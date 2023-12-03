@@ -99,14 +99,24 @@
 
         // confirm info / shipping / payment
 
-        public static Order CompleteWithPayment(int transactionId, int paymentId)
+        public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
         { 
+            // 這邊要處理:
+            // 1. 分散式交易
+            // 2. 排隊機制
+            // 3. 服務水準偵測、預警、監控
+            // 4. 整體負載控制
+            // 因此改用 async 來模擬，呼叫端必須有 async 的接收能力，即使透過 API (ex: 用 webhook / notification 也要能配合)
+
             var order = new Order();
+            var result = Task.Delay(1);
 
             var transaction = _temp[transactionId];
             order.buyer = transaction.consumer;
 
             decimal total = 0m;
+
+
             foreach(var p in transaction.cart._ProdQtyMap)
             {
                 Product product = Product.Database[p.Key];
@@ -129,6 +139,7 @@
             order.TotalPrice = total;
             order.Id = transactionId;
 
+            await result;
             return order;
         }
     }

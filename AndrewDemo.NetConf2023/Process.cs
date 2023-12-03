@@ -8,7 +8,7 @@ namespace AndrewDemo.NetConf2023
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // login
             Console.WriteLine("步驟 1, 登入");
@@ -56,13 +56,15 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine("步驟 4, 結帳");
 
             int tid = Checkout.Create(cart, member);
-            var order = Checkout.CompleteWithPayment(tid, 0);
+            var checkout_result = Checkout.CompleteAsync(tid, 0);
 
             // order created
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine("步驟 5, 訂單成立");
 
+
+            var order = await checkout_result;
             Console.WriteLine($"oders info:");
             Console.WriteLine($"訂單編號: {order.Id}");
             Console.WriteLine($"買家: {order.buyer.Name} ({order.buyer.Id})");
