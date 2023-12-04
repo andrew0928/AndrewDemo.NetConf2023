@@ -1,17 +1,29 @@
-﻿namespace AndrewDemo.NetConf2023
+﻿namespace AndrewDemo.NetConf2023.Core
 {
-
     public class Member
     {
         public int Id { get; set; }
         public string Name { get; set; }
 
+        public static Member Login(string name, string password)
+        {
+            // ignore password
+            return _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
+        }
 
-        public static Dictionary<int, Member> Database = new Dictionary<int, Member>()
+        public static Member Register(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        private static Dictionary<int, Member> _database = new Dictionary<int, Member>()
         {
             { 1, new Member() { Id = 1, Name = "andrew" } },
             { 2, new Member() { Id = 2, Name = "poy"} }
         };
+
+        [Obsolete("member: cross model data access!")]
+        public static Dictionary<int, Member> Database { get { return _database; } }
     }
 
 
@@ -21,11 +33,18 @@
         public string Name { get; set; }
         public decimal Price { get; set; }
 
-        public static Dictionary<int, Product> Database = new Dictionary<int, Product>()
+
+
+
+
+        private static Dictionary<int, Product> _database = new Dictionary<int, Product>()
         {
             { 1, new Product() { Id = 1, Name = "18天", Price = 65.00m } },
             { 2, new Product() { Id = 2, Name = "可樂", Price = 18.00m} }
         };
+
+        [Obsolete("product: cross model data access!")]
+        public static Dictionary<int, Product> Database { get { return _database; } }
     }
 
 
@@ -36,7 +55,7 @@
     //}
 
 
-    public class DiscountEngine
+    internal class DiscountEngine
     {
         public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member consumer)
         {
@@ -44,9 +63,9 @@
             var p = Product.Database.Where(p => p.Value.Name.Equals("18天")).FirstOrDefault().Value;
             var pid = p.Id;
 
-            if (cart._ProdQtyMap.ContainsKey(pid) && cart._ProdQtyMap[pid] > 2)
+            if (cart.ProdQtyMap.ContainsKey(pid) && cart.ProdQtyMap[pid] > 2)
             {
-                for(int index = 1; index <= cart._ProdQtyMap[pid]; index++)
+                for (int index = 1; index <= cart.ProdQtyMap[pid]; index++)
                 {
                     if (index % 2 == 0) yield return new DiscountRecord()
                     {
@@ -67,20 +86,40 @@
 
     public class Cart
     {
-        public Dictionary<int, int> _ProdQtyMap = new Dictionary<int, int>();
+        public Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
 
         // sku CRUD
         public bool AddProducts(int productId, int qty = 1)
         {
-            if (this._ProdQtyMap.ContainsKey(productId))
+            if (this.ProdQtyMap.ContainsKey(productId))
             {
-                this._ProdQtyMap[productId] += qty;
+                this.ProdQtyMap[productId] += qty;
             }
             else
             {
-                this._ProdQtyMap[productId] = qty;
+                this.ProdQtyMap[productId] = qty;
             }
             return true;
+        }
+
+        public decimal EstimatePrice()
+        {
+            decimal total = 0m;
+            foreach (var ci in this.ProdQtyMap)
+            {
+                Product p = Product.Database[ci.Key];
+                int pid = p.Id;
+                int qty = ci.Value;
+                //Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
+                total += p.Price * qty;
+            }
+            foreach (var dr in DiscountEngine.Calculate(this, null))
+            {
+                Console.WriteLine($"- [優惠] {dr.Name},   ${dr.DiscountAmount}");
+                total += dr.DiscountAmount;
+            }
+
+            return total;
         }
     }
 
@@ -100,7 +139,7 @@
         // confirm info / shipping / payment
 
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
-        { 
+        {
             // 這邊要處理:
             // 1. 分散式交易
             // 2. 排隊機制
@@ -117,7 +156,7 @@
             decimal total = 0m;
 
 
-            foreach(var p in transaction.cart._ProdQtyMap)
+            foreach (var p in transaction.cart.ProdQtyMap)
             {
                 Product product = Product.Database[p.Key];
                 int qty = p.Value;
@@ -128,7 +167,7 @@
                     product.Price * qty));
             }
 
-            foreach(var dr in DiscountEngine.Calculate(transaction.cart, transaction.consumer))
+            foreach (var dr in DiscountEngine.Calculate(transaction.cart, transaction.consumer))
             {
                 order.LineItems.Add((
                     $"優惠: {dr.Name} {dr.DiscountAmount}",

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AndrewDemo.NetConf2023.Core;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,23 +32,23 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine("步驟 3, 加入購物車, 帳款試算");
 
             var cart = new Cart();
-            decimal total = 0m;
+            //decimal total = 0m;
             cart.AddProducts(1, 6);
             cart.AddProducts(2, 1);
-            foreach(var ci in cart._ProdQtyMap)
-            {
-                Product p = Product.Database[ci.Key];
-                int pid = p.Id;
-                int qty = ci.Value;
-                Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
-                total += p.Price * qty;
-            }
-            foreach(var dr in DiscountEngine.Calculate(cart, member))
-            {
-                Console.WriteLine($"- [優惠] {dr.Name},   ${dr.DiscountAmount}");
-                total += dr.DiscountAmount;
-            }
-            Console.WriteLine($"結帳金額: ${total}");
+            //foreach(var ci in cart.ProdQtyMap)
+            //{
+            //    Product p = Product.Database[ci.Key];
+            //    int pid = p.Id;
+            //    int qty = ci.Value;
+            //    Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
+            //    total += p.Price * qty;
+            //}
+            //foreach(var dr in DiscountEngine.Calculate(cart, member))
+            //{
+            //    Console.WriteLine($"- [優惠] {dr.Name},   ${dr.DiscountAmount}");
+            //    total += dr.DiscountAmount;
+            //}
+            Console.WriteLine($"預估結帳金額: ${cart.EstimatePrice()}");
 
 
             // checkout
