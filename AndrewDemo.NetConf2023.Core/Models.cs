@@ -168,21 +168,23 @@
 
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
         {
+            var result = Task.Delay(100);
             // 這邊要處理:
             // 1. 分散式交易
             // 2. 排隊機制
             // 3. 服務水準偵測、預警、監控
             // 4. 整體負載控制
             // 因此改用 async 來模擬，呼叫端必須有 async 的接收能力，即使透過 API (ex: 用 webhook / notification 也要能配合)
+            Console.WriteLine($"[checkout] check system status, please wait ...");
+            await result;
+            Console.WriteLine($"[checkout] checkout process start...");
+
 
             var order = new Order();
-            var result = Task.Delay(1);
-
             var transaction = _temp[transactionId];
             order.buyer = transaction.consumer;
 
             decimal total = 0m;
-
 
             foreach (var p in transaction.cart.ProdQtyMap)
             {
@@ -205,8 +207,9 @@
 
             order.TotalPrice = total;
             order.Id = transactionId;
+            Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
+            Console.WriteLine();
 
-            await result;
             return order;
         }
     }
