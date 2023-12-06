@@ -8,14 +8,41 @@
         public static Member Login(string name, string password)
         {
             // ignore password
-            return _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
+            var m = _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
+
+            if (m != null)
+            {
+                MemberLoggedIn?.Invoke(m, new EventArgs() { });
+                return m;
+            }
+
+            return null;
         }
 
-        public static Member Register(string name)
+        public static (bool result, int registeredMemberId) Register(string name)
         {
-            throw new NotImplementedException();
+            if ((from x in _database where x.Value.Name == name select x.Value).Any())
+            {
+                return (false, 0);
+            }
+
+            var m = new Member()
+            {
+                Id = _current_number++,
+                Name = name
+            };
+
+            MemberRegistered?.Invoke(m, new EventArgs() { });
+
+            _database.Add(m.Id, m);
+            return (true, m.Id);
         }
 
+        public static event EventHandler<EventArgs> MemberRegistered;
+        public static event EventHandler<EventArgs> MemberLoggedIn;
+
+
+        private static int _current_number = 3;
         private static Dictionary<int, Member> _database = new Dictionary<int, Member>()
         {
             { 1, new Member() { Id = 1, Name = "andrew" } },
@@ -24,6 +51,7 @@
 
         [Obsolete("member: cross model data access!")]
         public static Dictionary<int, Member> Database { get { return _database; } }
+
     }
 
 
