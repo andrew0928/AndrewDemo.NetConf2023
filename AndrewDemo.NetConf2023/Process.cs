@@ -11,11 +11,22 @@ namespace AndrewDemo.NetConf2023
     {
         public static async Task Main(string[] args)
         {
+            // init
+            Checkout.CheckoutCompleted += (sender, args) =>
+            {
+                Console.WriteLine($"[system] checkout-completed event, order({((Order)sender).Id}) created.");
+            };
+            Member.MemberLoggedIn += (sender, args) =>
+            {
+                Console.WriteLine($"[system] member-loggined event, member({((Member)sender).Name}) loggined.");
+            };
+
             // login
             Console.WriteLine("步驟 1, 登入");
 
-            var member = (from m in Member.Database where m.Value.Name == "andrew" select m.Value).FirstOrDefault();
-            Console.WriteLine($"user {member.Name}(id: {member.Id}) logged in.");
+            var member = //(from m in Member.Database where m.Value.Name == "andrew" select m.Value).FirstOrDefault();
+                Member.Login("andrew", "123456");
+            //Console.WriteLine($"user {member.Name}(id: {member.Id}) logged in.");
 
             // browse product catalog
             Console.WriteLine();
@@ -35,20 +46,9 @@ namespace AndrewDemo.NetConf2023
             //decimal total = 0m;
             cart.AddProducts(1, 6);
             cart.AddProducts(2, 1);
-            //foreach(var ci in cart.ProdQtyMap)
-            //{
-            //    Product p = Product.Database[ci.Key];
-            //    int pid = p.Id;
-            //    int qty = ci.Value;
-            //    Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
-            //    total += p.Price * qty;
-            //}
-            //foreach(var dr in DiscountEngine.Calculate(cart, member))
-            //{
-            //    Console.WriteLine($"- [優惠] {dr.Name},   ${dr.DiscountAmount}");
-            //    total += dr.DiscountAmount;
-            //}
-            Console.WriteLine($"預估結帳金額: ${cart.EstimatePrice()}");
+
+            var _estimate_price = cart.EstimatePrice();
+            Console.WriteLine($"預估結帳金額: ${_estimate_price}");
 
 
             // checkout
@@ -57,9 +57,15 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine("步驟 4, 結帳");
 
             int tid = Checkout.Create(cart, member);
+            // 這中間還要做:
+            // 1. 確認訂單內容
+            // 2. 運送地址
+            // 3. 選擇支付方式
+            // 4. 付款
             var checkout_result = Checkout.CompleteAsync(tid, 0);
 
-            while(checkout_result.Wait(1000) == false)
+            // 若結帳需要時間, 等待期間 UI 可以做些別的提示，或是引導 user 稍後再回來
+            while (checkout_result.Wait(1000) == false)
             {
                 Console.WriteLine($"[checkout] waiting process queue...");
             }
@@ -68,8 +74,6 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine("步驟 5, 訂單成立");
-
-
 
             var order = await checkout_result;
             Console.WriteLine($"oders info:");
@@ -86,5 +90,6 @@ namespace AndrewDemo.NetConf2023
 
             return;
         }
+
     }
 }

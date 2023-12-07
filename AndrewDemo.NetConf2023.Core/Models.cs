@@ -41,7 +41,6 @@
         public static event EventHandler<EventArgs> MemberRegistered;
         public static event EventHandler<EventArgs> MemberLoggedIn;
 
-
         private static int _current_number = 3;
         private static Dictionary<int, Member> _database = new Dictionary<int, Member>()
         {
@@ -51,7 +50,6 @@
 
         [Obsolete("member: cross model data access!")]
         public static Dictionary<int, Member> Database { get { return _database; } }
-
     }
 
 
@@ -138,7 +136,7 @@
                 Product p = Product.Database[ci.Key];
                 int pid = p.Id;
                 int qty = ci.Value;
-                //Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
+                Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
                 total += p.Price * qty;
             }
             foreach (var dr in DiscountEngine.Calculate(this, null))
@@ -164,7 +162,7 @@
             return tid;
         }
 
-        // confirm info / shipping / payment
+        public static event EventHandler CheckoutCompleted;
 
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
         {
@@ -176,7 +174,7 @@
             // 因此改用 async 來模擬，呼叫端必須有 async 的接收能力，即使透過 API (ex: 用 webhook / notification 也要能配合)
 
             // 模擬排隊機制, 避免瞬間結帳人數過多衝垮後端系統
-            var ticket = new WaitingRoomTicket("checkout");
+            var ticket = new WaitingRoomTicket();
             Console.WriteLine($"[checkout] check system status, please wait ...");
             await ticket.WaitUntilCanRunAsync();
             Console.WriteLine($"[checkout] checkout process start...");
@@ -212,6 +210,8 @@
             Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
             Console.WriteLine();
 
+            CheckoutCompleted?.Invoke(order, new EventArgs());
+
             return order;
         }
     }
@@ -228,7 +228,7 @@
         private DateTime _created = DateTime.MinValue;
         private DateTime _released = DateTime.MinValue;
 
-        public WaitingRoomTicket(string note)
+        public WaitingRoomTicket()
         {
             this.Id = Interlocked.Increment(ref _sn);
             this._created = DateTime.Now;
