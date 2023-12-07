@@ -168,14 +168,15 @@
 
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
         {
-            //var result = Task.Delay(100);
-            var ticket = new WaitingRoomTicket("checkout");
             // 這邊要處理:
             // 1. 分散式交易
             // 2. 排隊機制
             // 3. 服務水準偵測、預警、監控
             // 4. 整體負載控制
             // 因此改用 async 來模擬，呼叫端必須有 async 的接收能力，即使透過 API (ex: 用 webhook / notification 也要能配合)
+
+            // 模擬排隊機制, 避免瞬間結帳人數過多衝垮後端系統
+            var ticket = new WaitingRoomTicket("checkout");
             Console.WriteLine($"[checkout] check system status, please wait ...");
             await ticket.WaitUntilCanRunAsync();
             Console.WriteLine($"[checkout] checkout process start...");
