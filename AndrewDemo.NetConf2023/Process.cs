@@ -59,10 +59,16 @@ namespace AndrewDemo.NetConf2023
             int tid = Checkout.Create(cart, member);
             var checkout_result = Checkout.CompleteAsync(tid, 0);
 
+            while(checkout_result.Wait(1000) == false)
+            {
+                Console.WriteLine($"[checkout] waiting process queue...");
+            }
+
             // order created
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine("步驟 5, 訂單成立");
+
 
 
             var order = await checkout_result;

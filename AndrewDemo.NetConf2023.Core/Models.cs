@@ -168,7 +168,8 @@
 
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
         {
-            var result = Task.Delay(100);
+            //var result = Task.Delay(100);
+            var ticket = new WaitingRoomTicket("checkout");
             // 這邊要處理:
             // 1. 分散式交易
             // 2. 排隊機制
@@ -176,7 +177,7 @@
             // 4. 整體負載控制
             // 因此改用 async 來模擬，呼叫端必須有 async 的接收能力，即使透過 API (ex: 用 webhook / notification 也要能配合)
             Console.WriteLine($"[checkout] check system status, please wait ...");
-            await result;
+            await ticket.WaitUntilCanRunAsync();
             Console.WriteLine($"[checkout] checkout process start...");
 
 
@@ -213,6 +214,38 @@
             return order;
         }
     }
+
+
+
+
+    // ref: https://queue-it.com/how-does-queue-it-work/
+    public class WaitingRoomTicket
+    {
+        private static int _sn = 0;
+
+        public int Id { get; private set; }
+        private DateTime _created = DateTime.MinValue;
+        private DateTime _released = DateTime.MinValue;
+
+        public WaitingRoomTicket(string note)
+        {
+            this.Id = Interlocked.Increment(ref _sn);
+            this._created = DateTime.Now;
+
+            Random random = new Random();
+            this._released = this._created + TimeSpan.FromSeconds(random.Next(3, 10));
+
+            Console.WriteLine($"[waiting-room] issue ticket: {this.Id} @ {this._created} (estimate: {this._released})");
+        }
+
+        public async Task WaitUntilCanRunAsync()
+        {
+            if (DateTime.Now > this._released) return;
+            await Task.Delay(this._released - DateTime.Now);
+        }
+    }
+
+
 
 
     public class Order
