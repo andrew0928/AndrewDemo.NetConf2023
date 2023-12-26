@@ -42,7 +42,8 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine();
             Console.WriteLine("步驟 3, 加入購物車, 帳款試算");
 
-            var cart = new Cart();
+            var cart = Cart.Create();
+
             //decimal total = 0m;
             cart.AddProducts(1, 6);
             cart.AddProducts(2, 1);
@@ -56,7 +57,7 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine();
             Console.WriteLine("步驟 4, 結帳");
 
-            int tid = Checkout.Create(cart, member);
+            int tid = Checkout.Create(cart.Id, member);
             // 這中間還要做:
             // 1. 確認訂單內容
             // 2. 運送地址

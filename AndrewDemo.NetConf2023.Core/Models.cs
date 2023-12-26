@@ -112,7 +112,35 @@
 
     public class Cart
     {
-        public Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
+        internal Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
+
+        public int Id { get; private set; }
+
+        private static int _sn = 0;
+        internal static Dictionary<int, Cart> _database = new Dictionary<int, Cart>();
+
+        public static Cart Create()
+        {
+            var c = new Cart()
+            {
+                Id = _sn++
+            };
+
+            _database.Add(c.Id, c);
+
+            return c;
+        }
+
+        private Cart()
+        {
+        }
+
+        public static Cart Get(int id)
+        {
+            if (!_database.ContainsKey(id)) return null;
+            return _database[id];
+        }
+
 
         // sku CRUD
         public bool AddProducts(int productId, int qty = 1)
@@ -153,12 +181,15 @@
     public class Checkout
     {
         private static int _serial_number = 1;
-        private static Dictionary<int, (int tid, Cart cart, Member consumer)> _temp = new Dictionary<int, (int tid, Cart cart, Member consumer)>();
+        private static Dictionary<int, (int tid, Cart cart, Member consumer)> _database = new Dictionary<int, (int tid, Cart cart, Member consumer)>();
 
-        public static int Create(Cart cart, Member consumer)
+        public static int Create(int cartId, Member consumer)
         {
+            var cart = Cart.Get(cartId);
+            if (cart == null) throw new ArgumentOutOfRangeException("cartId");
+
             int tid = (_serial_number++);
-            _temp.Add(tid, (tid, cart, consumer));
+            _database.Add(tid, (tid, cart, consumer));
             return tid;
         }
 
@@ -181,7 +212,7 @@
 
 
             var order = new Order();
-            var transaction = _temp[transactionId];
+            var transaction = _database[transactionId];
             order.buyer = transaction.consumer;
 
             decimal total = 0m;
