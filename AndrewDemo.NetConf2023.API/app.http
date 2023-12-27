@@ -1,0 +1,25 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+
+###
+POST http://localhost:5108/api/Carts
+
+###
+POST http://localhost:5108/api/Carts/1/items
+Content-Type: application/json
+
+{
+  "productId": 1,
+  "qty": 3
+}
+
+###
+POST http://localhost:5108/api/Carts/1/Items
+Content-Type: application/json
+
+{
+  "productId": 2,
+  "qty": 5
+}
+
+###
+GET http://localhost:5108/api/Carts/1

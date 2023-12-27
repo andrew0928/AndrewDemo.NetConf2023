@@ -1,4 +1,6 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System.Text.Json.Serialization;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     public class Member
     {
@@ -116,7 +118,7 @@
 
         public int Id { get; private set; }
 
-        private static int _sn = 0;
+        private static int _sn = 1;
         internal static Dictionary<int, Cart> _database = new Dictionary<int, Cart>();
 
         public static Cart Create()
@@ -174,6 +176,27 @@
             }
 
             return total;
+        }
+
+        public IEnumerable<LineItem> LineItems
+        {
+            get 
+            {
+                foreach (var ci in this.ProdQtyMap)
+                {
+                    yield return new LineItem()
+                    {
+                        ProductId = ci.Key,
+                        Qty = ci.Value
+                    };
+                }
+            }
+        }
+
+        public class LineItem
+        {
+            public int ProductId { get; set; }
+            public int Qty { get; set; }
         }
     }
 
