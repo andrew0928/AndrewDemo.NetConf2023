@@ -83,7 +83,7 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine($"明細:");
             foreach(var lineitem in order.LineItems)
             {
-                Console.WriteLine($"- [{lineitem.title}]    {lineitem.price}");
+                Console.WriteLine($"- [{lineitem.Title}]    {lineitem.Price}");
             }
             Console.WriteLine($"結帳金額: {order.TotalPrice}");
 

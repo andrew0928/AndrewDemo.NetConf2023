@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/products")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        [HttpGet(Name = "GetProducts")]
+        [HttpGet("", Name = "GetProducts")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public IEnumerable<Product> Get()
+        public ActionResult<IEnumerable<Product>> Get()
         {
-            return Product.Database.Values;
+            return Product.Database.Values.ToList();
         }
 
 

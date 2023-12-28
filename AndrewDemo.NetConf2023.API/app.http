@@ -1,10 +1,33 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
+@baseURL= http://localhost:5108
+@apikey=cec8ad70-fa27-4710-a046-7a8d1e65c0d9
+
+
+
 
 ###
-POST http://localhost:5108/api/Carts
+GET {{baseURL}}/api/products
+x-api-key: {{apikey}}
 
 ###
-POST http://localhost:5108/api/Carts/1/items
+GET {{baseURL}}/api/member
+x-api-key: {{apikey}}
+
+###
+GET {{baseURL}}/api/member/orders
+x-api-key: {{apikey}}
+
+
+
+
+###
+POST {{baseURL}}/api/carts/create
+x-api-key: {{apikey}}
+
+
+###
+POST {{baseURL}}/api/carts/1/items
+x-api-key: {{apikey}}
 Content-Type: application/json
 
 {
@@ -13,7 +36,8 @@ Content-Type: application/json
 }
 
 ###
-POST http://localhost:5108/api/Carts/1/Items
+POST {{baseURL}}/api/carts/1/items
+x-api-key: {{apikey}}
 Content-Type: application/json
 
 {
@@ -22,4 +46,33 @@ Content-Type: application/json
 }
 
 ###
-GET http://localhost:5108/api/Carts/1
+GET {{baseURL}}/api/carts/1
+x-api-key: {{apikey}}
+
+
+###
+POST {{baseURL}}/api/carts/1/estimate
+x-api-key: {{apikey}}
+
+
+
+
+###
+POST {{baseURL}}/api/checkout/create
+x-api-key: {{apikey}}
+Content-Type: application/json
+
+{
+  "cartId": 1
+}
+
+
+###
+POST {{baseURL}}/api/checkout/complete
+x-api-key: {{apikey}}
+Content-Type: application/json
+
+{
+  "transactionId": 1,
+  "paymentId": 9527
+}

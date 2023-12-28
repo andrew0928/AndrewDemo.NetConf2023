@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/carts")]
     [ApiController]
     public class CartsController : ControllerBase
     {
@@ -25,7 +25,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
         }
 
-        [HttpPost(Name = "CreateCart")]
+        [HttpPost("create", Name = "CreateCart")]
         [ProducesResponseType(StatusCodes.Status201Created)]
         public ActionResult<Cart> Post()
         {
@@ -52,10 +52,42 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
         }
 
+
+        [HttpPost("{id}/estimate", Name = "EstimatePrice")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<CartEstimateResponse> Post(int id)
+        {
+            var cart = Cart.Get(id);
+
+            if (cart != null)
+            {
+                return new CartEstimateResponse()
+                {
+                    TotalPrice = cart.EstimatePrice()
+                };
+                
+            }
+            else
+            {
+                return NotFound();
+            }
+        }
+
+
+
+
+
         public class AddItemToCartRequest
         {
             public int ProductId { get; set; }
             public int Qty { get; set; }
+        }
+
+        public class CartEstimateResponse
+        {
+            public decimal TotalPrice { get; set; }
+            //public List<DiscountRecord> Discounts { get; set; }
         }
     }
 }

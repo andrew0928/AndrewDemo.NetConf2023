@@ -178,13 +178,13 @@ namespace AndrewDemo.NetConf2023.Core
             return total;
         }
 
-        public IEnumerable<LineItem> LineItems
+        public IEnumerable<CartLineItem> LineItems
         {
             get 
             {
                 foreach (var ci in this.ProdQtyMap)
                 {
-                    yield return new LineItem()
+                    yield return new CartLineItem()
                     {
                         ProductId = ci.Key,
                         Qty = ci.Value
@@ -193,7 +193,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public class LineItem
+        public class CartLineItem
         {
             public int ProductId { get; set; }
             public int Qty { get; set; }
@@ -234,8 +234,10 @@ namespace AndrewDemo.NetConf2023.Core
             Console.WriteLine($"[checkout] checkout process start...");
 
 
-            var order = new Order();
             var transaction = _database[transactionId];
+            _database.Remove(transactionId);
+            var order = new Order(transactionId);
+
             order.buyer = transaction.consumer;
 
             decimal total = 0m;
@@ -246,21 +248,29 @@ namespace AndrewDemo.NetConf2023.Core
                 int qty = p.Value;
                 total += product.Price * qty;
 
-                order.LineItems.Add((
-                    $"商品: {product.Name} (單價: {product.Price} x {qty} = {product.Price * qty}",
-                    product.Price * qty));
+                order.LineItems.Add(new Order.OrderLineItem()
+                {
+                    Title = $"商品: {product.Name}, 單價: {product.Price} x {qty} 件 = {product.Price * qty:C}",
+                    Price = product.Price * qty
+                });
             }
 
             foreach (var dr in DiscountEngine.Calculate(transaction.cart, transaction.consumer))
             {
-                order.LineItems.Add((
-                    $"優惠: {dr.Name} {dr.DiscountAmount}",
-                    dr.DiscountAmount));
+                order.LineItems.Add(new Order.OrderLineItem()
+                {
+                    Title = $"優惠: {dr.Name}, 折扣 {-1 * dr.DiscountAmount:C}",
+                    Price = dr.DiscountAmount
+                });
+
                 total += dr.DiscountAmount;
             }
 
             order.TotalPrice = total;
-            order.Id = transactionId;
+
+            
+
+
             Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
             Console.WriteLine();
 
@@ -288,7 +298,7 @@ namespace AndrewDemo.NetConf2023.Core
             this._created = DateTime.Now;
 
             Random random = new Random();
-            this._released = this._created + TimeSpan.FromSeconds(random.Next(3, 10));
+            this._released = this._created + TimeSpan.FromSeconds(random.Next(1, 3));
 
             Console.WriteLine($"[waiting-room] issue ticket: {this.Id} @ {this._created} (estimate: {this._released})");
         }
@@ -305,12 +315,35 @@ namespace AndrewDemo.NetConf2023.Core
 
     public class Order
     {
-        public int Id { get; set; }
+        public static Dictionary<int, Order> _database = new Dictionary<int, Order>();
 
-        public Member buyer;
+        public Order(int transactionId)
+        {
+            this.Id = transactionId;
+            _database.Add(transactionId, this);
+        }
 
-        public List<(string title, decimal price)> LineItems = new List<(string title, decimal price)>();
+
+
+        public int Id { get; private set; }
+
+        public Member buyer { get; set; }
+
+        public List<OrderLineItem> LineItems { get; set; } = new List<OrderLineItem>();
 
         public decimal TotalPrice { get; set; }
+
+
+        public static IEnumerable<Order> GetOrders(int memberId)
+        {
+            return _database.Values.Where(x => x.buyer.Id == memberId);
+        }
+
+
+        public class OrderLineItem
+        {
+            public string Title { get; set; }
+            public decimal Price { get; set; }
+        }
     }
 }
