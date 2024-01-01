@@ -1,5 +1,6 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
 @baseURL= http://localhost:5108
+### @baseURL=https://andrewdemonetconf2023api20231231212527.azurewebsites.net/
 @apikey=cec8ad70-fa27-4710-a046-7a8d1e65c0d9
 
 

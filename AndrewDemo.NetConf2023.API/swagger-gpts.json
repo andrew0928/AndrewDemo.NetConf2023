@@ -1,0 +1,11 @@
+{
+  "openapi": "3.0.1",
+  "servers": [
+    {
+      "url": "https://andrewdemonetconf2023api20231231212527.azurewebsites.net/",
+      "description": "Test" // TODO: Change to production
+    }
+  ],
+  "paths": {
+  }
+}

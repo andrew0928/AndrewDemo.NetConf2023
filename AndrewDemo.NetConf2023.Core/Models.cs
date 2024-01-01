@@ -43,11 +43,11 @@ namespace AndrewDemo.NetConf2023.Core
         public static event EventHandler<EventArgs> MemberRegistered;
         public static event EventHandler<EventArgs> MemberLoggedIn;
 
-        private static int _current_number = 3;
+        private static int _current_number = 1;
         private static Dictionary<int, Member> _database = new Dictionary<int, Member>()
         {
-            { 1, new Member() { Id = 1, Name = "andrew" } },
-            { 2, new Member() { Id = 2, Name = "poy"} }
+            //{ 1, new Member() { Id = 1, Name = "andrew" } },
+            //{ 2, new Member() { Id = 2, Name = "poy"} }
         };
 
         [Obsolete("member: cross model data access!")]
@@ -67,20 +67,13 @@ namespace AndrewDemo.NetConf2023.Core
 
         private static Dictionary<int, Product> _database = new Dictionary<int, Product>()
         {
-            { 1, new Product() { Id = 1, Name = "18天", Price = 65.00m } },
-            { 2, new Product() { Id = 2, Name = "可樂", Price = 18.00m} }
+            //{ 1, new Product() { Id = 1, Name = "18天", Price = 65.00m } },
+            //{ 2, new Product() { Id = 2, Name = "可樂", Price = 18.00m} }
         };
 
         [Obsolete("product: cross model data access!")]
         public static Dictionary<int, Product> Database { get { return _database; } }
     }
-
-
-    //public class SKU
-    //{
-    //    public int Id { get; set; }
-    //    public string Name { get; set; }
-    //}
 
 
     internal class DiscountEngine

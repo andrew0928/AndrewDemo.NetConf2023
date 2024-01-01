@@ -11,7 +11,7 @@ namespace AndrewDemo.NetConf2023
     {
         public static async Task Main(string[] args)
         {
-            // init
+            // init event handler
             Checkout.CheckoutCompleted += (sender, args) =>
             {
                 Console.WriteLine($"[system] checkout-completed event, order({((Order)sender).Id}) created.");
@@ -20,6 +20,24 @@ namespace AndrewDemo.NetConf2023
             {
                 Console.WriteLine($"[system] member-loggined event, member({((Member)sender).Name}) loggined.");
             };
+
+            // init database
+            Member.Register("andrew");
+            Member.Register("poy");
+
+            Product.Database.Add(1, new Product()
+            {
+                Id = 1,
+                Name = "18天",
+                Price = 65m
+            });
+            Product.Database.Add(2, new Product()
+            {
+                Id = 2,
+                Name = "可樂",
+                Price = 18m
+            });
+
 
             // login
             Console.WriteLine("步驟 1, 登入");
