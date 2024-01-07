@@ -7,25 +7,29 @@ namespace AndrewDemo.NetConf2023.Core
         public int Id { get; set; }
         public string Name { get; set; }
 
-        public static Member Login(string name, string password)
+        // not implement password in this demo, just for demo
+        // any non-empty string is valid
+        public static string Login(string name, string password)
         {
+            if (string.IsNullOrEmpty(password)) return null;
+
             // ignore password
             var m = _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
+            if (m == null) return null;
 
-            if (m != null)
-            {
-                MemberLoggedIn?.Invoke(m, new EventArgs() { });
-                return m;
-            }
-
-            return null;
+            return CreateAccessToken(m);
         }
 
-        public static (bool result, int registeredMemberId) Register(string name)
+        /// <summary>
+        /// 註冊成功會傳回 access token
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        public static string Register(string name)
         {
             if ((from x in _database where x.Value.Name == name select x.Value).Any())
             {
-                return (false, 0);
+                return null;
             }
 
             var m = new Member()
@@ -37,7 +41,22 @@ namespace AndrewDemo.NetConf2023.Core
             MemberRegistered?.Invoke(m, new EventArgs() { });
 
             _database.Add(m.Id, m);
-            return (true, m.Id);
+            return CreateAccessToken(m);
+        }
+
+        public static Member GetCurrentMember(string accessToken)
+        {
+            // access token validation
+            if (AccessTokens.ContainsKey(accessToken))
+            {
+                var (expire, consumer) = AccessTokens[accessToken];
+                if (expire > DateTime.Now)
+                {
+                    return consumer;
+                }
+            }
+
+            return null;
         }
 
         public static event EventHandler<EventArgs> MemberRegistered;
@@ -50,8 +69,19 @@ namespace AndrewDemo.NetConf2023.Core
             //{ 2, new Member() { Id = 2, Name = "poy"} }
         };
 
-        [Obsolete("member: cross model data access!")]
-        public static Dictionary<int, Member> Database { get { return _database; } }
+        //[Obsolete("member: cross model data access!")]
+        private static Dictionary<int, Member> Database { get { return _database; } }
+
+        //
+        private static Dictionary<string, (DateTime expire, Member consumer)> AccessTokens = new Dictionary<string, (DateTime expire, Member consumer)>();
+
+        private static string CreateAccessToken(Member consumer)
+        {
+            string token = Guid.NewGuid().ToString("N");
+            AccessTokens.Add(token, (DateTime.MaxValue, consumer));
+
+            return token;
+        }
     }
 
 
@@ -199,10 +229,13 @@ namespace AndrewDemo.NetConf2023.Core
         private static int _serial_number = 1;
         private static Dictionary<int, (int tid, Cart cart, Member consumer)> _database = new Dictionary<int, (int tid, Cart cart, Member consumer)>();
 
-        public static int Create(int cartId, Member consumer)
+        public static int Create(int cartId, string token)
         {
             var cart = Cart.Get(cartId);
             if (cart == null) throw new ArgumentOutOfRangeException("cartId");
+
+            var consumer = Member.GetCurrentMember(token);
+            if (consumer == null) throw new ArgumentOutOfRangeException("token");
 
             int tid = (_serial_number++);
             _database.Add(tid, (tid, cart, consumer));

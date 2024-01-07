@@ -23,13 +23,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public ActionResult<CheckoutCreateResponse> Create([FromBody] CheckoutCreateRequest request)
         {
-            var member = this.HttpContext.Items["Consumer"] as Member;
+            var member = Member.GetCurrentMember(request.AccessToken);
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var transactionId = Checkout.Create(request.CartId, member);            
+            var transactionId = Checkout.Create(request.CartId, request.AccessToken);            
 
             return new CheckoutCreateResponse()
             {
@@ -54,7 +54,8 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public async Task<ActionResult<CheckoutCompleteResponse>> CompleteAsync([FromBody] CheckoutCompleteRequest request)
         {
-            var member = this.HttpContext.Items["Consumer"] as Member;
+            //var member = this.HttpContext.Items["Consumer"] as Member;
+            var member = Member.GetCurrentMember(request.AccessToken);
             if (member == null)
             {
                 return Unauthorized();
@@ -83,6 +84,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public class CheckoutCreateRequest
         {
             public int CartId { get; set; }
+            public string AccessToken { get; set; }
         }
 
         public class CheckoutCreateResponse
@@ -96,6 +98,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public class CheckoutCompleteRequest
         {
             public int TransactionId { get; set; }
+            public string AccessToken { get; set; }
             public int PaymentId { get; set; }
         }
 

@@ -42,8 +42,8 @@ namespace AndrewDemo.NetConf2023
             // login
             Console.WriteLine("步驟 1, 登入");
 
-            var member = //(from m in Member.Database where m.Value.Name == "andrew" select m.Value).FirstOrDefault();
-                Member.Login("andrew", "123456");
+            var token = Member.Login("andrew", "123456");
+            var member = Member.GetCurrentMember(token);
             //Console.WriteLine($"user {member.Name}(id: {member.Id}) logged in.");
 
             // browse product catalog
@@ -75,7 +75,7 @@ namespace AndrewDemo.NetConf2023
             Console.WriteLine();
             Console.WriteLine("步驟 4, 結帳");
 
-            int tid = Checkout.Create(cart.Id, member);
+            int tid = Checkout.Create(cart.Id, token);
             // 這中間還要做:
             // 1. 確認訂單內容
             // 2. 運送地址
