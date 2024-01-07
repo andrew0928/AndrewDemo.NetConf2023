@@ -86,7 +86,8 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             {
                 return new CartEstimateResponse()
                 {
-                    TotalPrice = cart.EstimatePrice()
+                    TotalPrice = cart.EstimatePrice(),
+                    Discounts = cart.EstimateDiscounts().ToList()
                 };
                 
             }
@@ -109,7 +110,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public class CartEstimateResponse
         {
             public decimal TotalPrice { get; set; }
-            //public List<DiscountRecord> Discounts { get; set; }
+            public List<Cart.CartDiscountHint> Discounts { get; set; }
         }
     }
 }

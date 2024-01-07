@@ -114,9 +114,12 @@ namespace AndrewDemo.NetConf2023.Core
             var p = Product.Database.Where(p => p.Value.Name.Equals("18天")).FirstOrDefault().Value;
             var pid = p.Id;
 
-            if (cart.ProdQtyMap.ContainsKey(pid) && cart.ProdQtyMap[pid] > 2)
+            //if (cart.ProdQtyMap.ContainsKey(pid) && cart.ProdQtyMap[pid] > 2)
+            var lineitem = cart.LineItems.Where(lt => (lt.ProductId == pid && lt.Qty > 2)).FirstOrDefault();
+
+            if (lineitem != null)
             {
-                for (int index = 1; index <= cart.ProdQtyMap[pid]; index++)
+                for (int index = 1; index <= lineitem.Qty; index++)
                 {
                     if (index % 2 == 0) yield return new DiscountRecord()
                     {
@@ -137,7 +140,7 @@ namespace AndrewDemo.NetConf2023.Core
 
     public class Cart
     {
-        internal Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
+        private Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
 
         public int Id { get; private set; }
 
@@ -184,18 +187,16 @@ namespace AndrewDemo.NetConf2023.Core
         public decimal EstimatePrice()
         {
             decimal total = 0m;
-            foreach (var ci in this.ProdQtyMap)
+            foreach (var lineitem in this.LineItems)
             {
-                Product p = Product.Database[ci.Key];
-                int pid = p.Id;
-                int qty = ci.Value;
-                Console.WriteLine($"- [{pid}] {p.Name}(單價: ${p.Price}) x {qty},     ${p.Price * qty}");
-                total += p.Price * qty;
+                Product p = Product.Database[lineitem.ProductId];
+                Console.WriteLine($"- [{p.Id}] {p.Name}(單價: ${p.Price}) x {lineitem.Qty},     ${p.Price * lineitem.Qty}");
+                total += p.Price * lineitem.Qty;
             }
-            foreach (var dr in DiscountEngine.Calculate(this, null))
+            foreach (var discount in this.EstimateDiscounts())
             {
-                Console.WriteLine($"- [優惠] {dr.Name},   ${dr.DiscountAmount}");
-                total += dr.DiscountAmount;
+                Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
+                total += discount.DiscountAmount;
             }
 
             return total;
@@ -216,10 +217,32 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
+        public IEnumerable<CartDiscountHint> EstimateDiscounts()
+        {
+            {
+                foreach (var d in DiscountEngine.Calculate(this, null))
+                {
+                    yield return new CartDiscountHint()
+                    {
+                        Name = d.Name,
+                        Description = $"[{d.Name}]: ${d.DiscountAmount}",
+                        DiscountAmount = d.DiscountAmount
+                    };
+                }
+            }
+        }
+
         public class CartLineItem
         {
             public int ProductId { get; set; }
             public int Qty { get; set; }
+        }
+
+        public class CartDiscountHint
+        {
+            public string Name { get; set; }
+            public string Description { get; set; }
+            public decimal DiscountAmount { get; set; }
         }
     }
 
@@ -268,16 +291,17 @@ namespace AndrewDemo.NetConf2023.Core
 
             decimal total = 0m;
 
-            foreach (var p in transaction.cart.ProdQtyMap)
+            //foreach (var p in transaction.cart.ProdQtyMap)
+            foreach (var lineitem in transaction.cart.LineItems)
             {
-                Product product = Product.Database[p.Key];
-                int qty = p.Value;
-                total += product.Price * qty;
+                Product product = Product.Database[lineitem.ProductId];
+                
+                total += product.Price * lineitem.Qty;
 
                 order.LineItems.Add(new Order.OrderLineItem()
                 {
-                    Title = $"商品: {product.Name}, 單價: {product.Price} x {qty} 件 = {product.Price * qty:C}",
-                    Price = product.Price * qty
+                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Qty} 件 = {product.Price * lineitem.Qty:C}",
+                    Price = product.Price * lineitem.Qty
                 });
             }
 
