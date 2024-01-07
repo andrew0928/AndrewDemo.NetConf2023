@@ -1,13 +1,15 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-@baseURL= http://localhost:5108
-### @baseURL=https://andrewdemonetconf2023api20231231212527.azurewebsites.net/
+#@baseURL= http://localhost:5108
+@baseURL=https://andrewdemonetconf2023api20231231212527.azurewebsites.net/
 
 
 
 # @apikey=cec8ad70-fa27-4710-a046-7a8d1e65c0d9
 @apikey=d069d4eb-6a1f-49c4-a8d0-3e32079e54b5
 
-@accessToken=6aa7e85a2520430fa8a295a8f8ca372c
+@accessToken=e60682fd092141cda91e904843677222
+
+@cartId=2
 
 
 
@@ -59,7 +61,7 @@ x-api-key: {{apikey}}
 
 
 ###
-POST {{baseURL}}/api/carts/1/items
+POST {{baseURL}}/api/carts/{{cartId}}/items
 x-api-key: {{apikey}}
 Content-Type: application/json
 
@@ -69,7 +71,7 @@ Content-Type: application/json
 }
 
 ###
-POST {{baseURL}}/api/carts/1/items
+POST {{baseURL}}/api/carts/{{cartId}}/items
 x-api-key: {{apikey}}
 Content-Type: application/json
 
@@ -79,12 +81,12 @@ Content-Type: application/json
 }
 
 ###
-GET {{baseURL}}/api/carts/1
+GET {{baseURL}}/api/carts/{{cartId}}
 x-api-key: {{apikey}}
 
 
 ###
-POST {{baseURL}}/api/carts/1/estimate
+POST {{baseURL}}/api/carts/{{cartId}}/estimate
 x-api-key: {{apikey}}
 
 
