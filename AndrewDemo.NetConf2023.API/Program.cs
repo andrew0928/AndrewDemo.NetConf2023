@@ -1,4 +1,4 @@
-
+ï»¿
 using AndrewDemo.NetConf2023.Core;
 
 namespace AndrewDemo.NetConf2023.API
@@ -24,22 +24,13 @@ namespace AndrewDemo.NetConf2023.API
                 //                        Version = "1.0",
                 //                        Description = @""
                 //                    });
-                /*
-                
-ÁÊª«¨t²Îªº«e¥x (storefront) API¡C¥H¤U¬O¨Ï¥Î³o²Õ API ªº¥D­n³W½d:
-
-1.¨t²Î¥²¶·´£¨Ñ x - api - key ¤~¯à©I¥s¡C
-2.«È¤á(consumer)ªº°O¦W¾Þ§@¡A³£¥²¶·´£¨Ñ access token ¨ÓÃÑ§O¨Ï¥ÎªÌ¡C
-3.¨ú±o access token ªº¤è¦¡¡A¬O³z¹L©I¥s / api / member / login API ¨Ó¨ú±o¡C
-4.·|­ûµù¥U¦¨¥\®É¡A¤]·|¶Ç¦^ access token¡C
-5.access token ¦³¦³®Ä´Á­­(¤£¤½¶})¡A¹L´Á«á¥²¶·­«·sµn¤J¨Ã§ó´«·sªº access token¡C
-6.¦b¹ï¸Ü¹Lµ{¤º¡A§A¥i¥H´À«È¤áÀx¦s access token¡A¥H«K¤U¦¸©I¥s API ®É¨Ï¥Î¡C
-
-                
-                */
                 var filePath = Path.Combine(System.AppContext.BaseDirectory, "AndrewDemo.NetConf2023.API.xml");
                 c.IncludeXmlComments(filePath);
             });
+
+
+            builder.Services.AddHttpClient();
+            //builder.Services.AddSingleton<IGitHubAuthenticationService, GitHubAuthenticationService>();
 
             var app = builder.Build();
 
@@ -51,23 +42,30 @@ namespace AndrewDemo.NetConf2023.API
                 ["d069d4eb-6a1f-49c4-a8d0-3e32079e54b5"] = "AndrewShop GTP v4",
             };
 
+            
+
+
+
             Product.Database.Add(1, new Product()
             {
                 Id = 1,
-                Name = "18¤Ñ",
+                Name = "18å¤©",
                 Price = 65m
             });
             Product.Database.Add(2, new Product()
             {
                 Id = 2,
-                Name = "¥i¼Ö",
+                Name = "å¯æ¨‚",
                 Price = 18m
             });
-
 
             app.Use((context, next) =>
             {
                 if (!context.Request.Path.StartsWithSegments("/api"))
+                {
+                    return next();
+                }
+                if (context.Request.Path.StartsWithSegments("/api/authentication", StringComparison.OrdinalIgnoreCase))
                 {
                     return next();
                 }
@@ -83,15 +81,8 @@ namespace AndrewDemo.NetConf2023.API
                     context.Response.StatusCode = 401;
                     return context.Response.WriteAsync("Unauthorized");
                 }
-
-                //if (!Member.Database.ContainsKey(userId))
-                //{
-                //    context.Response.StatusCode = 401;
-                //    return context.Response.WriteAsync("Unauthorized");
-                //}
-
-                //context.Items["Consumer"] = Member.Database[userId];
                 Console.WriteLine($"[system] {appName}({potentialApiKey}) request api {context.Request.Path}.");
+
 
                 return next();
             });
@@ -104,6 +95,7 @@ namespace AndrewDemo.NetConf2023.API
             }
 
             app.UseAuthorization();
+            app.UseAuthorization();
 
 
             app.MapControllers();
@@ -111,6 +103,4 @@ namespace AndrewDemo.NetConf2023.API
             app.Run();
         }
     }
-
-
 }

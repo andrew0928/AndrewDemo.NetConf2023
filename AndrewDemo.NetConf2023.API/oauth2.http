@@ -1,0 +1,13 @@
+# For more info on HTTP files go to https://aka.ms/vs/httpfile
+@baseURL= http://localhost:5108
+@oauth2_accesstoken=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
+
+
+
+
+###
+GET http://localhost:5108/api/Authentication/github/login
+
+###
+GET {{baseURL}}/api/products
+Authorization: Bearer {{oauth2_accesstoken}}

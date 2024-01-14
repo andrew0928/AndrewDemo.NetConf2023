@@ -1,0 +1,31 @@
+﻿
+@{
+    ViewData["Title"] = "SignIn";
+}
+
+<h1>SignIn</h1>
+
+
+
+<form method="get" action="/home/signin">
+    <div class="form-group">
+        <label>帳號:</label>
+        <input type="text" class="form-control" name="name" value="andrew" />
+    </div>
+    <div class="form-group">
+        <label>密碼:</label>
+        <input type="password" class="form-control" name="password" value="1234" />
+    </div>
+
+    <div class="form-group">
+        <label>(Oauth) Client ID:</label>
+        <input type="text" class="form-control" name="client_id" value="6741" />
+    </div>
+    <div class="form-group">
+        <label>(Oauth) Redirect URL:</label>
+        <input type="text" class="form-control" name="redirect_url" value="https://columns.chicken-house.net/" />
+    </div>
+
+
+    <input type="submit" class="btn btn-primary" value="OK">
+</form>
