@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Controllers\AuthenticationController.cs" />
     <Compile Remove="Controllers\WeatherForecastController.cs" />
   </ItemGroup>
 
@@ -26,6 +25,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\signin.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,41 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <script language="javascript">
+        function fill() {
+            var url = window.location.href;
+            var params = url.split('?')[1].split('&');
+            for (var i = 0; i < params.length; i++) {
+                var key = params[i].split('=')[0];
+                var value = params[i].split('=')[1];
+                //if (key == 'username') {
+                //    document.getElementsByName('username')[0].value = value;
+                //}
+                //if (key == 'password') {
+                //    document.getElementsByName('password')[0].value = value;
+                //}
+                if (key == 'client_id') {
+                    document.getElementsByName('client_id')[0].value = value;
+                }
+                if (key == 'redirect_uri') {
+                    document.getElementsByName('redirect_uri')[0].value = value;
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    Hello! This is a test page.
+
+    <form method="get" onsubmit="fill()">
+        name: <input type="text" name="username" /><br/>
+        pass: <input type="password" name="password" /><br/>
+        client_id: <input type="text" name="client_id" /><br/>
+        redirect_uri: <input type="text" name="redirect_uri" /><br/>
+        <input type="submit" value="Sign in" />
+    </form>
+</body>
+
+</html>

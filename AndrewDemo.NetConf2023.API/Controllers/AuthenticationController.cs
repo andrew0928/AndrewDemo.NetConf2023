@@ -1,6 +1,8 @@
 ﻿using AndrewDemo.NetConf2023.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Razor;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -9,6 +11,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [AllowAnonymous]
     public class AuthenticationController : ControllerBase
     {
         private IHttpClientFactory _httpClientFactory;
@@ -21,6 +24,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         private string _clientId = "51a88ad43f758bb868d2";
         private string _clientSecret = "0fbf213bc34c91603c31f0876d306653170fc243";
         private string _redirectUrl = "http://localhost:5108/api/authentication/github/callback";
+
+
+        [HttpGet("signin")]
+        public IActionResult SignIn()
+        {
+            return File("signin.html", "text/html");
+            //return Ok("Hello World");
+            
+        }
+
+
 
 
         [HttpGet("github/login")]

@@ -97,6 +97,8 @@ namespace AndrewDemo.NetConf2023.API
             app.UseAuthorization();
             app.UseAuthorization();
 
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
 
             app.MapControllers();
 
