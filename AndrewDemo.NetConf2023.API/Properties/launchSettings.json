@@ -3,7 +3,7 @@
     "http": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "swagger",
+      "launchUrl": "api/login/authorize?client_id=8879576&state=1234&redirect_uri=https%3A%2F%2Fcolumns.chicken-house.net%2Fabout",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

@@ -61,27 +61,62 @@ namespace AndrewDemo.NetConf2023.API
 
             app.Use((context, next) =>
             {
+                Console.WriteLine();
+                Console.WriteLine($"[system] request api:");
+                Console.WriteLine($"  {context.Request.Method} {context.Request.Path}{context.Request.QueryString.Value}");
+
+                foreach (var header in context.Request.Headers)
+                {
+                    Console.WriteLine($"  {header.Key}: {header.Value}");
+                }
+
+                //Console.WriteLine();
+                //StreamReader sr = new StreamReader(context.Request.Body);
+                //Console.WriteLine($"  {sr.ReadToEndAsync().Result}");
+
+
+
+                //if (!context.Request.Path.StartsWithSegments("/api"))
+                //{
+                //    return next();
+                //}
+                //if (context.Request.Path.StartsWithSegments("/api/login", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    return next();
+                //}
+
+                //if (!context.Request.Headers.TryGetValue("x-api-key", out var potentialApiKey))
+                //{
+                //    context.Response.StatusCode = 401;
+                //    return context.Response.WriteAsync("Unauthorized");
+                //}
+
+                //if (!apikeys.TryGetValue(potentialApiKey, out var appName))
+                //{
+                //    context.Response.StatusCode = 401;
+                //    return context.Response.WriteAsync("Unauthorized");
+                //}
+
+                if (context.Request.Path.StartsWithSegments("/api/login"))
+                {
+                    return next();
+                }
                 if (!context.Request.Path.StartsWithSegments("/api"))
                 {
                     return next();
                 }
-                if (context.Request.Path.StartsWithSegments("/api/authentication", StringComparison.OrdinalIgnoreCase))
-                {
-                    return next();
-                }
 
-                if (!context.Request.Headers.TryGetValue("x-api-key", out var potentialApiKey))
+                if (!context.Request.Headers.TryGetValue("Authorization", out var token))
                 {
+                    Console.WriteLine($"[system] Authorization Header not found");
                     context.Response.StatusCode = 401;
                     return context.Response.WriteAsync("Unauthorized");
                 }
 
-                if (!apikeys.TryGetValue(potentialApiKey, out var appName))
-                {
-                    context.Response.StatusCode = 401;
-                    return context.Response.WriteAsync("Unauthorized");
-                }
-                Console.WriteLine($"[system] {appName}({potentialApiKey}) request api {context.Request.Path}.");
+                var accessToken = token.ToString().Substring("Bearer ".Length);
+                Console.WriteLine($"[system] token: {accessToken}");
+                context.Items["access-token"] = accessToken;
+
 
 
                 return next();

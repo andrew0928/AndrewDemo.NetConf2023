@@ -1,9 +1,13 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
 @baseURL= http://localhost:5108
 #@baseURL=https://andrewdemonetconf2023api20231231212527.azurewebsites.net/
+#@baseURL=https://andrewshopoauthdemo.azurewebsites.net
+@code=6b2408a74cbc4fdcb71fced6794d9980
+
+
 
 @apikey=d069d4eb-6a1f-49c4-a8d0-3e32079e54b5
-@accessToken=22a18c5cd6db4887af8480f7a0ccc971
+@accessToken=e4ee6f38b1be4a81833372e2d7e6b1a3
 @cartId=1
 @transactionId=1
 @paymentId=6741
@@ -12,20 +16,27 @@
 
 
 @clientid=d1f57db5815f61b857f6
-@code=a60c40165a6e2714ed16
 @secret=43a8916a12e8fb1a8be39d1763b7d8c27998aa28
 @redir=https://chat.openai.com/aip/g-ed6edba8640ce90c45e25af8de0559c3b339d261/oauth/callback
 
 
-GET https://api.github.com/login/oauth/access_token?client_id={{clientid}}&client_secret={{secret}}&code={{code}}&redirect_uri={{redir}}
-User-Agent: VSCode REST Client
+#GET https://api.github.com/login/oauth/access_token?client_id={{clientid}}&client_secret={{secret}}&code={{code}}&redirect_uri={{redir}}
+#User-Agent: VSCode REST Client
 
 
 
+###
+GET {{baseURL}}/api/login/token?code={{code}}&client_id={{clientid}}&client_secret={{secret}}&redirect_uri={{redir}}
 
-## Content-Type: application/x-www-form-urlencoded
+
+### 
+POST {{baseURL}}/api/login/token
+Content-Type: application/x-www-form-urlencoded
+
+code={{code}}
 
 
+#grant_type=authorization_code&client_id=d069d4eb-6a1f-49c4-a8d0-3e32079e54b5&client_secret=&code={{code}}&redirect_uri=https%3A%2F%2Fchat.openai.com%2Faip%2Fg-eadd0d62ba76892f801c536b5892666e86dd4e9b%2Foauth%2Fcallback
 
 
 
@@ -60,24 +71,24 @@ x-api-key: {{apikey}}
 }
 
 ###
-GET {{baseURL}}/api/member/{{accessToken}}/
-x-api-key: {{apikey}}
+GET {{baseURL}}/api/member/
+Authorization: Bearer {{accessToken}}
 
 ###
-GET {{baseURL}}/api/member/{{accessToken}}/orders
-x-api-key: {{apikey}}
+GET {{baseURL}}/api/member/orders
+Authorization: Bearer {{accessToken}}
 
 
 
 
 ###
 POST {{baseURL}}/api/carts/create
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 
 
 ###
 POST {{baseURL}}/api/carts/{{cartId}}/items
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -87,7 +98,7 @@ Content-Type: application/json
 
 ###
 POST {{baseURL}}/api/carts/{{cartId}}/items
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -97,19 +108,19 @@ Content-Type: application/json
 
 ###
 GET {{baseURL}}/api/carts/{{cartId}}
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 
 
 ###
 POST {{baseURL}}/api/carts/{{cartId}}/estimate
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 
 
 
 
 ###
 POST {{baseURL}}/api/checkout/create
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
@@ -120,7 +131,7 @@ Content-Type: application/json
 
 ###
 POST {{baseURL}}/api/checkout/complete
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {

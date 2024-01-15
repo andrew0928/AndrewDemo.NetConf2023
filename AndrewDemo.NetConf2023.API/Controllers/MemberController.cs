@@ -9,6 +9,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class MemberController : ControllerBase
     {
+        /*
         /// <summary>
         /// 註冊會員。
         /// </summary>
@@ -50,7 +51,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
             return new MemberAccessTokenResponse() { AccessToken = token };
         }
-
+        */
 
         /// <summary>
         /// 取得目前登入的使用者基本資訊。
@@ -59,15 +60,24 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// API 執行時的登入使用者身分，是由 APIKEY 決定的。這個 API 只能取得目前登入使用者的資訊，無法取得其他會員的資訊。
         /// </remarks>
         /// <returns></returns>
-        [HttpGet("{token}", Name = "GetCurrentMember")]
+        [HttpGet(Name = "GetCurrentMember")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<Member> Get(string token)
+        public ActionResult<Member> Get(
+            //[FromHeader(Name = "Authorization")]string token
+            )
         {
-            var member = Member.GetCurrentMember(token);
+            var accessToken = this.HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return Unauthorized();
+            }
+
+            var member = Member.GetCurrentMember(accessToken);
             if (member == null)
             {
                 return Unauthorized();
             }
+
             return member;
         }
 
@@ -76,11 +86,20 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// 取得目前登入的使用者已訂購過的訂單資訊。
         /// </summary>
         /// <returns></returns>
-        [HttpGet("{token}/orders", Name = "GetMemberOrders")]
+        [HttpGet("orders", Name = "GetMemberOrders")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public ActionResult<MemberOrdersResponse> GetOrders(string token)
+        public ActionResult<MemberOrdersResponse> GetOrders(
+            //[FromHeader(Name = "Authorization")] string token
+            )
         {
-            var member = Member.GetCurrentMember(token); 
+            var accessToken = this.HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return Unauthorized();
+            }
+
+
+            var member = Member.GetCurrentMember(accessToken); 
             if (member == null)
             {
                 return NotFound();

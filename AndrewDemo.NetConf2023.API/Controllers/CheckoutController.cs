@@ -21,15 +21,23 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <returns></returns>
         [HttpPost("create", Name = "CreateCheckout")]
         [ProducesResponseType(StatusCodes.Status201Created)]
-        public ActionResult<CheckoutCreateResponse> Create([FromBody] CheckoutCreateRequest request)
+        public ActionResult<CheckoutCreateResponse> Create(
+            //[FromHeader(Name = "Authorization")] string token,
+            [FromBody] CheckoutCreateRequest request)
         {
-            var member = Member.GetCurrentMember(request.AccessToken);
+            var accessToken = this.HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return Unauthorized();
+            }
+
+            var member = Member.GetCurrentMember(accessToken);
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var transactionId = Checkout.Create(request.CartId, request.AccessToken);            
+            var transactionId = Checkout.Create(request.CartId, accessToken);            
 
             return new CheckoutCreateResponse()
             {
@@ -52,10 +60,18 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <returns></returns>
         [HttpPost("complete", Name = "CompleteCheckout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<ActionResult<CheckoutCompleteResponse>> CompleteAsync([FromBody] CheckoutCompleteRequest request)
+        public async Task<ActionResult<CheckoutCompleteResponse>> CompleteAsync(
+            //[FromHeader(Name = "Authorization")] string token,
+            [FromBody] CheckoutCompleteRequest request)
         {
+            var accessToken = this.HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return Unauthorized();
+            }
+
             //var member = this.HttpContext.Items["Consumer"] as Member;
-            var member = Member.GetCurrentMember(request.AccessToken);
+            var member = Member.GetCurrentMember(accessToken);
             if (member == null)
             {
                 return Unauthorized();
@@ -84,7 +100,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public class CheckoutCreateRequest
         {
             public int CartId { get; set; }
-            public string AccessToken { get; set; }
+            //public string AccessToken { get; set; }
         }
 
         public class CheckoutCreateResponse
@@ -98,7 +114,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public class CheckoutCompleteRequest
         {
             public int TransactionId { get; set; }
-            public string AccessToken { get; set; }
+            //public string AccessToken { get; set; }
             public int PaymentId { get; set; }
         }
 
