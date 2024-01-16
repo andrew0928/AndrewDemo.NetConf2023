@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Razor;
+using System.ComponentModel.DataAnnotations;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -16,41 +17,59 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private static Dictionary<string, string> _codes = new Dictionary<string, string>();
 
-        [HttpGet("authorize", Name = "oauth_authorize")]
+
+        /// <summary>
+        /// GET, 顯示登入表單
+        /// </summary>
+        /// <returns>表單 HTML 內容</returns>
+        [HttpGet("authorize", Name = "signin")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public IActionResult GetAuthorize()
+        {
+            return File("signin.html", "text/html");
+        }
+
+        /// <summary>
+        /// POST, 接收登入表單，並且進行登入。按照 OAuth2 規範，驗證成功後會產生 grant_code 並且導向 redirect_uri。
+        /// </summary>
+        /// <remarks>這個版本的實做, 只要有填 name 一定會登入成功。密碼會被忽略，如果帳號不存在會自動註冊。</remarks>
+        /// <param name="name">帳號</param>
+        /// <param name="password">密碼</param>
+        /// <param name="clientId">Oauth2: client-id</param>
+        /// <param name="redirectURL">Oauth2: redirect-uri</param>
+        /// <param name="state">Oauth2: state</param>
+        /// <returns></returns>
+        [HttpPost("authorize", Name = "oauth_authorize")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status302Found)]
-        public IActionResult Authorize(
-            [FromQuery(Name = "client_id")] string clientId,
-            [FromQuery(Name = "redirect_uri")] string redirectURL,
-            [FromQuery(Name = "state")] string state)
+        public IActionResult PostAuthorize(
+            [FromForm(Name = "name")] string ?name,
+            [FromForm(Name = "password")] string? password,
+            [FromForm(Name = "client_id"), Required] string clientId,
+            [FromForm(Name = "redirect_uri"), Required] string redirectURL,
+            [FromForm(Name = "state")] string? state)
         {
-            if (Request.Query["name"].Count == 0)
+            string token = Member.Login(name, password);
+            if (token == null)
             {
-                return File("signin.html", "text/html");
+                Console.WriteLine($"[/api/login/authorize] Login failed: {name}, try register...");
+                token = Member.Register(name);
             }
-            else
-            {
-                string token = null;
-                string name = Request.Query["name"][0];
 
+            string code = Guid.NewGuid().ToString("N");
+            _codes[code] = token;
+            Console.WriteLine($"[/api/login/authorize] Authorize success: {name}, code: {code}, token: {token}");
 
-                token = Member.Login(name, "0000");
-                if (token == null)
-                {
-                    Console.WriteLine($"[/api/login/authorize] Login failed: {name}, try register...");
-                    token = Member.Register(name);
-                }
-
-                Console.WriteLine($"[/api/login/authorize] Login success: {name}, token: {token}");
-                string code = Guid.NewGuid().ToString("N");
-                _codes[code] = token;
-
-                Console.WriteLine($"[/api/login/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
-                return Redirect($"{redirectURL}?code={code}&state={state}");
-            }
+            Console.WriteLine($"[/api/login/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
+            return Redirect($"{redirectURL}?code={code}&state={state}");
         }
 
 
+        /// <summary>
+        /// 支援 OAuth2 規範, 讓 application 對 authorizer 進行 token 的交換 (拿 code 換 access-token, 只能執行一次)。
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
         [HttpPost("token", Name = "oauth_token_exchange")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]

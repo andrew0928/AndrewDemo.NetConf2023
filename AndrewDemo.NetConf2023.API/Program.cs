@@ -10,39 +10,20 @@ namespace AndrewDemo.NetConf2023.API
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-            
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
             {
-                //                c.SwaggerDoc("1.0",
-                //                    new()
-                //                    {
-                //                        Title = "AndrewDemo.NetConf2023.API",
-                //                        Version = "1.0",
-                //                        Description = @""
-                //                    });
                 var filePath = Path.Combine(System.AppContext.BaseDirectory, "AndrewDemo.NetConf2023.API.xml");
                 c.IncludeXmlComments(filePath);
             });
 
 
             builder.Services.AddHttpClient();
-            //builder.Services.AddSingleton<IGitHubAuthenticationService, GitHubAuthenticationService>();
 
             var app = builder.Build();
-
-
-            // init database & apikey settings
-            //var apikeys = new Dictionary<string, string>
-            //{
-            //    ["cec8ad70-fa27-4710-a046-7a8d1e65c0d9"] = "AndrewShop GTP v3",
-            //    ["d069d4eb-6a1f-49c4-a8d0-3e32079e54b5"] = "AndrewShop GTP v4",
-            //};
-
-            
 
 
 
@@ -79,54 +60,22 @@ namespace AndrewDemo.NetConf2023.API
                 //    Console.WriteLine($"  {header.Key}: {header.Value}");
                 //}
 
-                //Console.WriteLine();
-                //StreamReader sr = new StreamReader(context.Request.Body);
-                //Console.WriteLine($"  {sr.ReadToEndAsync().Result}");
 
 
-
-                //if (!context.Request.Path.StartsWithSegments("/api"))
-                //{
-                //    return next();
-                //}
-                //if (context.Request.Path.StartsWithSegments("/api/login", StringComparison.OrdinalIgnoreCase))
-                //{
-                //    return next();
-                //}
-
-                //if (!context.Request.Headers.TryGetValue("x-api-key", out var potentialApiKey))
-                //{
-                //    context.Response.StatusCode = 401;
-                //    return context.Response.WriteAsync("Unauthorized");
-                //}
-
-                //if (!apikeys.TryGetValue(potentialApiKey, out var appName))
-                //{
-                //    context.Response.StatusCode = 401;
-                //    return context.Response.WriteAsync("Unauthorized");
-                //}
-
-                if (context.Request.Path.StartsWithSegments("/api/login"))
+                
+                if (context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/api/login"))
                 {
-                    return next();
+                    if (!context.Request.Headers.TryGetValue("Authorization", out var token))
+                    {
+                        Console.WriteLine($"[system] Authorization Header not found");
+                        context.Response.StatusCode = 401;
+                        return context.Response.WriteAsync("Unauthorized");
+                    }
+
+                    var accessToken = token.ToString().Substring("Bearer ".Length);
+                    Console.WriteLine($"[system] token: {accessToken}");
+                    context.Items["access-token"] = accessToken;
                 }
-                if (!context.Request.Path.StartsWithSegments("/api"))
-                {
-                    return next();
-                }
-
-                if (!context.Request.Headers.TryGetValue("Authorization", out var token))
-                {
-                    Console.WriteLine($"[system] Authorization Header not found");
-                    context.Response.StatusCode = 401;
-                    return context.Response.WriteAsync("Unauthorized");
-                }
-
-                var accessToken = token.ToString().Substring("Bearer ".Length);
-                Console.WriteLine($"[system] token: {accessToken}");
-                context.Items["access-token"] = accessToken;
-
-
 
                 return next();
             });
@@ -138,8 +87,8 @@ namespace AndrewDemo.NetConf2023.API
                 app.UseSwaggerUI();
             }
 
-            app.UseAuthorization();
-            app.UseAuthorization();
+            //app.UseAuthorization();
+            //app.UseAuthorization();
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
