@@ -89,6 +89,7 @@ namespace AndrewDemo.NetConf2023.Core
     {
         public int Id { get; set; }
         public string Name { get; set; }
+        public string Description {  get; set; }
         public decimal Price { get; set; }
 
 
@@ -110,20 +111,21 @@ namespace AndrewDemo.NetConf2023.Core
     {
         public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member consumer)
         {
-            // 18天 第二罐六折
-            var p = Product.Database.Where(p => p.Value.Name.Equals("18天")).FirstOrDefault().Value;
-            var pid = p.Id;
+            // 18天(ID: 1) 第二罐六折
+            //var p = Product.Database[1];//.Where(p => p.Value.Id.Equals(1)).FirstOrDefault().Value;
+            var pid = 1;
 
             //if (cart.ProdQtyMap.ContainsKey(pid) && cart.ProdQtyMap[pid] > 2)
             var lineitem = cart.LineItems.Where(lt => (lt.ProductId == pid && lt.Qty > 2)).FirstOrDefault();
 
             if (lineitem != null)
             {
+                var p = Product.Database[lineitem.ProductId];
                 for (int index = 1; index <= lineitem.Qty; index++)
                 {
                     if (index % 2 == 0) yield return new DiscountRecord()
                     {
-                        Name = "18天 第二件六折優惠",
+                        Name = $"{p.Name} 第二件六折",
                         DiscountAmount = p.Price * -0.4m,
                     };
                 }

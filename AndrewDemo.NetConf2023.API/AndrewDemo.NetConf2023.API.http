@@ -1,92 +1,64 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
 @baseURL= http://localhost:5108
-#@baseURL=https://andrewdemonetconf2023api20231231212527.azurewebsites.net/
 #@baseURL=https://andrewshopoauthdemo.azurewebsites.net
-@code=6b2408a74cbc4fdcb71fced6794d9980
-
-
-
-@apikey=d069d4eb-6a1f-49c4-a8d0-3e32079e54b5
-@accessToken=e4ee6f38b1be4a81833372e2d7e6b1a3
-@cartId=1
-@transactionId=1
-@paymentId=6741
 
 
 
 
+
+
+
+
+### OAuth2 流程
 @clientid=d1f57db5815f61b857f6
 @secret=43a8916a12e8fb1a8be39d1763b7d8c27998aa28
 @redir=https://chat.openai.com/aip/g-ed6edba8640ce90c45e25af8de0559c3b339d261/oauth/callback
 
+@code=6b2408a74cbc4fdcb71fced6794d9980
+@accessToken=ca4328e6b06d4170b0868253a745e6aa
 
-#GET https://api.github.com/login/oauth/access_token?client_id={{clientid}}&client_secret={{secret}}&code={{code}}&redirect_uri={{redir}}
-#User-Agent: VSCode REST Client
-
-
-
-###
-GET {{baseURL}}/api/login/token?code={{code}}&client_id={{clientid}}&client_secret={{secret}}&redirect_uri={{redir}}
+### STEP1, 從 authorize 登入驗證, 成功後會攜帶 code 到 redirect-uri
+GET {{baseURL}}/api/login/authorize?client_id={{clientid}}&redirect_uri={{redir}}&response_type=code&scope=openid&state=123456
 
 
-### 
+### STEP2, 從 callback 拿到的 code 到 server 取得 access-token
 POST {{baseURL}}/api/login/token
 Content-Type: application/x-www-form-urlencoded
 
 code={{code}}
 
 
-#grant_type=authorization_code&client_id=d069d4eb-6a1f-49c4-a8d0-3e32079e54b5&client_secret=&code={{code}}&redirect_uri=https%3A%2F%2Fchat.openai.com%2Faip%2Fg-eadd0d62ba76892f801c536b5892666e86dd4e9b%2Foauth%2Fcallback
 
 
 
-###
+
+### 購物車操作流程
+@cartId=1
+@transactionId=1
+@paymentId=6741
+
+
+
+### STEP1, 取得商品列表
 GET {{baseURL}}/api/products
-x-api-key: {{apikey}}
+Authorization: Bearer {{accessToken}}
 
-
-
-
-
-
-
-
-###
-POST {{baseURL}}/api/member/register
-Content-Type: application/json
-x-api-key: {{apikey}}
-
-{
-  "name": "andrew"
-}
-
-###
-POST {{baseURL}}/api/member/login
-Content-Type: application/json
-x-api-key: {{apikey}}
-
-{
-  "name": "andrew",
-  "password": "123456"
-}
-
-###
+### STEP2, 取得目前會員資料
 GET {{baseURL}}/api/member/
 Authorization: Bearer {{accessToken}}
 
-###
+### STEP3, 取得目前會員訂單
 GET {{baseURL}}/api/member/orders
 Authorization: Bearer {{accessToken}}
 
 
 
-
-###
+### STEP4, 建立購物車
 POST {{baseURL}}/api/carts/create
 Authorization: Bearer {{accessToken}}
 
 
-###
+### STEP5, 加入商品到購物車 (ID:1, 18天台灣啤酒 x 3)
 POST {{baseURL}}/api/carts/{{cartId}}/items
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -96,7 +68,7 @@ Content-Type: application/json
   "qty": 3
 }
 
-###
+### STEP6, 加入商品到購物車 (ID:2, 可口可樂 x 5)
 POST {{baseURL}}/api/carts/{{cartId}}/items
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -106,19 +78,19 @@ Content-Type: application/json
   "qty": 5
 }
 
-###
+### STEP7, 取得購物車內容
 GET {{baseURL}}/api/carts/{{cartId}}
 Authorization: Bearer {{accessToken}}
 
 
-###
+### STEP8, 計算購物車結帳金額 (包含折扣)
 POST {{baseURL}}/api/carts/{{cartId}}/estimate
 Authorization: Bearer {{accessToken}}
 
 
 
 
-###
+### STEP9, 建立結帳資料，準備結帳付款
 POST {{baseURL}}/api/checkout/create
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
@@ -129,7 +101,7 @@ Content-Type: application/json
 }
 
 
-###
+### STEP10, 取得付款資料，完成結帳
 POST {{baseURL}}/api/checkout/complete
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
