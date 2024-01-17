@@ -9,47 +9,47 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class MemberController : ControllerBase
     {
-        ///// <summary>
-        ///// 註冊會員。
-        ///// </summary>
-        ///// <remarks>
-        ///// 若註冊成功，會傳回 201 Created，並且訊息會包含 AccessToken。
-        ///// 若 Name 已經存在，會回傳 400 Bad Request，並且訊息會說明 Name 已經存在。
-        ///// </remarks>
-        ///// <param name="request"></param>
-        ///// <returns></returns>
-        //[HttpPost("register", Name = "RegisterMember")]
-        //[ProducesResponseType(StatusCodes.Status201Created)]
-        //public ActionResult<MemberAccessTokenResponse> Register([FromBody] MemberRegisterRequest request)
-        //{
-        //    var token = Member.Register(request.Name);
-        //    if (token == null)
-        //    {
-        //        return BadRequest($"Consumer's name: {request.Name} was existed.");
-        //    }
-        //    return new MemberAccessTokenResponse() { AccessToken = token };
-        //}
+        /// <summary>
+        /// 註冊會員。
+        /// </summary>
+        /// <remarks>
+        /// 若註冊成功，會傳回 201 Created，並且訊息會包含 AccessToken。
+        /// 若 Name 已經存在，會回傳 400 Bad Request，並且訊息會說明 Name 已經存在。
+        /// </remarks>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("register", Name = "RegisterMember")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        public ActionResult<MemberAccessTokenResponse> Register([FromBody] MemberRegisterRequest request)
+        {
+            var token = Member.Register(request.Name);
+            if (token == null)
+            {
+                return BadRequest($"Consumer's name: {request.Name} was existed.");
+            }
+            return new MemberAccessTokenResponse() { AccessToken = token };
+        }
 
-        ///// <summary>
-        ///// 會員登入。
-        ///// </summary>
-        ///// <remarks>
-        ///// 若登入成功，會回傳 200 OK，並且訊息會包含 AccessToken。
-        ///// 若登入失敗，會回傳 401 Unauthorized。
-        ///// </remarks>
-        ///// <param name="request"></param>
-        ///// <returns></returns>
-        //[HttpPost("login", Name = "LoginMember")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //public ActionResult<MemberAccessTokenResponse> Login([FromBody] MemberLoginRequest request)
-        //{
-        //    var token = Member.Login(request.Name, request.Password);
-        //    if (token == null)
-        //    {
-        //        return Unauthorized();
-        //    }
-        //    return new MemberAccessTokenResponse() { AccessToken = token };
-        //}
+        /// <summary>
+        /// 會員登入。
+        /// </summary>
+        /// <remarks>
+        /// 若登入成功，會回傳 200 OK，並且訊息會包含 AccessToken。
+        /// 若登入失敗，會回傳 401 Unauthorized。
+        /// </remarks>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("login", Name = "LoginMember")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        public ActionResult<MemberAccessTokenResponse> Login([FromBody] MemberLoginRequest request)
+        {
+            var token = Member.Login(request.Name, request.Password);
+            if (token == null)
+            {
+                return Unauthorized();
+            }
+            return new MemberAccessTokenResponse() { AccessToken = token };
+        }
 
 
         /// <summary>

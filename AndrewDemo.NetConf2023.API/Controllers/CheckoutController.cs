@@ -129,4 +129,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             public Order OrderDetail { get; set; }
         }
     }
+
+
+
+
+
+
+    // ref: https://queue-it.com/how-does-queue-it-work/
 }
