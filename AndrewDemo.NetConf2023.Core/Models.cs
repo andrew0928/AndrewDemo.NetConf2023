@@ -11,11 +11,11 @@ namespace AndrewDemo.NetConf2023.Core
         // any non-empty string is valid
         public static string Login(string name, string password)
         {
-            if (string.IsNullOrEmpty(password)) return null;
-
-            // ignore password
             var m = _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
             if (m == null) return null;
+
+            // ignore password
+            //if (string.IsNullOrEmpty(password)) return null;
 
             return CreateAccessToken(m);
         }
