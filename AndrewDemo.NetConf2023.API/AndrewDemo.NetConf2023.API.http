@@ -1,6 +1,6 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-@baseURL= http://localhost:5108
-#@baseURL=https://andrewshopoauthdemo.azurewebsites.net
+# @baseURL= http://localhost:5108
+@baseURL=https://andrewshopoauthdemo.azurewebsites.net
 
 
 

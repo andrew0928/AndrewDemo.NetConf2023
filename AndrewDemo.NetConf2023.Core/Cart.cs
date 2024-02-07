@@ -52,12 +52,12 @@
             foreach (var lineitem in this.LineItems)
             {
                 Product p = Product.Database[lineitem.ProductId];
-                Console.WriteLine($"- [{p.Id}] {p.Name}(單價: ${p.Price}) x {lineitem.Qty},     ${p.Price * lineitem.Qty}");
+                //Console.WriteLine($"- [{p.Id}] {p.Name}(單價: ${p.Price}) x {lineitem.Qty},     ${p.Price * lineitem.Qty}");
                 total += p.Price * lineitem.Qty;
             }
             foreach (var discount in this.EstimateDiscounts())
             {
-                Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
+                //Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
                 total += discount.DiscountAmount;
             }
 
@@ -87,7 +87,7 @@
                     yield return new CartDiscountHint()
                     {
                         Name = d.Name,
-                        Description = $"[{d.Name}]: ${d.DiscountAmount}",
+                        Description = d.Description, //$"[{d.Name}]: ${d.DiscountAmount}",
                         DiscountAmount = d.DiscountAmount
                     };
                 }

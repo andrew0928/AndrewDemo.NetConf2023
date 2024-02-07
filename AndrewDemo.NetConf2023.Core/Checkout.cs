@@ -31,9 +31,9 @@
 
             // 模擬排隊機制, 避免瞬間結帳人數過多衝垮後端系統
             var ticket = new WaitingRoomTicket();
-            Console.WriteLine($"[checkout] check system status, please wait ...");
+            //Console.WriteLine($"[checkout] check system status, please wait ...");
             await ticket.WaitUntilCanRunAsync();
-            Console.WriteLine($"[checkout] checkout process start...");
+            //Console.WriteLine($"[checkout] checkout process start...");
 
 
             var transaction = _database[transactionId];
@@ -74,8 +74,8 @@
             
 
 
-            Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
-            Console.WriteLine();
+            //Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
+            //Console.WriteLine();
 
             CheckoutCompleted?.Invoke(order, new EventArgs());
 
@@ -100,7 +100,7 @@
             Random random = new Random();
             this._released = this._created + TimeSpan.FromSeconds(random.Next(1, 3));
 
-            Console.WriteLine($"[waiting-room] issue ticket: {this.Id} @ {this._created} (estimate: {this._released})");
+            //Console.WriteLine($"[waiting-room] issue ticket: {this.Id} @ {this._created} (estimate: {this._released})");
         }
 
         public async Task WaitUntilCanRunAsync()

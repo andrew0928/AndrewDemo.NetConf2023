@@ -81,7 +81,7 @@ namespace AndrewDemo.NetConf2023.API
             });
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            //if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
