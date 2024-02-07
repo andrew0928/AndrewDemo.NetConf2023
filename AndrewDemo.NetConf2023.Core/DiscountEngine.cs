@@ -9,7 +9,7 @@
             var pid = 1;
 
             //if (cart.ProdQtyMap.ContainsKey(pid) && cart.ProdQtyMap[pid] > 2)
-            var lineitem = cart.LineItems.Where(lt => (lt.ProductId == pid && lt.Qty > 2)).FirstOrDefault();
+            var lineitem = cart.LineItems.Where(lt => (lt.ProductId == pid && lt.Qty >= 2)).FirstOrDefault();
 
             if (lineitem != null)
             {
@@ -18,7 +18,8 @@
                 {
                     if (index % 2 == 0) yield return new DiscountRecord()
                     {
-                        Name = $"{p.Name} 第二件六折",
+                        Name = $"第二件六折",
+                        Description = $"符合商品: {p.Name} x 2",
                         DiscountAmount = p.Price * -0.4m,
                     };
                 }
@@ -28,6 +29,7 @@
         public class DiscountRecord
         {
             public string Name { get; set; }
+            public string Description { get; set; }
             public decimal DiscountAmount { get; set; }
         }
     }
