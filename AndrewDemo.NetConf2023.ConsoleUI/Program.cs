@@ -63,6 +63,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine("\t3. checkout (patterns: 3 [payment-id])");
                     Console.WriteLine("\t4. my account info");
                     Console.WriteLine("\t5. exit");
+
                     Console.WriteLine();
                 }
                 else if (command == "5")
