@@ -43,28 +43,43 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 }
                 Console.WriteLine();
             }
+
+            CopilotNotify($"我在查詢我的帳號資訊。查詢結果顯示，我在這裡購買過 {count} 次，總共花了 {amount:C} 元。");
         }
+
+
+
 
         private static void EmptyMyCartCommandProcessor(string[] args)
         {
-            _cartId = Cart.Create().Id;
+            CopilotNotify($"清空購物車。");
+            ShopFunction_EmptyCart();
             AssistantOutput("Your cart is empty now.");
         }
 
         private static void CheckoutCommandProcessor(string[] args)
         {
-            int checkout_id = Checkout.Create(_cartId, _access_token);
             int payment_id = int.Parse(args[0]);
 
-            var result = Checkout.CompleteAsync(checkout_id, payment_id);
-            while (!result.Wait(1000))
+            AssistantOutput($"結帳前有任何要求可以跟我說，若無我將替您結帳 (直接輸入或是 ENTER 跳過)");
+            CopilotAsk(Console.ReadLine());
+
+            if (!CopilotConfirm($"確認購物車內容，核對客戶要求，沒問題立即結帳。"))
             {
-                Console.WriteLine("waiting for payment...");
+                AssistantOutput("是否繼續結帳? (Y/N)");
+                if (Console.ReadLine().ToLower() != "y") return;
             }
 
-            if (result.Result != null)
+            var order = ShopFunction_Checkout(payment_id);
+
+            if (order != null)
             {
-                AssistantOutput($"Checkout completed successfully. your order number is: [{result.Result.Id}]");
+                AssistantOutput($"Checkout completed successfully. your order number is: [{order.Id}]");
+                //CopilotConfirm($"已經結帳完成，成立的訂單編號是: {order.Id}");
+            }
+            else
+            {
+                //CopilotConfirm($"結帳失敗，沒有成立訂單");
             }
         }
 
@@ -73,9 +88,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             int pid = int.Parse(args[0]);
             if (args.Length < 2 || !int.TryParse(args[1], out int qty)) qty = 1;
 
-            var cart = Cart.Get(_cartId);
-            cart.AddProducts(pid, -qty);
-            AssistantOutput($"商品 [{pid}] 已經從您的購物車中移除了 {qty} 件.");
+            if (ShopFunction_AddItemToCart(pid, -qty))
+            {
+                AssistantOutput($"商品 [{pid}] 已經從您的購物車中移除了 {qty} 件.");
+                //CopilotConfirm($"我在購物車內移除了 {qty} 件商品 (商品 ID: {pid})");
+            }
         }
 
         private static void AddItemsCommandProcessor(string[] args)
@@ -83,9 +100,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             int pid = int.Parse(args[0]);
             if (args.Length < 2 || !int.TryParse(args[1], out int qty)) qty = 1;
 
-            var cart = Cart.Get(_cartId);
-            cart.AddProducts(pid, qty);
-            AssistantOutput($"商品 [{pid}] 已經加入您的購物車了 {qty} 件.");
+            if (ShopFunction_AddItemToCart(pid, qty))
+            {
+                AssistantOutput($"商品 [{pid}] 已經加入您的購物車了 {qty} 件.");
+                //CopilotConfirm($"我在購物車內加入了 {qty} 件商品 (商品 ID: {pid})");
+            }
         }
 
         private static void AddItemsWithBudgetCommandProcessor(string[] args)
@@ -96,9 +115,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             var cart = Cart.Get(_cartId);
             var product = Product.Database[pid];
 
+            //CopilotConfirm($"我有總預算上限 {budget:C} 可以拿來購買商品 (商品ID: {pid})");
+
             if (cart.EstimatePrice() > budget)
             {
                 AssistantOutput($"您的預算 {budget:C} 不足以購買商品 [{pid}]。");
+                //CopilotConfirm($"預算不足，最後沒有放任何商品進購物車");
                 return;
             }
 
@@ -114,12 +136,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             total--;
             InfoOutput($"rmv  {pid} x 1, estimate: {cart.EstimatePrice()}");
             AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice():C}, 已為您加入購物車了。");
+            //CopilotConfirm($"經過計算，我在購物車內多放了 {total} 件商品 (商品 ID: {pid})");
         }
 
         private static void ShowMyItemsCommandProcessor(string[] args)
         {
             var cart = Cart.Get(_cartId);
             AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice():C} 元.");
+            //CopilotConfirm($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {cart.EstimatePrice():C} 元");
 
             if (cart.LineItems.Count() == 0)
             {
@@ -142,6 +166,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void ListProductsCommandProcessor(string[] args)
         {
             AssistantOutput("您好, 以下是我們店裡有賣的東西...");
+            //CopilotConfirm($"我在查詢店裡有賣的東西。");
             foreach (var product in Product.Database.Values)
             {
                 Console.WriteLine($"- {product.Id}\t{product.Name}\t{product.Price:C}");

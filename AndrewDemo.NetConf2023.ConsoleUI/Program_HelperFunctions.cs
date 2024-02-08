@@ -1,4 +1,8 @@
 ﻿using AndrewDemo.NetConf2023.Core;
+using Microsoft.Extensions.Configuration;
+using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.ChatCompletion;
+using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.Data;
 using System.Runtime.CompilerServices;
 
@@ -7,14 +11,13 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     internal partial class Program
     {
         #region console application helper methods
-        private static void InitSystem()
+        private static void InitShop()
         {
-
             Product.Database.Add(1, new Product()
             {
                 Id = 1,
                 Name = "18天台灣生啤酒 355ml",
-                Description = "18天台灣生啤酒未經過巴氏德高溫殺菌，採用歐洲優質原料，全程0-7°C冷藏保鮮，猶如鮮奶與生魚片般珍貴，保留最多啤酒營養及麥香風味；這樣高品質、超新鮮、賞味期只有18天的台灣生啤酒，值得您搶鮮到手!",
+                Description = "18天台灣生啤酒未經過巴氏德高溫殺菌，採用歐洲優質原料，全程0-7°C冷藏保鮮，猶如鮮奶與生魚片般珍貴，保留最多啤酒營養及麥香風味；這樣高品質、超新鮮、賞味期只有18天的台灣生啤酒，值得您搶鮮到手! (未成年請勿飲酒)",
                 Price = 65m
             });
             Product.Database.Add(2, new Product()
@@ -31,7 +34,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Description = "新升級!台灣在地茶葉入，冰釀回甘。台灣在地茶葉，原葉沖泡。如同現泡般的清新綠茶香。",
                 Price = 25m
             });
-
         }
 
         private static void AssistantOutput(string message)
@@ -54,6 +56,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             Console.WriteLine($"info > {message}");
             Console.ResetColor();
         }
+
 
 
 

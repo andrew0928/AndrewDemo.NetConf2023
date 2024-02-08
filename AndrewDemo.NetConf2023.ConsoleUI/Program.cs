@@ -33,7 +33,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         static void Main(string[] args)
         {
-            InitSystem();
+            InitSK();
+            InitShop();
 
             if (!UserAuthorize())
             {
@@ -65,10 +66,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine("\t5. exit");
 
                     Console.WriteLine();
+                    //NotifyCopilot($"我查詢了目前商店提供的操作指令清單");
                 }
                 else if (command == "5")
                 {
                     exit = true;
+                    //NotifyCopilot($"我決定離開商店了");
                     continue;
                 }
                 //else
@@ -91,6 +94,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 else
                 {
                     AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
+                    //NotifyCopilot($"我輸入了不在商店指令清單內的指令，我將這指令轉成問題問 copilot。");
+                    CopilotAsk(commandline);
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;

@@ -10,6 +10,8 @@
             var cart = Cart.Get(cartId);
             if (cart == null) throw new ArgumentOutOfRangeException("cartId");
 
+            if (cart.LineItems?.Count() == 0) throw new InvalidOperationException("cart is empty.");
+
             var consumer = Member.GetCurrentMember(token);
             if (consumer == null) throw new ArgumentOutOfRangeException("token");
 
