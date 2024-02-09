@@ -5,11 +5,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
-using Microsoft.SemanticKernel.PromptTemplates.Handlebars;
 using System.ComponentModel;
-using System.Data;
-using System.Runtime.CompilerServices;
-using System.Security.Cryptography;
 
 namespace AndrewDemo.NetConf2023.ConsoleUI
 {
@@ -24,6 +20,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
         };
 
+        
 
         private static IChatCompletionService _chatCompletionService = null;
         #endregion
@@ -118,8 +115,19 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             _kernel.FunctionInvoking += (sender, args) =>
             {
-                Console.WriteLine($" function invoking: {args.Function.Name}");
+                string argline = "";
+                foreach (var arg in args.Arguments)
+                {
+                    argline = argline + $", {arg.Key}: {arg.Value}";
+                }
+                if (argline != "") argline = argline.Substring(2);
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"copilot > function call: {args.Function.Name}({argline})");
+                Console.ResetColor();
+
             };
+
             //_kernel.FunctionInvoked += (sender, args) =>
             //{
             //    Console.WriteLine($" function invoked: {args.Function.Name}, {args.Result}");
@@ -129,43 +137,56 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             #endregion
         }
 
-        private static void _kernel_FunctionInvoked(object? sender, FunctionInvokedEventArgs e)
+
+        private static async Task<string> CallCopilotAsync(params string[] user_messages)
         {
-            throw new NotImplementedException();
+            if (user_messages == null ||
+                user_messages.Length == 0) return null;
+
+            foreach(var message in user_messages)
+            {
+                if (string.IsNullOrWhiteSpace(message)) continue;
+
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"copilot > user: {message}");
+                Console.ResetColor();
+                _chatMessages.AddUserMessage(message);
+            }
+
+            var result = await _chatCompletionService.GetChatMessageContentsAsync(
+                _chatMessages,
+                _settings,
+                _kernel);
+
+            string response = "";
+            foreach (var content in result)
+            {
+                if (content.Role != AuthorRole.Assistant) continue;
+                _chatMessages.AddAssistantMessage(content.Content);
+                //Console.WriteLine($"copilot > assistant: {content.Content}");
+                response = response + content.Content + "\n";
+            }
+
+            return response; ;
         }
 
         private static void CopilotNotify(string message)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
 
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            //Console.WriteLine($"copilot notify > {message}");
-            Console.ResetColor();
-
-            _chatMessages.AddUserMessage("我已進行操作: " + message);
-            var result = _chatCompletionService.GetChatMessageContentsAsync(
-                _chatMessages,
-                _settings,
-                _kernel).Result;
-
-            foreach (var content in result)
+            var result = CallCopilotAsync($"我已進行操作: {message}").Result;
+            if (result.StartsWith("OK"))
             {
-                if (content.Role != AuthorRole.Assistant) continue;
-                _chatMessages.AddAssistantMessage(content.Content);
-
-                if (!content.Content.StartsWith("OK"))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"copilot hint > {content.Content}");
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Console.WriteLine($"copilot hint > {content.Content}");
-                }
+                //Console.ForegroundColor = ConsoleColor.DarkGray;
+                //Console.WriteLine($"copilot notify > {result}");
+                //Console.ResetColor();
+            }
+            else
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"copilot notify > {result}");
                 Console.ResetColor();
             }
-            Console.ResetColor();
         }
 
 
@@ -173,24 +194,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         {
             if (string.IsNullOrWhiteSpace(prompt)) return (false, null);
 
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"copilot confirm > {prompt}");
-            Console.ResetColor();
-
-            /*
-
-我要開始結帳，沒問題請回覆 "OK: "，有注意事項請回覆 "HINT: "。
-其他建議可以在回覆之後接著說明
-
-以下是我購物車內的清單:
-
-- 18天生啤酒 x 5, 單價 $65
-- 可口可樂 x 10, 單價 $20
-
-購買註記:
-- 小孩辦10歲生日宴會使用，請附贈彩帶與氣球
-
-            */
             string items = "";
             foreach(var item in Cart.Get(_cartId).LineItems)
             {
@@ -198,73 +201,29 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 items = items + $"\n- [{product.Id}] {product.Name}, 單價 {product.Price:C} x {item.Qty} 件";
             }
 
-            _chatMessages.AddUserMessage(
-                $"""
+            var result = CallCopilotAsync(
+               $"""
                 我要進行結帳前確認
                 我要開始結帳，沒問題請回覆 "OK: "，有注意事項請回覆 "HINT: "。
                 其他建議可以在回覆之後接著說明。
-                """);
-            _chatMessages.AddUserMessage(
+                """,
                 $"""
                 以下是我購物車內的清單:{items}
                 預估結帳金額: {Cart.Get(_cartId).EstimatePrice():C}
-                """);
-            _chatMessages.AddUserMessage(
+                """,
                 $"""
                 購買註記:
                 - {prompt}
-                """);
-            _chatMessages.AddUserMessage(prompt);
-            var result = _chatCompletionService.GetChatMessageContentsAsync(
-                _chatMessages,
-                _settings,
-                _kernel).Result;
-
-            string result_messages = "";
-            foreach(var content in result)
-            {
-                if (content.Role != AuthorRole.Assistant) continue;
-                _chatMessages.AddAssistantMessage(content.Content);
-                result_messages = result_messages + content.Content + "\n";
-
-                //if (!content.Content.StartsWith("OK"))
-                //{
-                //    Console.ForegroundColor = ConsoleColor.Yellow;
-                //    Console.WriteLine($"copilot hint > {content.Content}");
-                //    safe = false;
-                //}
-                //else
-                //{
-                //    Console.ForegroundColor = ConsoleColor.DarkGray;
-                //    Console.WriteLine($"copilot hint > {content.Content}");
-                //}
-                //Console.ResetColor();
-            }
-            //Console.ResetColor();
-            //return safe;
-            return (result_messages.StartsWith("OK"), result_messages);
+                """).Result;
+            return (result.StartsWith("OK"), result);
         }
 
-        private static void CopilotAsk(string prompt)
+        private static string CopilotAsk(string prompt)
         {
-            if (string.IsNullOrWhiteSpace(prompt)) return;
+            if (string.IsNullOrWhiteSpace(prompt)) return null;
 
-            Console.ForegroundColor = ConsoleColor.DarkGray;
-            Console.WriteLine($"copilot ask > {prompt}");
-
-            _chatMessages.AddUserMessage("店長請問: " + prompt);
-            var result = _chatCompletionService.GetChatMessageContentsAsync(
-                _chatMessages,
-                _settings,
-                _kernel).Result;
-
-            foreach (var content in result)
-            {
-                if (content.Role != AuthorRole.Assistant) continue;
-                _chatMessages.AddAssistantMessage(content.Content);
-                Console.WriteLine($"copilot answer > {content.Content}");
-            }
-            Console.ResetColor();
+            var result = CallCopilotAsync($"店長請問: {prompt}").Result;
+            return result;
         }
 
 

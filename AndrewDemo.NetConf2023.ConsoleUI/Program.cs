@@ -10,17 +10,17 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private delegate void CommandProcessor(string[] args);
 
         // command id => command processor mapping table
-        private static Dictionary<string, (CommandProcessor function, string intent)> commandProcessors = new Dictionary<string, (CommandProcessor, string)>()
+        private static Dictionary<string, CommandProcessor> commandProcessors = new Dictionary<string, CommandProcessor>()
         {
             //{ "0", ShowMenuCommandProcessor },
-            { "1",  (ListProductsCommandProcessor, "查詢所有商品資訊") },
-            { "21", (ShowMyItemsCommandProcessor, "查詢我的購物車內榮") },
-            { "22", (AddItemsCommandProcessor, "將商品加入購物車") },
-            { "23", (RemoveItemsCommandProcessor, "將商品從購物車移除") },
-            { "24", (EmptyMyCartCommandProcessor, "清空我的購物車") },
-            { "25", (AddItemsWithBudgetCommandProcessor, "在預算範圍內，盡可能的多將商品加入購物車") },
-            { "3",  (CheckoutCommandProcessor, "結帳") },
-            { "4",  (ShowMyInfoCommandProcessor, "查詢我的帳號資訊，以及購買紀錄") },
+            { "1",  ListProductsCommandProcessor },
+            { "21", ShowMyItemsCommandProcessor },
+            { "22", AddItemsCommandProcessor },
+            { "23", RemoveItemsCommandProcessor },
+            { "24", EmptyMyCartCommandProcessor },
+            { "25", AddItemsWithBudgetCommandProcessor },
+            { "3",  CheckoutCommandProcessor },
+            { "4",  ShowMyInfoCommandProcessor },
             //{ "5", ExitCommandProcessor },
         };
 
@@ -79,8 +79,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     try
                     {
-                        //CopilotNotify(commandProcessors[command].intent);
-                        commandProcessors[command].function(parameters);
+                        commandProcessors[command](parameters);
                         Console.WriteLine();
                     }
                     catch (Exception ex)
@@ -90,8 +89,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 }
                 else
                 {
-                    AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
-                    CopilotAsk(commandline);
+                    //AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
+                    var result = CopilotAsk(commandline);
+                    Console.WriteLine($"copilot answer > {result}");
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;
