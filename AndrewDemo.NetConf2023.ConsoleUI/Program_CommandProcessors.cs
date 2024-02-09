@@ -7,6 +7,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     internal partial class Program
     {
 
+
         #region command processors
         private static void ShowMyInfoCommandProcessor(string[] args)
         {
@@ -44,7 +45,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.WriteLine();
             }
 
-            CopilotNotify($"我在查詢我的帳號資訊。查詢結果顯示，我在這裡購買過 {count} 次，總共花了 {amount:C} 元。");
+            //CopilotNotify($"我在查詢我的帳號資訊。查詢結果顯示，我在這裡購買過 {count} 次，總共花了 {amount:C} 元。");
         }
 
 
@@ -52,7 +53,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static void EmptyMyCartCommandProcessor(string[] args)
         {
-            CopilotNotify($"清空購物車。");
             ShopFunction_EmptyCart();
             AssistantOutput("Your cart is empty now.");
         }
@@ -62,13 +62,32 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             int payment_id = int.Parse(args[0]);
 
             AssistantOutput($"結帳前有任何要求可以跟我說，若無我將替您結帳 (直接輸入或是 ENTER 跳過)");
-            CopilotAsk(Console.ReadLine());
+            //CopilotAsk(Console.ReadLine());
+            var rules = Console.ReadLine();
 
-            if (!CopilotConfirm($"確認購物車內容，核對客戶要求，沒問題立即結帳。"))
+            //#pragma warning disable SKEXP0060 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+            //            var result = _plan.InvokeAsync(
+            //                _kernel,
+            //                new Microsoft.SemanticKernel.KernelArguments(new Dictionary<string, object?>()
+            //                {
+            //                    { "rules", rules }
+            //                })).Result;
+            //#pragma warning restore SKEXP0060 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
+
+
+            var result = CopilotCheckoutConfirm(rules);
+
+            if (!result.confirm)
             {
-                AssistantOutput("是否繼續結帳? (Y/N)");
-                if (Console.ReadLine().ToLower() != "y") return;
+                Console.WriteLine($"助理店長提醒:\n{result.message}");
+                AssistantOutput($"您可以決定是否修正購買內容喔，是否要直接結帳 ( Y / N )?");
+                if (Console.ReadLine().ToLower() != "y")
+                {
+                    AssistantOutput($"結帳取消");
+                    return;
+                }
             }
+
 
             var order = ShopFunction_Checkout(payment_id);
 

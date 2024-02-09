@@ -21,7 +21,7 @@
             return c;
         }
 
-        private Cart()
+        public Cart()
         {
         }
 

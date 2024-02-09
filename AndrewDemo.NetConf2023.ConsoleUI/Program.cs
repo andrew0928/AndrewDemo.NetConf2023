@@ -10,17 +10,17 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private delegate void CommandProcessor(string[] args);
 
         // command id => command processor mapping table
-        private static Dictionary<string, CommandProcessor> commandProcessors = new Dictionary<string, CommandProcessor>()
+        private static Dictionary<string, (CommandProcessor function, string intent)> commandProcessors = new Dictionary<string, (CommandProcessor, string)>()
         {
             //{ "0", ShowMenuCommandProcessor },
-            { "1", ListProductsCommandProcessor },
-            { "21", ShowMyItemsCommandProcessor },
-            { "22", AddItemsCommandProcessor },
-            { "23", RemoveItemsCommandProcessor },
-            { "24", EmptyMyCartCommandProcessor },
-            { "25", AddItemsWithBudgetCommandProcessor },
-            { "3", CheckoutCommandProcessor },
-            { "4", ShowMyInfoCommandProcessor },
+            { "1",  (ListProductsCommandProcessor, "查詢所有商品資訊") },
+            { "21", (ShowMyItemsCommandProcessor, "查詢我的購物車內榮") },
+            { "22", (AddItemsCommandProcessor, "將商品加入購物車") },
+            { "23", (RemoveItemsCommandProcessor, "將商品從購物車移除") },
+            { "24", (EmptyMyCartCommandProcessor, "清空我的購物車") },
+            { "25", (AddItemsWithBudgetCommandProcessor, "在預算範圍內，盡可能的多將商品加入購物車") },
+            { "3",  (CheckoutCommandProcessor, "結帳") },
+            { "4",  (ShowMyInfoCommandProcessor, "查詢我的帳號資訊，以及購買紀錄") },
             //{ "5", ExitCommandProcessor },
         };
 
@@ -67,6 +67,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
                     Console.WriteLine();
                     //NotifyCopilot($"我查詢了目前商店提供的操作指令清單");
+                    CopilotNotify("顯示操作指令");
                 }
                 else if (command == "5")
                 {
@@ -83,7 +84,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     try
                     {
-                        commandProcessors[command](parameters);
+                        CopilotNotify(commandProcessors[command].intent);
+                        commandProcessors[command].function(parameters);
                         Console.WriteLine();
                     }
                     catch (Exception ex)
