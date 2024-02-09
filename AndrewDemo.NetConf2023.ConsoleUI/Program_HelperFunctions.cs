@@ -73,14 +73,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static bool UserAuthorize()
         {
-            //Console.WriteLine($"Login / Register First:");
-            //Console.Write($"- username:\t");
-            //var username = Console.ReadLine();
-            //Console.Write($"- password:\t");
-            //var password = ReadPassword();
+            Console.WriteLine($"Login / Register First:");
+            Console.Write($"- username:\t");
+            var username = Console.ReadLine();
+            Console.Write($"- password:\t");
+            var password = ReadPassword();
 
-            var username = "andrew";
-            var password = "123456";
+            //var username = "andrew";
+            //var password = "123456";
 
             string token = Member.Login(username, password);
             if (token == null)

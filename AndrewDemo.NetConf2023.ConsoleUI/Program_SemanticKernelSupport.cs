@@ -175,6 +175,18 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             if (string.IsNullOrWhiteSpace(message)) return;
 
             var result = CallCopilotAsync($"我已進行操作: {message}").Result;
+
+            //result.ContinueWith((task) =>
+            //{
+            //    var content = task.Result;
+            //    if (!content.StartsWith("OK"))
+            //    {
+            //        Console.ForegroundColor = ConsoleColor.Yellow;
+            //        Console.WriteLine($"copilot notify > {result}");
+            //        Console.ResetColor();
+            //    }
+            //});
+
             if (result.StartsWith("OK"))
             {
                 //Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -192,8 +204,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static (bool confirm, string message) CopilotCheckoutConfirm(string prompt)
         {
-            if (string.IsNullOrWhiteSpace(prompt)) return (false, null);
-
             string items = "";
             foreach(var item in Cart.Get(_cartId).LineItems)
             {

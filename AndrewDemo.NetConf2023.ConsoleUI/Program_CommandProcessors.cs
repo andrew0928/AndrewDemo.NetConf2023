@@ -175,7 +175,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void ListProductsCommandProcessor(string[] args)
         {
             AssistantOutput("您好, 以下是我們店裡有賣的東西...");
-            CopilotNotify($"我在查詢店裡有賣的東西。");
             foreach (var product in Product.Database.Values)
             {
                 Console.WriteLine($"- {product.Id}\t{product.Name}\t{product.Price:C}");
@@ -184,6 +183,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.WriteLine();
                 Console.ResetColor();
             }
+            CopilotNotify($"我在查詢店裡有賣的東西。");
         }
         #endregion
 
