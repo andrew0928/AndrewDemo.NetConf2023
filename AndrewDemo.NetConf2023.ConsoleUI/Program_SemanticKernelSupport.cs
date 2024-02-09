@@ -18,6 +18,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         #region semantic kernel context
         private static Kernel _kernel = null;
         private static ChatHistory _chatMessages = new ChatHistory();
+
         private static OpenAIPromptExecutionSettings _settings = new()
         {
             ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
@@ -70,9 +71,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
                 選購過程的操作過程關注:
                 1. 如果購物車是空的，就進行結帳，代表客人可能遺漏操作步驟。請提醒客人留意，並在結帳前主動列出購物車內容再次確認。
-                2. 如果客人反覆加入/移除商品超過 5 次，可能是系統異常，或是需要諮詢才能決定。請直接詢問是否需要幫助。
+                2. 如果客人連續加入/移除商品超過 5 次，可能是系統異常，或是需要諮詢才能決定。請直接詢問是否需要幫助。
                 3. 如果客人加入購物車的商品數量超過 10 件，可能是操作異常，或是需要諮詢。請直接詢問是否需要幫助。
-                4. 如果客人不斷顯示操作指令清單，可能是不熟悉操作，或是找不到他要的功能。請直接詢問是否需要幫助。
+                4. 如果客人連續顯示操作指令清單 3 次，可能是不熟悉操作，或是找不到他要的功能。請直接詢問是否需要幫助。
                 4. 確認方式: 客人提示訊息會用 "我已進行操作: XXX" 開頭，並附上操作內容。沒問題就回覆 OK, 有注意事項就回覆 HINT
 
                 客人開放性問題詢問或要求協助:
@@ -149,6 +150,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             foreach (var content in result)
             {
+                if (content.Role != AuthorRole.Assistant) continue;
                 _chatMessages.AddAssistantMessage(content.Content);
 
                 if (!content.Content.StartsWith("OK"))
@@ -221,6 +223,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             string result_messages = "";
             foreach(var content in result)
             {
+                if (content.Role != AuthorRole.Assistant) continue;
                 _chatMessages.AddAssistantMessage(content.Content);
                 result_messages = result_messages + content.Content + "\n";
 
@@ -257,6 +260,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             foreach (var content in result)
             {
+                if (content.Role != AuthorRole.Assistant) continue;
                 _chatMessages.AddAssistantMessage(content.Content);
                 Console.WriteLine($"copilot answer > {content.Content}");
             }

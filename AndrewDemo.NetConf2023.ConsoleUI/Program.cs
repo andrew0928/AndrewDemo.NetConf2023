@@ -46,10 +46,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             Console.WriteLine();
 
             bool exit = false;
+            int count = 0;
             string commandline = "0";
 
             do
             {
+                count++;
                 (string command, string[] parameters) = ParseCommand(commandline);
                 if (command == "0")
                 {
@@ -66,7 +68,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine("\t5. exit");
 
                     Console.WriteLine();
-                    CopilotNotify("顯示操作指令");
+                    if (count > 1) CopilotNotify("顯示系統操作指令");
                 }
                 else if (command == "5")
                 {
@@ -77,7 +79,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     try
                     {
-                        CopilotNotify(commandProcessors[command].intent);
+                        //CopilotNotify(commandProcessors[command].intent);
                         commandProcessors[command].function(parameters);
                         Console.WriteLine();
                     }
