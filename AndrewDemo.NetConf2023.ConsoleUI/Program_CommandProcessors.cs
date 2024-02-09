@@ -6,8 +6,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 {
     internal partial class Program
     {
-
-
         #region command processors
         private static void ShowMyInfoCommandProcessor(string[] args)
         {
@@ -22,13 +20,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 count++;
                 amount += order.TotalPrice;
             }
-
-            //return new MemberOrdersResponse()
-            //{
-            //    TotalOrders = count,
-            //    TotalAmount = amount,
-            //    Orders = orders
-            //};
 
             AssistantOutput($"您好, 以下是您的帳號資訊與購買紀錄. 您購買過 {count} 次，總消費金額為 {amount:C} 元。");
 
@@ -62,17 +53,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             int payment_id = int.Parse(args[0]);
 
             AssistantOutput($"結帳前有任何要求可以跟我說，若無我將替您結帳 (直接輸入或是 ENTER 跳過)");
-            //CopilotAsk(Console.ReadLine());
             var rules = Console.ReadLine();
-
-            //#pragma warning disable SKEXP0060 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
-            //            var result = _plan.InvokeAsync(
-            //                _kernel,
-            //                new Microsoft.SemanticKernel.KernelArguments(new Dictionary<string, object?>()
-            //                {
-            //                    { "rules", rules }
-            //                })).Result;
-            //#pragma warning restore SKEXP0060 // Type is for evaluation purposes only and is subject to change or removal in future updates. Suppress this diagnostic to proceed.
 
 
             var result = CopilotCheckoutConfirm(rules);

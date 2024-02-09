@@ -27,10 +27,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static IChatCompletionService _chatCompletionService = null;
         #endregion
 
-        //#pragma warning disable SKEXP0060
-        //        private static HandlebarsPlan _plan;
-        //#pragma warning restore SKEXP0060
-        //private static KernelFunction _checkout_validate;
 
         private static void InitSK()
         {
@@ -41,10 +37,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             var builder = Kernel.CreateBuilder()
                 .AddAzureOpenAIChatCompletion("SKDemo_GPT4_Preview", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
-            //.AddAzureOpenAIChatCompletion("SKDemo_GPT4_ShopCopilot", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
             //.AddOpenAIChatCompletion("fake-model", "fake-apikey", httpClient: new HttpClient(new LMStudioLocalServiceHandler(1234)));
-            //.AddHuggingFaceTextGeneration("mistralai/Mixtral-8x7B-Instruct-v0.1");//, "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");
-            //.AddHuggingFaceTextGeneration("openchat/openchat-3.5-0106");//, "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");
+            //.AddHuggingFaceTextGeneration("mistralai/Mixtral-8x7B-Instruct-v0.1");
+            //.AddHuggingFaceTextGeneration("openchat/openchat-3.5-0106");
 
             builder.Services.AddLogging(logger => 
             {
@@ -53,9 +48,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             });
 
             builder.Plugins.AddFromType<Program>();
-            //builder.Plugins.AddFromType<SystemCallPlugin>();
-            //builder.Plugins.AddFromType<ProductsQueryPlugin>();
-            //builder.Plugins.AddFromType<CalculateProductsPricePlanner>();
 
             _kernel = builder.Build();
 
@@ -123,61 +115,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
              */
 
-            //#pragma warning disable SKEXP0060
-            //            var planner = new HandlebarsPlanner(new HandlebarsPlannerOptions(allowLoops: true));
-            //            _plan = planner.CreatePlanAsync(
-            //                _kernel,
-            //                """
-            //                你現在是助理店長, 負責協助引導每個來商店購買的客人順利結帳。
-
-            //                結帳前請檢查下列項目:
-            //                1. 客人購買的東西是否適合他的期待? 請協助客人確認購買清單。
-            //                2. 客人的購買行為是否安全? 請協助客人確認購買行為。有些商品有法律限制，或是有可能對客人造成危險。
-            //                3. 客人的購買行為是否合理? 請協助客人確認購買行為。有些商品可能有更好的選擇，或是有更好的折扣。
-            //                4. 核對客人額外的要求是否合理且被滿足: {{$rules}}
-
-            //                以上項目若無問題則回覆 "OK"，若有問題則回覆問題說明與建議。
-            //                """).Result;
-            //            InfoOutput("Plan created: " + _plan.ToString());
-            //#pragma warning restore SKEXP0060
-
-
-            //_checkout_validate = _kernel.CreateFunctionFromPrompt(
-            //    new()
-            //    { 
-            //        Template = """
-            //        你現在是助理店長, 負責協助引導每個來商店購買的客人順利結帳。
-
-
-            //        結帳前請列出購物車的所有商品清單，並檢查下列項目:
-            //        1. 客人購買的東西是否適合他的期待? 請協助客人確認購買清單。
-            //        2. 客人的購買行為是否安全? 請協助客人確認購買行為。有些商品有法律限制，或是有可能對客人造成危險。
-            //        3. 客人的購買行為是否合理? 請協助客人確認購買行為。有些商品可能有更好的選擇，或是有更好的折扣。
-            //        4. 核對客人額外的要求是否合理且被滿足: {{$rules}}
-
-            //        以上項目若無問題則回覆 "OK"，若有問題則回覆問題說明與建議。
-            //        """,
-            //        TemplateFormat = "handlebars",
-            //        ExecutionSettings =
-            //        {
-            //            {
-            //                "default", new OpenAIPromptExecutionSettings()
-            //                {
-            //                    ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
-            //                }
-            //            }
-            //        }
-            //    },
-            //    promptTemplateFactory: new HandlebarsPromptTemplateFactory());
-
             _kernel.FunctionInvoking += (sender, args) =>
             {
                 Console.WriteLine($" function invoking: {args.Function.Name}");
             };
-            _kernel.FunctionInvoked += (sender, args) =>
-            {
-                Console.WriteLine($" function invoked: {args.Function.Name}, {args.Result}");
-            };
+            //_kernel.FunctionInvoked += (sender, args) =>
+            //{
+            //    Console.WriteLine($" function invoked: {args.Function.Name}, {args.Result}");
+            //};
 
             _chatCompletionService = _kernel.Services.GetRequiredService<IChatCompletionService>();
             #endregion
@@ -326,8 +271,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("清空購物車。購物車內的代結帳商品清單會完全歸零回復原狀")]
         public static void ShopFunction_EmptyCart()
         {
-            //Console.WriteLine($"copilot call > EmptyCart()");
-
             _cartId = Cart.Create().Id;
         }
 
@@ -337,8 +280,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品ID")] int productId,
             [Description("指定加入購物車的商品數量")] int quanty)
         {
-            //Console.WriteLine($"copilot call > AddItemToCart(productId: {productId}, quanty: {quanty})");
-
             var cart = Cart.Get(_cartId);
             return cart.AddProducts(productId, quanty);
         }
@@ -347,83 +288,30 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("試算目前購物車的結帳金額 (包含可能發生的折扣)")]
         public static decimal ShopFunction_EstimatePrice()
         {
-            //Console.WriteLine($"copilot call > EstimatePrice()");
-
             return Cart.Get(_cartId).EstimatePrice();
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
         public static Cart.CartLineItem[] ShopFunction_ShowMyCartItems()
         {
-            //Console.WriteLine($"copilot call > ShowMyCartItems()");
-
             return Cart.Get(_cartId).LineItems.ToArray();
-            //AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice():C} 元.");
-
-            //if (cart.LineItems.Count() == 0)
-            //{
-            //    Console.WriteLine($"您的購物車現在是空的，可以用 22 [product-id] 選購商品喔. 或是用 1 可以看我們的商品介紹~");
-            //    return;
-            //}
-
-            //foreach (var item in cart.LineItems)
-            //{
-            //    var product = Product.Database[item.ProductId];
-            //    Console.WriteLine($"- 商品: [{product.Id}] {product.Name}\t{product.Price:C} x {item.Qty}");
-            //}
-
-            //foreach (var discount in cart.EstimateDiscounts())
-            //{
-            //    Console.WriteLine($"- 折扣: [{discount.Name}], {discount.Description}\t{discount.DiscountAmount:C}");
-            //}
         }
 
-        // Cart_AddItemWithBudget
-        //private static bool ShopFunction_AddItemToCartWithBudget(int productId, decimal budget)
-        //{
-        //    var cart = Cart.Get(_cartId);
-        //    var product = Product.Database[productId];
-
-        //    if (cart.EstimatePrice() > budget)
-        //    {
-        //        //AssistantOutput($"您的預算 {budget:C} 不足以購買商品 [{pid}]。");
-        //        //return;
-        //        return false;
-        //    }
-
-        //    // add product to cart as much as possible, until reach the budget
-        //    int total = 0;
-        //    while (cart.EstimatePrice() <= budget)
-        //    {
-        //        cart.AddProducts(productId, 1);
-        //        total++;
-        //        InfoOutput($"add {productId} x 1, estimate: {cart.EstimatePrice()}");
-        //    }
-        //    cart.AddProducts(productId, -1); // remove the last one
-        //    total--;
-        //    InfoOutput($"rmv  {productId} x 1, estimate: {cart.EstimatePrice()}");
-        //    //AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice():C}, 已為您加入購物車了。");
-        //    return true;
-        //}
 
         // Cart_Checkout
         [KernelFunction, Description("購買目前購物車內的商品清單，提供支付代碼，完成結帳程序，傳回訂單內容")]
         public static Order ShopFunction_Checkout(
             [Description("支付代碼，此代碼代表客戶已經在外部系統完成付款")] int paymentId)
         {
-            //Console.WriteLine($"copilot call > Checkout(paymentId: {paymentId})");
-
             int checkout_id = Checkout.Create(_cartId, _access_token);
             var response = Checkout.CompleteAsync(checkout_id, paymentId);
             while (!response.Wait(1000))
             {
-                //Console.WriteLine("waiting for payment...");
                 InfoOutput("waiting for payment...");
             }
 
             if (response.Result != null)
             {
-                //AssistantOutput($"Checkout completed successfully. your order number is: [{result.Result.Id}]");
                 _cartId = Cart.Create().Id;
                 return response.Result;
             }
@@ -435,8 +323,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回店內所有出售的商品品項資訊")]
         public static Product[] ShopFunction_ListProducts()
         {
-            //Console.WriteLine($"copilot call > ListProducts()");
-
             return Product.Database.Values.ToArray();
         }
 
@@ -445,8 +331,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Product ShopFunction_GetProduct(
             [Description("指定查詢的商品 ID")] int productId)
         {
-            //Console.WriteLine($"copilot call > GetProduct(productId: {productId})");
-
             if (!Product.Database.ContainsKey(productId)) return null;
             return Product.Database[productId];
         }
@@ -455,8 +339,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回我 (目前登入) 的個人資訊")]
         public static Member ShopFunction_GetMyInfo()
         {
-            //Console.WriteLine($"copilot call > GetMyInfo()");
-
             return Member.GetCurrentMember(_access_token);
         }
 
@@ -464,8 +346,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回我 (目前登入) 的過去訂購紀錄")]
         public static Order[] ShopFunction_GetMyOrders()
         {
-            //Console.WriteLine($"copilot call > GetMyOrders()");
-
             var member = Member.GetCurrentMember(_access_token);
             return Order.GetOrders(member.Id).ToArray();
         }

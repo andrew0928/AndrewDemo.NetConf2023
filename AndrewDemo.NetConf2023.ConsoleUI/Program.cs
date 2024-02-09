@@ -66,20 +66,13 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine("\t5. exit");
 
                     Console.WriteLine();
-                    //NotifyCopilot($"我查詢了目前商店提供的操作指令清單");
                     CopilotNotify("顯示操作指令");
                 }
                 else if (command == "5")
                 {
                     exit = true;
-                    //NotifyCopilot($"我決定離開商店了");
                     continue;
                 }
-                //else
-                //{
-                //    Console.WriteLine("Invalid command");
-                //}
-
                 else if (commandProcessors.ContainsKey(command))
                 {
                     try
@@ -96,7 +89,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 else
                 {
                     AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
-                    //NotifyCopilot($"我輸入了不在商店指令清單內的指令，我將這指令轉成問題問 copilot。");
                     CopilotAsk(commandline);
                 }
 
@@ -105,13 +97,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.ResetColor();
                 commandline = Console.ReadLine();
             } while (!exit);
-
-
-
-
-
         }
-
-
     }
 }
