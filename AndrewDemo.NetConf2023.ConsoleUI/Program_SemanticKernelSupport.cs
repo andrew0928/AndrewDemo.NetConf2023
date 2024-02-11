@@ -189,9 +189,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (result.StartsWith("OK"))
             {
-                //Console.ForegroundColor = ConsoleColor.DarkGray;
-                //Console.WriteLine($"copilot notify > {result}");
-                //Console.ResetColor();
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"copilot notify > {result}");
+                Console.ResetColor();
             }
             else
             {

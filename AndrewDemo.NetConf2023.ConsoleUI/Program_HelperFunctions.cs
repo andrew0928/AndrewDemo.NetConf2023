@@ -63,6 +63,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static (string command, string[] args) ParseCommand(string commandline)
         {
             // format: command [arg1] [arg2] ...
+            if (commandline == null) return (null, new string[0]);
+
             var parts = commandline.Split(' ');
             if (parts.Length == 0)
             {

@@ -47,13 +47,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             bool exit = false;
             int count = 0;
-            string commandline = "0";
+            string commandline = null;
 
             do
             {
-                count++;
                 (string command, string[] parameters) = ParseCommand(commandline);
-                if (command == "0")
+                if (command == null || command == "0")
                 {
                     Console.WriteLine("\t0. show me (this menu)");
                     Console.WriteLine("\t1. list products");
@@ -68,7 +67,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine("\t5. exit");
 
                     Console.WriteLine();
-                    if (count > 1) CopilotNotify("顯示系統操作指令");
+                    if (commandline != null) CopilotNotify($"我查詢了目前商店提供的操作指令清單");
                 }
                 else if (command == "5")
                 {
@@ -90,6 +89,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 else
                 {
                     //AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
+                    AssistantOutput("請稍待，正在幫您詢問助理店長 (copilot) 中...");
                     var result = CopilotAsk(commandline);
                     Console.WriteLine($"copilot answer > {result}");
                 }

@@ -46,7 +46,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         {
             ShopFunction_EmptyCart();
             AssistantOutput("Your cart is empty now.");
-            CopilotNotify($"我清空了我的購物車");
+            CopilotNotify($"我的購物車目前有 {Cart.Get(_cartId).LineItems.Count()} 件商品在裡面，我清空了我的購物車");
         }
 
         private static void CheckoutCommandProcessor(string[] args)
@@ -131,6 +131,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             if (cart.EstimatePrice() > budget)
             {
                 AssistantOutput($"您的預算 {budget:C} 不足以購買商品 [{pid}]。");
+                CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。不過目前購物車商品已經超出預算，最後沒有放任何商品進購物車");
                 return;
             }
 
@@ -146,6 +147,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             total--;
             InfoOutput($"rmv  {pid} x 1, estimate: {cart.EstimatePrice()}");
             AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice():C}, 已為您加入購物車了。");
+            CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。經過計算，在預算範圍內多放了 {total} 件商品進購物車。");
         }
 
         private static void ShowMyItemsCommandProcessor(string[] args)
@@ -183,7 +185,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.WriteLine();
                 Console.ResetColor();
             }
-            CopilotNotify($"我在查詢店裡有賣的東西。");
+            CopilotNotify($"我在查詢店裡有賣的東西，店裡總共有 {Product.Database.Values.Count()} 種商品販售。");
         }
         #endregion
 
