@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
@@ -39,9 +40,13 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             //.AddHuggingFaceTextGeneration("mistralai/Mixtral-8x7B-Instruct-v0.1");
             //.AddHuggingFaceTextGeneration("openchat/openchat-3.5-0106");
 
+
             builder.Services.AddLogging(logger => 
             {
                 logger.AddDebug();
+                logger.AddConsole(opt =>
+                {
+                });
                 logger.SetMinimumLevel(LogLevel.Trace);
             });
 

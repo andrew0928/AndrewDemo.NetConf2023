@@ -110,7 +110,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (ShopFunction_AddItemToCart(pid, qty))
             {
-                AssistantOutput($"商品 [{pid}] 已經加入您的購物車了 {qty} 件.");
+                AssistantOutput($"商品 [{pid}] x {qty} 件, 已經加入您的購物車了。");
                 CopilotNotify($"我在購物車內加入了 {qty} 件商品 (商品 ID: {pid}, {product.Name})");
             }
             else
