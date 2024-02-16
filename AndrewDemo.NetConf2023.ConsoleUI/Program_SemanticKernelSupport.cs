@@ -1,4 +1,5 @@
 ﻿using AndrewDemo.NetConf2023.Core;
+using Json.More;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -42,7 +43,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             builder.Services.AddLogging(logger => 
             {
                 logger.AddDebug();
-                logger.SetMinimumLevel(LogLevel.Trace);
+                logger.AddConsole();
+                logger.SetMinimumLevel(LogLevel.Information);
             });
 
             builder.Plugins.AddFromType<Program>();
@@ -87,8 +89,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 4. 購買含糖飲料請提醒客人注意醣類攝取。
                 5. 購買含咖啡因飲料請提醒客人注意咖啡因攝取。
                 6. 有預算要求，請留意折扣規則。部分優惠折扣可能導致買越多越便宜，請代替客人確認是否多買一件真的會超過預算。
-
-
+                
                 """);
 
             /*
@@ -153,15 +154,23 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 _chatMessages.AddUserMessage(message);
             }
 
-            var result = await _chatCompletionService.GetChatMessageContentsAsync(
+            var result = _chatCompletionService.GetChatMessageContentsAsync(
                 _chatMessages,
                 _settings,
                 _kernel);
 
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            while (!result.Wait(500)) Console.Write(".");
+            Console.WriteLine();
+            Console.ResetColor();
+
             string response = "";
-            foreach (var content in result)
+            foreach (var content in result.Result)
             {
+                if (content == null) continue;
                 if (content.Role != AuthorRole.Assistant) continue;
+                if (content.Content == null) continue;
+
                 _chatMessages.AddAssistantMessage(content.Content);
                 //Console.WriteLine($"copilot > assistant: {content.Content}");
                 response = response + content.Content + "\n";
@@ -230,7 +239,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static string CopilotAsk(string prompt)
         {
-            if (string.IsNullOrWhiteSpace(prompt)) return null;
+            if (string.IsNullOrWhiteSpace(prompt)) return "";
 
             var result = CallCopilotAsync($"店長請問: {prompt}").Result;
             return result;
@@ -255,6 +264,16 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         {
             var cart = Cart.Get(_cartId);
             return cart.AddProducts(productId, quanty);
+        }
+
+        // Cart_RemoveItem
+        [KernelFunction, Description("將指定的商品與指定的數量從購物車移除。移除成功會傳回 TRUE，若移除失敗會傳回 FALSE，購物車內容會維持原狀不會改變")]
+        public static bool ShopFunction_RemoveItemToCart(
+            [Description("指定要從購物車移除的商品ID")] int productId,
+            [Description("指定要從購物車移除的商品數量")] int quanty)
+        {
+            var cart = Cart.Get(_cartId);
+            return cart.AddProducts(productId, -quanty);
         }
 
         // Cart_EstimatePrice
