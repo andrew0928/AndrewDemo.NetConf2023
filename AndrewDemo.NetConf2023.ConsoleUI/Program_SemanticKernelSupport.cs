@@ -22,6 +22,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             ToolCallBehavior = ToolCallBehavior.AutoInvokeKernelFunctions
         };
 
+        private static bool _enable_checkout_confirm = true;
+        private static bool _enable_copilot_notify = true;
+        private static bool _enable_copilot_ask = true;
         
 
         private static IChatCompletionService _chatCompletionService = null;
@@ -45,7 +48,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             builder.Services.AddLogging(logger => 
             {
                 logger.AddDebug();
-                logger.AddConsole();
+                //logger.AddConsole();
                 logger.SetMinimumLevel(LogLevel.Information);
             });
 
@@ -162,7 +165,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 _kernel);
 
             Console.ForegroundColor = ConsoleColor.DarkGray;
-            while (!result.Wait(500)) Console.Write(".");
+            try
+            {
+                while (!result.Wait(500)) Console.Write(".");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"copilot > error: {ex.Message}");
+            }
             Console.WriteLine();
             Console.ResetColor();
 
@@ -183,6 +193,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static void CopilotNotify(string message)
         {
+            if (!_enable_copilot_notify) return;
             if (string.IsNullOrWhiteSpace(message)) return;
 
             var result = CallCopilotAsync($"我已進行操作: {message}").Result;
@@ -215,6 +226,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static (bool confirm, string message) CopilotCheckoutConfirm(string prompt)
         {
+            if (!_enable_checkout_confirm) return (true, "");
+
             string items = "";
             foreach(var item in Cart.Get(_cartId).LineItems)
             {
@@ -241,6 +254,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static string CopilotAsk(string prompt)
         {
+            if (!_enable_copilot_ask) return "";
+
             if (string.IsNullOrWhiteSpace(prompt)) return "";
 
             var result = CallCopilotAsync($"店長請問: {prompt}").Result;
