@@ -49,6 +49,15 @@ namespace AndrewDemo.NetConf2023.API
                 Price = 25m
             });
 
+
+
+            //{ 
+            //    var token = Member.Register("andrew");
+            //    Member.SetShopNotes(
+            //        token,
+            //        @"安德魯是個很認真工作的工程師，平日工作或是需要專注時都喝茶飲料來提神，但是在休息或放鬆時則喜歡喝可樂。除非特定場合或是好友聚會，不然都不喝酒。");
+            //}
+
             app.Use((context, next) =>
             {
                 Console.WriteLine();

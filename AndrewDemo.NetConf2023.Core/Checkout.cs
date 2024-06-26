@@ -20,7 +20,7 @@
 
         public static event EventHandler CheckoutCompleted;
 
-        public static async Task<Order> CompleteAsync(int transactionId, int paymentId)
+        public static async Task<Order> CompleteAsync(int transactionId, int paymentId, int satisfaction = 0, string comments = null)
         {
             // 這邊要處理:
             // 1. 分散式交易
@@ -40,7 +40,7 @@
             _database.Remove(transactionId);
             var order = new Order(transactionId);
 
-            order.buyer = transaction.consumer;
+            order.Buyer = transaction.consumer;
 
             decimal total = 0m;
 
@@ -71,7 +71,11 @@
 
             order.TotalPrice = total;
 
-            
+            order.ShopNotes = new Order.OrderShopNotes()
+            {
+                BuyerSatisfaction = satisfaction,
+                Comments = comments
+            };
 
 
             //Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");

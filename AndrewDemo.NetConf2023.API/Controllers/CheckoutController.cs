@@ -77,7 +77,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var order = await Checkout.CompleteAsync(request.TransactionId, request.PaymentId);
+            var order = await Checkout.CompleteAsync(request.TransactionId, request.PaymentId, request.Satisfaction, request.ShopComments);
 
             return new CheckoutCompleteResponse()
             {
@@ -113,9 +113,26 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
         public class CheckoutCompleteRequest
         {
+            /// <summary>
+            /// 指定要完成的交易 transactionId
+            /// </summary>
             public int TransactionId { get; set; }
             //public string AccessToken { get; set; }
+
+            /// <summary>
+            /// 指定該交易的支付代碼, 由外部支付系統提供
+            /// </summary>
             public int PaymentId { get; set; }
+
+            /// <summary>
+            /// 消費者對這次購物的滿意度評分, 1 ~ 10 分
+            /// </summary>
+            public int Satisfaction { get; set; } = 0;
+
+            /// <summary>
+            /// 消費者對這次交易的註記，包含對商店的評價、建議等。
+            /// </summary>
+            public string ShopComments { get; set; } = null;
         }
 
         public class CheckoutCompleteResponse

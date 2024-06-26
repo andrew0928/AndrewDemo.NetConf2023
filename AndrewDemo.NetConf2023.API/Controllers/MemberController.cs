@@ -53,6 +53,27 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
 
         /// <summary>
+        /// 更新會員註記 (商店端)
+        /// 商店可在交易過程中，對會員做一些註記，例如：該會員的偏好、特殊需求等等。
+        /// </summary>
+        /// <param name="request"></param>
+        /// <returns></returns>
+        [HttpPost("shop_notes", Name = "SetShopNotes")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        public ActionResult<Member> SetShopNotes([FromBody] MemberSetNotesRequest request)
+        {
+            var accessToken = this.HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return Unauthorized();
+            }
+
+            return Member.SetShopNotes(accessToken, request.ShopNotes);
+        }
+
+
+
+        /// <summary>
         /// 取得目前登入的使用者基本資訊。
         /// </summary>
         /// <remarks>
@@ -126,13 +147,31 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
         public class MemberRegisterRequest
         {
+            /// <summary>
+            /// 會員名稱
+            /// </summary>
             public string Name { get; set; }
         }
 
         public class MemberLoginRequest
         {
+            /// <summary>
+            /// 登入帳號
+            /// </summary>
             public string Name { get; set; }
+
+            /// <summary>
+            /// 登入密碼
+            /// </summary>
             public string Password { get; set; }
+        }
+
+        public class MemberSetNotesRequest
+        {
+            /// <summary>
+            /// 會員註記
+            /// </summary>
+            public string ShopNotes { get; set; }
         }
 
         public class MemberOrdersResponse
@@ -158,5 +197,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             public string AccessToken { get; set; }
             //public DateTime ExpiredAt { get; set; }
         }
+
+
     }
 }
