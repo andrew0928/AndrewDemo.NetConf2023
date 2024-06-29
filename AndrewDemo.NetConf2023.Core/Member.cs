@@ -5,6 +5,8 @@
         public int Id { get; set; }
         public string Name { get; set; }
 
+        public string ShopNotes { get; set; }
+
         // not implement password in this demo, just for demo
         // any non-empty string is valid
         public static string Login(string name, string password)
@@ -33,12 +35,12 @@
             var m = new Member()
             {
                 Id = _current_number++,
-                Name = name
+                Name = name,
             };
 
-            MemberRegistered?.Invoke(m, new EventArgs() { });
-
             _database.Add(m.Id, m);
+
+            MemberRegistered?.Invoke(m, new EventArgs() { });
             return CreateAccessToken(m);
         }
 
@@ -50,6 +52,22 @@
                 var (expire, consumer) = AccessTokens[accessToken];
                 if (expire > DateTime.Now)
                 {
+                    return consumer;
+                }
+            }
+
+            return null;
+        }
+
+        public static Member SetShopNotes(string accessToken, string notes)
+        {
+            // access token validation
+            if (AccessTokens.ContainsKey(accessToken))
+            {
+                var (expire, consumer) = AccessTokens[accessToken];
+                if (expire > DateTime.Now)
+                {
+                    consumer.ShopNotes = notes;
                     return consumer;
                 }
             }

@@ -97,7 +97,7 @@ namespace AndrewDemo.NetConf2023
             var order = await checkout_result;
             Console.WriteLine($"oders info:");
             Console.WriteLine($"訂單編號: {order.Id}");
-            Console.WriteLine($"買家: {order.buyer.Name} ({order.buyer.Id})");
+            Console.WriteLine($"買家: {order.Buyer.Name} ({order.Buyer.Id})");
             Console.WriteLine($"明細:");
             foreach(var lineitem in order.LineItems)
             {
