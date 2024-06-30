@@ -39,7 +39,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 .Build();
 
             var builder = Kernel.CreateBuilder()
-                .AddAzureOpenAIChatCompletion("SKDemo_GPT4_Preview", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
+                //.AddAzureOpenAIChatCompletion("SKDemo_GPT4_Preview", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
+                .AddAzureOpenAIChatCompletion("SKDemo_GPT4o", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
+
+
+
             //.AddOpenAIChatCompletion("fake-model", "fake-apikey", httpClient: new HttpClient(new LMStudioLocalServiceHandler(1234)));
             //.AddHuggingFaceTextGeneration("mistralai/Mixtral-8x7B-Instruct-v0.1");
             //.AddHuggingFaceTextGeneration("openchat/openchat-3.5-0106");
@@ -71,14 +75,16 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 2. 客人的購買行為是否安全? 請協助客人確認購買行為。有些商品有法律限制，或是有可能對客人造成危險。
                 3. 客人的購買行為是否合理? 請協助客人確認購買行為。有些商品可能有更好的選擇，或是有更好的折扣。
                 4. 檢查 FAQ 清單
-                5. 確認方式: 客人提示訊息會用 "我要進行結帳確認: XXX" 開頭，並且附上購物內容資訊。沒問題就回覆 OK, 有注意事項就回覆 HINT
+                5. 確認方式: 客人提示訊息會用 "我要進行結帳確認: XXX" 開頭，並且附上購物內容資訊。沒問題就回覆 OK 並且不需要其他資訊, 有注意事項就回覆 HINT 開頭並附上注意事項。
 
                 選購過程的操作過程關注:
                 1. 如果購物車是空的，就進行結帳，代表客人可能遺漏操作步驟。請提醒客人留意，並在結帳前主動列出購物車內容再次確認。
                 2. 如果客人連續加入/移除商品超過 5 次，可能是系統異常，或是需要諮詢才能決定。請直接詢問是否需要幫助。
                 3. 如果客人加入購物車的商品數量超過 10 件，可能是操作異常，或是需要諮詢。請直接詢問是否需要幫助。
                 4. 如果客人連續顯示操作指令清單 3 次，可能是不熟悉操作，或是找不到他要的功能。請直接詢問是否需要幫助。
-                4. 確認方式: 客人提示訊息會用 "我已進行操作: XXX" 開頭，並附上操作內容。沒問題就回覆 OK, 有注意事項就回覆 HINT
+                5. 確認方式: 客人提示訊息會用 "我已進行操作: XXX" 開頭，並附上操作內容。沒問題就回覆 OK 並且不需要其他資訊, 若有注意事項就回覆 HINT 開頭並附上注意事項。
+                6. 客人操作都是自行執行，你只需要傾聽，只在需要提醒時回應客戶。請勿重複執行客戶已經進行的操作。
+
 
                 客人開放性問題詢問或要求協助:
                 1. 如果客人詢問的問題需要呼叫查詢的動作，你可以直接執行不必詢問
