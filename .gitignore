@@ -362,4 +362,5 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 # SpecStory explanation file
-.specstory/.what-is-this.md
+.specstory/
+.DS_Store
