@@ -9,6 +9,9 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class MemberController : ControllerBase
     {
+        // remove useless api for register and login
+
+        /*
         /// <summary>
         /// 註冊會員。
         /// </summary>
@@ -50,6 +53,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
             return new MemberAccessTokenResponse() { AccessToken = token };
         }
+        */
 
 
         /// <summary>

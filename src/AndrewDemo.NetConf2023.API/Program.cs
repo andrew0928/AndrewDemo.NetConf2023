@@ -3,8 +3,15 @@ using AndrewDemo.NetConf2023.Core;
 
 namespace AndrewDemo.NetConf2023.API
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="args"></param>
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);

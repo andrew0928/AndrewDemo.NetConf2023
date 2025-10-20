@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- 宣告專案支援與要打包的多個 RID -->
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
+    <ContainerRuntimeIdentifiers>linux-x64;linux-arm64</ContainerRuntimeIdentifiers>
+
+    <!-- 統一 image 命名與標籤；各專案預設用其專案名當 repo -->
+    <ContainerRepository>$(MSBuildProjectName)</ContainerRepository>
+    <ContainerImageTags>$([System.DateTime]::Now.ToString("yyyyMMdd"));develop;latest</ContainerImageTags>
+  </PropertyGroup>
+</Project>
