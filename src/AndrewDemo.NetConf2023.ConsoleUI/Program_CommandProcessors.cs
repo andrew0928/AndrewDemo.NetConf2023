@@ -148,7 +148,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             }
 
 
-            if (cart.EstimatePrice() > budget)
+            if (cart.EstimatePrice(Database) > budget)
             {
                 AssistantOutput($"您的預算 {budget:C} 不足以購買商品 [{pid}]。");
                 CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。不過目前購物車商品已經超出預算，最後沒有放任何商品進購物車");
@@ -157,24 +157,24 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             // add product to cart as much as possible, until reach the budget
             int total = 0;
-            while (cart.EstimatePrice() <= budget)
+            while (cart.EstimatePrice(Database) <= budget)
             {
                 cart.AddProducts(pid, 1);
                 total++;
-                InfoOutput($"add {pid} x 1, estimate: {cart.EstimatePrice()}");
+                InfoOutput($"add {pid} x 1, estimate: {cart.EstimatePrice(Database)}");
             }
             cart.AddProducts(pid, -1); // remove the last one
             total--;
-            InfoOutput($"rmv  {pid} x 1, estimate: {cart.EstimatePrice()}");
-            AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice():C}, 已為您加入購物車了。");
+            InfoOutput($"rmv  {pid} x 1, estimate: {cart.EstimatePrice(Database)}");
+            AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice(Database):C}, 已為您加入購物車了。");
             CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。經過計算，在預算範圍內多放了 {total} 件商品進購物車。");
         }
 
         private static void ShowMyItemsCommandProcessor(string[] args)
         {
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice():C} 元.");
-            CopilotNotify($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {cart.EstimatePrice():C} 元");
+            AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice(Database):C} 元.");
+            CopilotNotify($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {cart.EstimatePrice(Database):C} 元");
 
             if (cart.LineItems.Count() == 0)
             {
@@ -193,7 +193,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.WriteLine($"- 商品: [{product.Id}] {product.Name}\t{product.Price:C} x {item.Qty}");
             }
 
-            foreach (var discount in cart.EstimateDiscounts())
+            foreach (var discount in cart.EstimateDiscounts(Database))
             {
                 Console.WriteLine($"- 折扣: [{discount.Name}], {discount.Description}\t{discount.DiscountAmount:C}");
             }

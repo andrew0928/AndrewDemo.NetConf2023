@@ -34,6 +34,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         static void Main(string[] args)
         {
+            // 初始化資料庫
+            Database = new ShopDatabaseContext();
+            
             InitSK();
             InitShop();
 

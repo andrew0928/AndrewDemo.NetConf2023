@@ -15,7 +15,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     internal partial class Program
     {
         #region console application helper methods
-        private static IShopDatabaseContext Database => ShopDatabase.Current;
+        private static IShopDatabaseContext Database { get; set; } = null!;
 
         private static Member? GetMemberByToken(string token)
         {
@@ -127,7 +127,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 });
             }
 
-            foreach (var discount in DiscountEngine.Calculate(cart, consumer))
+            foreach (var discount in DiscountEngine.Calculate(cart, consumer, Database))
             {
                 order.LineItems.Add(new Order.OrderLineItem
                 {

@@ -276,7 +276,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 """,
                 $"""
                 以下是我購物車內的清單:{items}
-                預估結帳金額: {cart.EstimatePrice():C}
+                預估結帳金額: {cart.EstimatePrice(Database):C}
                 """,
                 $"""
                 購買註記:
@@ -333,7 +333,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static decimal ShopFunction_EstimatePrice()
         {
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            return cart.EstimatePrice();
+            return cart.EstimatePrice(Database);
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
