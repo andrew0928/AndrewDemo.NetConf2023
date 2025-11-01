@@ -8,6 +8,8 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
 using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AndrewDemo.NetConf2023.ConsoleUI
 {
@@ -39,7 +41,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 .Build();
 
             var builder = Kernel.CreateBuilder()
-                //.AddAzureOpenAIChatCompletion("SKDemo_GPT4_Preview", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
+                //.AddAzureOpenAIChatCompletion("gpt-5-mini", "https://app-azureopenai.openai.azure.com/", "");
                 .AddAzureOpenAIChatCompletion("SKDemo_GPT4o", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"] ?? string.Empty);
 
 
@@ -249,10 +251,10 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             if (!_enable_checkout_confirm) return (true, "");
 
             string items = "";
-            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             foreach(var item in cart.LineItems)
             {
-                var product = Product.GetById(item.ProductId);
+                var product = GetProductById(item.ProductId);
                 if (product == null)
                 {
                     items += $"\n- [{item.ProductId}] (已下架) x {item.Qty} 件";
@@ -298,7 +300,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("清空購物車。購物車內的代結帳商品清單會完全歸零回復原狀")]
         public static void ShopFunction_EmptyCart()
         {
-            _cartId = Cart.Create().Id;
+            _cartId = CreateNewCart().Id;
         }
 
         // Cart_AddItem
@@ -307,7 +309,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品ID")] int productId,
             [Description("指定加入購物車的商品數量")] int quanty)
         {
-            var cart = Cart.Get(_cartId);
+                var cart = GetCurrentCart();
             if (cart == null) return false;
             return cart.AddProducts(productId, quanty);
         }
@@ -318,7 +320,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定要從購物車移除的商品ID")] int productId,
             [Description("指定要從購物車移除的商品數量")] int quanty)
         {
-            var cart = Cart.Get(_cartId);
+                var cart = GetCurrentCart();
             if (cart == null) return false;
             return cart.AddProducts(productId, -quanty);
         }
@@ -327,14 +329,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("試算目前購物車的結帳金額 (包含可能發生的折扣)")]
         public static decimal ShopFunction_EstimatePrice()
         {
-            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             return cart.EstimatePrice();
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
         public static Cart.CartLineItem[] ShopFunction_ShowMyCartItems()
         {
-            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             return cart.LineItems.ToArray();
         }
 
@@ -345,8 +347,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("支付代碼，此代碼代表客戶已經在外部系統完成付款")] int paymentId)
         {
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
-            int checkout_id = Checkout.Create(_cartId, token);
-            var response = Checkout.CompleteAsync(checkout_id, paymentId);
+                int checkoutId = CreateCheckoutTransaction(_cartId, token);
+                var response = CompleteCheckoutTransactionAsync(checkoutId, paymentId);
             while (!response.Wait(1000))
             {
                 InfoOutput("waiting for payment...");
@@ -354,7 +356,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (response.Result != null)
             {
-                _cartId = Cart.Create().Id;
+                    _cartId = CreateNewCart().Id;
                 return response.Result;
             }
 
@@ -365,7 +367,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回店內所有出售的商品品項資訊")]
         public static Product[] ShopFunction_ListProducts()
         {
-            return Product.GetAll().ToArray();
+            return GetAllProducts().ToArray();
         }
 
         // Product_Get
@@ -373,7 +375,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Product? ShopFunction_GetProduct(
             [Description("指定查詢的商品 ID")] int productId)
         {
-            return Product.GetById(productId);
+                return GetProductById(productId);
         }
 
         // Member_Get
@@ -381,7 +383,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Member? ShopFunction_GetMyInfo()
         {
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
-            return Member.GetCurrentMember(token);
+            return GetMemberByToken(token);
         }
 
         // Member_GetOrders
@@ -389,8 +391,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Order[] ShopFunction_GetMyOrders()
         {
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
-            var member = Member.GetCurrentMember(token) ?? throw new InvalidOperationException("member not found");
-            return Order.GetOrders(member.Id).ToArray();
+            var member = GetMemberByToken(token) ?? throw new InvalidOperationException("member not found");
+            return GetOrdersForMember(member.Id).ToArray();
         }
 
         #endregion

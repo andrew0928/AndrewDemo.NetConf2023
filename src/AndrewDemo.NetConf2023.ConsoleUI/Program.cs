@@ -42,7 +42,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 return;
             }
 
-            var member = Member.GetCurrentMember(_access_token ?? string.Empty) ?? throw new InvalidOperationException("member not found");
+            var member = RequireCurrentMember();
             Console.WriteLine($"Hello {member.Name}({member.Id}), Welcome to Andrew's Shop!");
             Console.WriteLine();
 

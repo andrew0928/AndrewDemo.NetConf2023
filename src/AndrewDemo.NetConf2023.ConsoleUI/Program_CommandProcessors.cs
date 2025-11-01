@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using AndrewDemo.NetConf2023.Core;
 using System.Data;
 using System.Runtime.CompilerServices;
@@ -10,12 +11,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         #region command processors
         private static void ShowMyInfoCommandProcessor(string[] args)
         {
-            var token = _access_token ?? throw new InvalidOperationException("access token not initialized");
-            var member = Member.GetCurrentMember(token) ?? throw new InvalidOperationException("member not found");
+            var member = RequireCurrentMember();
 
             int count = 0;
             decimal amount = 0;
-            var orders = Order.GetOrders(member.Id).ToList();
+            var orders = GetOrdersForMember(member.Id).ToList();
 
             foreach (var order in orders)
             {
@@ -47,7 +47,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void EmptyMyCartCommandProcessor(string[] args)
         {
             ShopFunction_EmptyCart();
-            var cart = Cart.Get(_cartId);
+            var cart = GetCurrentCart();
             var itemCount = cart?.LineItems.Count() ?? 0;
             AssistantOutput("Your cart is empty now.");
             CopilotNotify($"我的購物車目前有 {itemCount} 件商品在裡面，我清空了我的購物車");
@@ -93,7 +93,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void RemoveItemsCommandProcessor(string[] args)
         {
             int pid = int.Parse(args[0]);
-            var product = Product.GetById(pid);
+            var product = GetProductById(pid);
             if (product == null)
             {
                 AssistantOutput($"找不到商品 {pid}，沒有異動購物車。");
@@ -115,7 +115,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void AddItemsCommandProcessor(string[] args)
         {
             int pid = int.Parse(args[0]);
-            var product = Product.GetById(pid);
+            var product = GetProductById(pid);
             if (product == null)
             {
                 AssistantOutput($"找不到商品 {pid}，沒有異動購物車。");
@@ -139,8 +139,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             int pid = int.Parse(args[0]);
             decimal budget = decimal.Parse(args[1]);
 
-            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
-            var product = Product.GetById(pid);
+            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
+            var product = GetProductById(pid);
             if (product == null)
             {
                 AssistantOutput($"找不到商品 {pid}，沒有異動購物車。");
@@ -172,7 +172,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static void ShowMyItemsCommandProcessor(string[] args)
         {
-            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice():C} 元.");
             CopilotNotify($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {cart.EstimatePrice():C} 元");
 
@@ -184,7 +184,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             foreach (var item in cart.LineItems)
             {
-                var product = Product.GetById(item.ProductId);
+                var product = GetProductById(item.ProductId);
                 if (product == null)
                 {
                     Console.WriteLine($"- 商品: [{item.ProductId}] (已下架)");
@@ -202,7 +202,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void ListProductsCommandProcessor(string[] args)
         {
             AssistantOutput("您好, 以下是我們店裡有賣的東西...");
-            var products = Product.GetAll();
+            var products = GetAllProducts();
             foreach (var product in products)
             {
                 Console.WriteLine($"- {product.Id}\t{product.Name}\t{product.Price:C}");
