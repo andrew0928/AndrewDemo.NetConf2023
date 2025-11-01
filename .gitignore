@@ -364,3 +364,5 @@ FodyWeavers.xsd
 # SpecStory explanation file
 .specstory/
 .DS_Store
+
+.env

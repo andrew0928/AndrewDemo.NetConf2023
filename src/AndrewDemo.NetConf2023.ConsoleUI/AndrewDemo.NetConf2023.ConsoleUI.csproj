@@ -20,4 +20,9 @@
     <ProjectReference Include="..\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include=".env" CopyToOutputDirectory="PreserveNewest" />
+    <None Include=".env.example" />
+  </ItemGroup>
+
 </Project>

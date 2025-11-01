@@ -1,15 +1,16 @@
 ﻿using System;
 using AndrewDemo.NetConf2023.Core;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.OpenAI;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace AndrewDemo.NetConf2023.ConsoleUI
 {
@@ -36,13 +37,15 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static void InitSK()
         {
             #region init semantic kernel
-            var config = new ConfigurationBuilder()
-                .AddUserSecrets<Program>()
-                .Build();
+            LoadEnvIfPresent();
+
+            var deployName = GetRequiredEnv("AzureOpenAI__DeployName");
+            var endpoint = GetRequiredEnv("AzureOpenAI__Endpoint");
+            var apiKey = GetRequiredEnv("AzureOpenAI__ApiKey");
 
             var builder = Kernel.CreateBuilder()
                 //.AddAzureOpenAIChatCompletion("gpt-5-mini", "https://app-azureopenai.openai.azure.com/", "");
-                .AddAzureOpenAIChatCompletion("SKDemo_GPT4o", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"] ?? string.Empty);
+                .AddAzureOpenAIChatCompletion(deployName, endpoint, apiKey);
 
 
 
@@ -396,5 +399,68 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         }
 
         #endregion
+
+        private static void LoadEnvIfPresent()
+        {
+            // Support local development by hydrating env vars from a .env file when available
+            try
+            {
+                var visited = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                void HydrateFrom(string? directory)
+                {
+                    if (string.IsNullOrWhiteSpace(directory)) return;
+
+                    var fullPath = Path.GetFullPath(directory);
+                    if (!visited.Add(fullPath)) return;
+
+                    var candidate = Path.Combine(fullPath, ".env");
+                    if (!File.Exists(candidate)) return;
+
+                    foreach (var rawLine in File.ReadAllLines(candidate))
+                    {
+                        var line = rawLine.Trim();
+                        if (string.IsNullOrEmpty(line) || line.StartsWith("#")) continue;
+
+                        var separatorIndex = line.IndexOf('=');
+                        if (separatorIndex < 0) continue;
+
+                        var key = line[..separatorIndex].Trim();
+                        if (string.IsNullOrEmpty(key)) continue;
+
+                        var value = line[(separatorIndex + 1)..].Trim().Trim('"');
+                        if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+                        {
+                            Environment.SetEnvironmentVariable(key, value);
+                        }
+                    }
+                }
+
+                HydrateFrom(AppContext.BaseDirectory);
+
+                var current = Directory.GetCurrentDirectory();
+                while (!string.IsNullOrEmpty(current))
+                {
+                    HydrateFrom(current);
+                    var parent = Directory.GetParent(current);
+                    current = parent?.FullName ?? string.Empty;
+                }
+            }
+            catch
+            {
+                // Ignore I/O failures; environment variables might already be configured.
+            }
+        }
+
+        private static string GetRequiredEnv(string name)
+        {
+            var value = Environment.GetEnvironmentVariable(name);
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"環境變數 {name} 未設定");
+            }
+
+            return value;
+        }
     }
 }
