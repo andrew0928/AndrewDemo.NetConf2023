@@ -10,6 +10,9 @@ using System.Text.Json.Serialization;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
+    /// <summary>
+    /// 處理登入與 OAuth2 授權流程。
+    /// </summary>
     [Route("api/login")]
     [ApiController]
     [AllowAnonymous]
@@ -49,11 +52,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             [FromForm(Name = "redirect_uri"), Required] string redirectURL,
             [FromForm(Name = "state")] string? state)
         {
-            string token = Member.Login(name, password);
+            string token = Member.Login(name ?? string.Empty, password ?? string.Empty);
             if (token == null)
             {
                 Console.WriteLine($"[/api/login/authorize] Login failed: {name}, try register...");
-                token = Member.Register(name);
+                token = Member.Register(name ?? string.Empty);
             }
 
             string code = Guid.NewGuid().ToString("N");
@@ -97,9 +100,15 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             });
         }
 
+        /// <summary>
+        /// OAuth2 代碼交換請求。
+        /// </summary>
         public class TokenRequest
         {
-            public string code { get; set; }
+            /// <summary>
+            /// 授權碼。
+            /// </summary>
+            public string code { get; set; } = string.Empty;
             //public string grant_type { get; set; }
             //public string client_id { get; set; }
             //public string client_secret { get; set; }

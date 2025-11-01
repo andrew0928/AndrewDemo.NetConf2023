@@ -132,7 +132,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 消費者對這次交易的註記，包含對商店的評價、建議等。
             /// </summary>
-            public string ShopComments { get; set; } = null;
+            public string? ShopComments { get; set; }
         }
 
         public class CheckoutCompleteResponse

@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
-
+    /// <summary>
+    /// 提供會員資料與交易紀錄的查詢與更新功能。
+    /// </summary>
     [Route("api/member")]
     [ApiController]
     public class MemberController : ControllerBase
@@ -72,7 +74,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            return Member.SetShopNotes(accessToken, request.ShopNotes);
+            var member = Member.SetShopNotes(accessToken, request.ShopNotes);
+            if (member == null)
+            {
+                return Unauthorized();
+            }
+
+            return member;
         }
 
 
@@ -149,36 +157,48 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
 
 
-        public class MemberRegisterRequest
+    /// <summary>
+    /// 會員註冊請求資料。
+    /// </summary>
+    public class MemberRegisterRequest
         {
             /// <summary>
             /// 會員名稱
             /// </summary>
-            public string Name { get; set; }
+            public string Name { get; set; } = string.Empty;
         }
 
-        public class MemberLoginRequest
+    /// <summary>
+    /// 會員登入請求資料。
+    /// </summary>
+    public class MemberLoginRequest
         {
             /// <summary>
             /// 登入帳號
             /// </summary>
-            public string Name { get; set; }
+            public string Name { get; set; } = string.Empty;
 
             /// <summary>
             /// 登入密碼
             /// </summary>
-            public string Password { get; set; }
+            public string Password { get; set; } = string.Empty;
         }
 
-        public class MemberSetNotesRequest
+    /// <summary>
+    /// 更新會員註記的請求資料。
+    /// </summary>
+    public class MemberSetNotesRequest
         {
             /// <summary>
             /// 會員註記
             /// </summary>
-            public string ShopNotes { get; set; }
+            public string ShopNotes { get; set; } = string.Empty;
         }
 
-        public class MemberOrdersResponse
+    /// <summary>
+    /// 會員訂單查詢回應資料。
+    /// </summary>
+    public class MemberOrdersResponse
         {
             /// <summary>
             /// 總訂單數量
@@ -193,12 +213,18 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 訂單列表
             /// </summary>
-            public List<Order> Orders { get; set; }
+            public List<Order> Orders { get; set; } = new List<Order>();
         }
 
+        /// <summary>
+        /// 會員存取權杖回應資料。
+        /// </summary>
         public class MemberAccessTokenResponse
         {
-            public string AccessToken { get; set; }
+            /// <summary>
+            /// 存取權杖。
+            /// </summary>
+            public string AccessToken { get; set; } = string.Empty;
             //public DateTime ExpiredAt { get; set; }
         }
 

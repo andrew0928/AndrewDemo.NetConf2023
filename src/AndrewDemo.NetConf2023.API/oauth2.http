@@ -1,13 +1,28 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
 @baseURL= http://localhost:5108
-@oauth2_accesstoken=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
+@oauth2_accesstoken=94d38ffa2cb24032b7718e05c2e816e4
+
+#
+# how to get access token?
+# 1. use this url to login
+# {{baseURL}}/api/login/authorize?client_id=1234&redirect_uri=about:blank&state=ready
+# 2. get code from console log, or detect it from 302 redirurl query
+
+ 
+### get token from code
+POST {{baseURL}}/api/login/token
+Content-Type: application/x-www-form-urlencoded
+
+code=b755f0dd5a6a4fca9f5139d1384f61ea
 
 
 
 
-###
-GET http://localhost:5108/api/Authentication/github/login
 
-###
+### list products
 GET {{baseURL}}/api/products
+Authorization: Bearer {{oauth2_accesstoken}}
+
+### create cart
+POST {{baseURL}}/api/carts/create
 Authorization: Bearer {{oauth2_accesstoken}}

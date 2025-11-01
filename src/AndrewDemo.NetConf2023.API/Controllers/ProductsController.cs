@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
+    /// <summary>
+    /// 負責提供商品查詢介面。
+    /// </summary>
     [Route("api/products")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -17,7 +20,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<Product>> Get()
         {
-            return Product.Database.Values.ToList();
+            return Product.GetAll().ToList();
         }
 
         /// <summary>
@@ -30,14 +33,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Product> Get(int id)
         {
-            if (Product.Database.ContainsKey(id))
-            {
-                return Product.Database[id];
-            }
-            else
+            var product = Product.GetById(id);
+            if (product == null)
             {
                 return NotFound();
             }
+
+            return product;
         }
     }
 
