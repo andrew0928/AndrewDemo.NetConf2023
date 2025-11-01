@@ -20,8 +20,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 ConnectionString = connectionString
             });
-
-            ShopDatabase.Use(_context);
         }
 
         public void Dispose()
