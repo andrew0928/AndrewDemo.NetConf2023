@@ -4,7 +4,7 @@ using Xunit;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
 {
-    public class CartPersistenceTests
+    public class CartPersistenceTests : ShopDatabaseTestBase
     {
         [Fact]
         public void CartAddProducts_PersistsAndCanBeReadBack()
@@ -13,10 +13,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             int quantity = 2;
             int productId = TestDataFactory.CreateProduct(price);
 
-            var cart = Cart.Create();
+            var cart = ShopDatabase.Create(new Cart());
             cart.AddProducts(productId, quantity);
 
-            var reloaded = Cart.Get(cart.Id);
+            var reloaded = ShopDatabase.Current.Carts.FindById(cart.Id);
             Assert.NotNull(reloaded);
 
             var lineItems = reloaded!.LineItems.ToList();

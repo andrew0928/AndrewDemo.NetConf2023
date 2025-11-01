@@ -7,6 +7,7 @@ namespace AndrewDemo.NetConf2023.Core
 {
     public class Checkout
     {
+        [Obsolete("請改用 IShopDatabaseContext.CheckoutTransactions 直接管理交易紀錄。")]
         public static int Create(int cartId, string token)
         {
             var cart = Cart.Get(cartId);
@@ -30,6 +31,7 @@ namespace AndrewDemo.NetConf2023.Core
 
         public static event EventHandler? CheckoutCompleted;
 
+        [Obsolete("請改用自訂服務搭配 IShopDatabaseContext 完成結帳流程。")]
         public static async Task<Order> CompleteAsync(int transactionId, int paymentId, int satisfaction = 0, string? comments = null)
         {
             // 這邊要處理:

@@ -10,33 +10,37 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
         internal static int CreateProduct(decimal price, string? name = null, string? description = null)
         {
-            int id = Interlocked.Increment(ref _productSeq);
+            int seq = Interlocked.Increment(ref _productSeq);
 
-            Product.Upsert(new Product
+            var product = new Product
             {
-                Id = id,
-                Name = name ?? $"TestProduct-{id}",
+                Id = seq,
+                Name = name ?? $"TestProduct-{seq}",
                 Description = description,
                 Price = price
-            });
+            };
 
-            return id;
+            ShopDatabase.Create(product);
+            return seq;
         }
 
         internal static (Member member, string token) RegisterMember()
         {
             string memberName = $"member-{Guid.NewGuid():N}";
-            string? token = Member.Register(memberName);
-            if (token == null)
+            var member = new Member
             {
-                throw new InvalidOperationException("failed to register test member");
-            }
+                Name = memberName
+            };
 
-            var member = Member.GetCurrentMember(token);
-            if (member == null)
+            ShopDatabase.Create(member);
+
+            string token = Guid.NewGuid().ToString("N");
+            ShopDatabase.Current.MemberTokens.Upsert(new MemberAccessTokenRecord
             {
-                throw new InvalidOperationException("registered member could not be loaded");
-            }
+                Token = token,
+                MemberId = member.Id,
+                Expire = DateTime.MaxValue
+            });
 
             return (member, token);
         }

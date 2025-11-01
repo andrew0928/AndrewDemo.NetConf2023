@@ -16,7 +16,7 @@ namespace AndrewDemo.NetConf2023.Core
         ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions { get; }
     }
 
-    internal sealed class ShopDatabaseContext : IShopDatabaseContext
+    public sealed class ShopDatabaseContext : IShopDatabaseContext
     {
         private readonly LiteDatabase _database;
         private readonly ILiteCollection<Cart> _carts;
@@ -87,7 +87,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public ILiteCollection<MemberAccessTokenRecord> MemberTokens
+    public ILiteCollection<MemberAccessTokenRecord> MemberTokens
         {
             get
             {
@@ -96,7 +96,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions
+    public ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions
         {
             get
             {
@@ -187,6 +187,36 @@ namespace AndrewDemo.NetConf2023.Core
                 _current = context;
             }
         }
+
+        internal static T Create<T>() where T : class, new()
+        {
+            return Create(new T());
+        }
+
+        internal static T Create<T>(T entity) where T : class
+        {
+            if (entity == null)
+            {
+                throw new ArgumentNullException(nameof(entity));
+            }
+
+            var context = Current;
+            var collection = GetCollection<T>(context);
+            collection.Insert(entity);
+            return entity;
+        }
+
+        private static ILiteCollection<T> GetCollection<T>(IShopDatabaseContext context) where T : class
+        {
+            if (typeof(T) == typeof(Cart)) return (ILiteCollection<T>)context.Carts;
+            if (typeof(T) == typeof(Product)) return (ILiteCollection<T>)context.Products;
+            if (typeof(T) == typeof(Member)) return (ILiteCollection<T>)context.Members;
+            if (typeof(T) == typeof(Order)) return (ILiteCollection<T>)context.Orders;
+            if (typeof(T) == typeof(MemberAccessTokenRecord)) return (ILiteCollection<T>)context.MemberTokens;
+            if (typeof(T) == typeof(CheckoutTransactionRecord)) return (ILiteCollection<T>)context.CheckoutTransactions;
+
+            return context.Database.GetCollection<T>();
+        }
     }
 
     public static class ShopDatabaseServiceCollectionExtensions
@@ -211,7 +241,7 @@ namespace AndrewDemo.NetConf2023.Core
         public string? ConnectionString { get; set; }
     }
 
-    internal class MemberAccessTokenRecord
+    public class MemberAccessTokenRecord
     {
         [BsonId]
         public string Token { get; set; } = string.Empty;
@@ -219,7 +249,7 @@ namespace AndrewDemo.NetConf2023.Core
         public int MemberId { get; set; }
     }
 
-    internal class CheckoutTransactionRecord
+    public class CheckoutTransactionRecord
     {
         [BsonId(true)]
         public int TransactionId { get; set; }

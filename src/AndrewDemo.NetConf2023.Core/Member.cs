@@ -15,6 +15,7 @@ namespace AndrewDemo.NetConf2023.Core
 
         // not implement password in this demo, just for demo
         // any non-empty string is valid
+        [Obsolete("請改用 IShopDatabaseContext.Members 配合自訂服務處理登入流程。")]
         public static string Login(string name, string password)
         {
             var member = ShopDatabase.Current.Members.FindOne(m => m.Name == name);
@@ -33,6 +34,7 @@ namespace AndrewDemo.NetConf2023.Core
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>
+        [Obsolete("請改用 IShopDatabaseContext.Members 與 Token 儲存機制自行註冊。")]
         public static string Register(string name)
         {
             var existing = ShopDatabase.Current.Members.FindOne(m => m.Name == name);
@@ -52,6 +54,7 @@ namespace AndrewDemo.NetConf2023.Core
             return CreateAccessToken(member);
         }
 
+        [Obsolete("請改用 Token 儲存機制與 IShopDatabaseContext 直接查詢會員。")]
         public static Member GetCurrentMember(string accessToken)
         {
             var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
@@ -61,6 +64,7 @@ namespace AndrewDemo.NetConf2023.Core
             return ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
         }
 
+        [Obsolete("請改用 IShopDatabaseContext.Members.Upsert 更新會員資訊。")]
         public static Member SetShopNotes(string accessToken, string notes)
         {
             var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);

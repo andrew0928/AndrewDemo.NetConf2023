@@ -16,6 +16,7 @@ namespace AndrewDemo.NetConf2023.Core
 
         public Dictionary<int, int> ProdQtyMap { get; set; } = new Dictionary<int, int>();
 
+        [Obsolete("請改用 IShopDatabaseContext.Carts 插入購物車實體。")] 
         public static Cart Create()
         {
             var cart = new Cart();
@@ -23,6 +24,7 @@ namespace AndrewDemo.NetConf2023.Core
             return cart;
         }
 
+        [Obsolete("請改用 IShopDatabaseContext.Carts.FindById 取得購物車。")]
         public static Cart? Get(int id)
         {
             var cart = ShopDatabase.Current.Carts.FindById(id);

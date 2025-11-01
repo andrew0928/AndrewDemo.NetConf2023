@@ -4,7 +4,7 @@ using Xunit;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
 {
-    public class ProductPersistenceTests
+    public class ProductPersistenceTests : ShopDatabaseTestBase
     {
         [Fact]
         public void ProductUpsertAndGetAll_ReturnsInsertedProduct()
@@ -12,11 +12,11 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             decimal price = 42m;
             int productId = TestDataFactory.CreateProduct(price);
 
-            var product = Product.GetById(productId);
+            var product = ShopDatabase.Current.Products.FindById(productId);
             Assert.NotNull(product);
             Assert.Equal(price, product!.Price);
 
-            var allProducts = Product.GetAll();
+            var allProducts = ShopDatabase.Current.Products.FindAll().ToList();
             Assert.Contains(allProducts, p => p.Id == productId && p.Price == price);
         }
     }
