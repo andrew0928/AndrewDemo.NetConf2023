@@ -24,7 +24,7 @@ namespace AndrewDemo.NetConf2023.Core
                 CreatedAt = DateTime.UtcNow
             };
 
-            LiteDbContext.CheckoutTransactions.Insert(transaction);
+            ShopDatabase.Current.CheckoutTransactions.Insert(transaction);
             return transaction.TransactionId;
         }
 
@@ -46,16 +46,16 @@ namespace AndrewDemo.NetConf2023.Core
             //Console.WriteLine($"[checkout] checkout process start...");
 
 
-            var transaction = LiteDbContext.CheckoutTransactions.FindById(transactionId);
+            var transaction = ShopDatabase.Current.CheckoutTransactions.FindById(transactionId);
             if (transaction == null)
             {
                 throw new ArgumentOutOfRangeException(nameof(transactionId));
             }
 
-            LiteDbContext.CheckoutTransactions.Delete(transactionId);
+            ShopDatabase.Current.CheckoutTransactions.Delete(transactionId);
 
             var cart = Cart.Get(transaction.CartId) ?? throw new InvalidOperationException($"cart {transaction.CartId} not found");
-            var consumer = LiteDbContext.Members.FindById(transaction.MemberId) ?? throw new InvalidOperationException($"member {transaction.MemberId} not found");
+            var consumer = ShopDatabase.Current.Members.FindById(transaction.MemberId) ?? throw new InvalidOperationException($"member {transaction.MemberId} not found");
 
             var order = new Order(transactionId)
             {

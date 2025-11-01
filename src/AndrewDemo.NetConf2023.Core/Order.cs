@@ -30,12 +30,12 @@ namespace AndrewDemo.NetConf2023.Core
 
         public static IEnumerable<Order> GetOrders(int memberId)
         {
-            return LiteDbContext.Orders.Find(o => o.Buyer.Id == memberId);
+            return ShopDatabase.Current.Orders.Find(o => o.Buyer.Id == memberId);
         }
 
         internal static void Upsert(Order order)
         {
-            LiteDbContext.Orders.Upsert(order);
+            ShopDatabase.Current.Orders.Upsert(order);
         }
 
 

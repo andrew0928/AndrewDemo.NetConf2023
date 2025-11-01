@@ -17,7 +17,7 @@ namespace AndrewDemo.NetConf2023.Core
         // any non-empty string is valid
         public static string Login(string name, string password)
         {
-            var member = LiteDbContext.Members.FindOne(m => m.Name == name);
+            var member = ShopDatabase.Current.Members.FindOne(m => m.Name == name);
             if (member == null) return null;
 
             // ignore password
@@ -35,7 +35,7 @@ namespace AndrewDemo.NetConf2023.Core
         /// <returns></returns>
         public static string Register(string name)
         {
-            var existing = LiteDbContext.Members.FindOne(m => m.Name == name);
+            var existing = ShopDatabase.Current.Members.FindOne(m => m.Name == name);
             if (existing != null)
             {
                 return null;
@@ -46,7 +46,7 @@ namespace AndrewDemo.NetConf2023.Core
                 Name = name,
             };
 
-            LiteDbContext.Members.Insert(member);
+            ShopDatabase.Current.Members.Insert(member);
 
             MemberRegistered?.Invoke(member, EventArgs.Empty);
             return CreateAccessToken(member);
@@ -54,24 +54,24 @@ namespace AndrewDemo.NetConf2023.Core
 
         public static Member GetCurrentMember(string accessToken)
         {
-            var tokenRecord = LiteDbContext.MemberTokens.FindById(accessToken);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
             if (tokenRecord == null) return null;
             if (tokenRecord.Expire <= DateTime.Now) return null;
 
-            return LiteDbContext.Members.FindById(tokenRecord.MemberId);
+            return ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
         }
 
         public static Member SetShopNotes(string accessToken, string notes)
         {
-            var tokenRecord = LiteDbContext.MemberTokens.FindById(accessToken);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
             if (tokenRecord == null) return null;
             if (tokenRecord.Expire <= DateTime.Now) return null;
 
-            var member = LiteDbContext.Members.FindById(tokenRecord.MemberId);
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null) return null;
 
             member.ShopNotes = notes;
-            LiteDbContext.Members.Upsert(member);
+            ShopDatabase.Current.Members.Upsert(member);
 
             return member;
         }
@@ -83,7 +83,7 @@ namespace AndrewDemo.NetConf2023.Core
         private static string CreateAccessToken(Member consumer)
         {
             string token = Guid.NewGuid().ToString("N");
-            LiteDbContext.MemberTokens.Upsert(new MemberAccessTokenRecord()
+            ShopDatabase.Current.MemberTokens.Upsert(new MemberAccessTokenRecord()
             {
                 Token = token,
                 Expire = DateTime.MaxValue,

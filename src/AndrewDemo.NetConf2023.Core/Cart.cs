@@ -19,13 +19,13 @@ namespace AndrewDemo.NetConf2023.Core
         public static Cart Create()
         {
             var cart = new Cart();
-            LiteDbContext.Carts.Insert(cart);
+            ShopDatabase.Current.Carts.Insert(cart);
             return cart;
         }
 
         public static Cart? Get(int id)
         {
-            var cart = LiteDbContext.Carts.FindById(id);
+            var cart = ShopDatabase.Current.Carts.FindById(id);
             if (cart != null && cart.ProdQtyMap == null)
             {
                 cart.ProdQtyMap = new Dictionary<int, int>();
@@ -47,7 +47,7 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 this.ProdQtyMap[productId] = qty;
             }
-            LiteDbContext.Carts.Upsert(this);
+            ShopDatabase.Current.Carts.Upsert(this);
             return true;
         }
 
