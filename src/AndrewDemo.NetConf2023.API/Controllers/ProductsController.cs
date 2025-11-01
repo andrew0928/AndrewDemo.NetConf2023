@@ -11,6 +11,16 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
+        private readonly IShopDatabaseContext _database;
+
+        /// <summary>
+        /// 建構函式
+        /// </summary>
+        /// <param name="database"></param>
+        public ProductsController(IShopDatabaseContext database)
+        {
+            _database = database;
+        }
 
         /// <summary>
         /// 取得線上商店的所有商品資訊。
@@ -20,7 +30,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<Product>> Get()
         {
-            return ShopDatabase.Current.Products.FindAll().ToList();
+            return _database.Products.FindAll().ToList();
         }
 
         /// <summary>
@@ -33,7 +43,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Product> Get(int id)
         {
-            var product = ShopDatabase.Current.Products.FindById(id);
+            var product = _database.Products.FindById(id);
             if (product == null)
             {
                 return NotFound();

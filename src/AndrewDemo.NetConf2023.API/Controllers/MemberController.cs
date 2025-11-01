@@ -11,6 +11,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class MemberController : ControllerBase
     {
+        private readonly IShopDatabaseContext _database;
+
+        /// <summary>
+        /// 建構函式
+        /// </summary>
+        /// <param name="database"></param>
+        public MemberController(IShopDatabaseContext database)
+        {
+            _database = database;
+        }
+
         // remove useless api for register and login
 
         /*
@@ -74,20 +85,20 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
             if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
             {
                 return Unauthorized();
             }
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
+            var member = _database.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
             }
 
             member.ShopNotes = request.ShopNotes;
-            ShopDatabase.Current.Members.Update(member);
+            _database.Members.Update(member);
 
             return member;
         }
@@ -113,13 +124,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
             if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
             {
                 return Unauthorized();
             }
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
+            var member = _database.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
@@ -146,13 +157,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
             if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
             {
                 return Unauthorized();
             }
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
+            var member = _database.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return NotFound();
@@ -160,7 +171,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             int count = 0;
             decimal amount = 0;
-            var orders = ShopDatabase.Current.Orders.Find(o => o.Buyer.Id == member.Id).ToList();
+            var orders = _database.Orders.Find(o => o.Buyer.Id == member.Id).ToList();
             
             foreach (var order in orders)
             {

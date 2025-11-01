@@ -19,6 +19,16 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class LoginController : ControllerBase
     {
         private static Dictionary<string, string> _codes = new Dictionary<string, string>();
+        private readonly IShopDatabaseContext _database;
+
+        /// <summary>
+        /// 建構函式
+        /// </summary>
+        /// <param name="database"></param>
+        public LoginController(IShopDatabaseContext database)
+        {
+            _database = database;
+        }
 
 
         /// <summary>
@@ -53,7 +63,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             [FromForm(Name = "state")] string? state)
         {
             string token;
-            var member = ShopDatabase.Current.Members.FindOne(m => m.Name == (name ?? string.Empty));
+            var member = _database.Members.FindOne(m => m.Name == (name ?? string.Empty));
             
             if (member == null)
             {
@@ -65,11 +75,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
                 Console.WriteLine($"[/api/login/authorize] User not found: {name}, registering...");
                 member = new Member { Name = name };
-                ShopDatabase.Current.Members.Insert(member);
+                _database.Members.Insert(member);
             }
 
             token = Guid.NewGuid().ToString("N");
-            ShopDatabase.Current.MemberTokens.Upsert(new MemberAccessTokenRecord
+            _database.MemberTokens.Upsert(new MemberAccessTokenRecord
             {
                 Token = token,
                 MemberId = member.Id,

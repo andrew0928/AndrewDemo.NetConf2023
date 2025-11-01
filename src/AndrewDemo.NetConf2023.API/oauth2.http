@@ -1,6 +1,6 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
 @baseURL= http://localhost:5108
-@oauth2_accesstoken=94d38ffa2cb24032b7718e05c2e816e4
+@oauth2_accesstoken=6aa0d76638274595a6d1dea5f0f4d7a6
 
 #
 # how to get access token?
@@ -13,7 +13,7 @@
 POST {{baseURL}}/api/login/token
 Content-Type: application/x-www-form-urlencoded
 
-code=b755f0dd5a6a4fca9f5139d1384f61ea
+code=ee49cbc641ff4d528fd13c70ce48cbe5
 
 
 

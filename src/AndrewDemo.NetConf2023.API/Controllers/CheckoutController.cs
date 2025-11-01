@@ -4,10 +4,24 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
+    /// <summary>
+    /// 
+    /// </summary>
     [Route("api/checkout")]
     [ApiController]
     public class CheckoutController : ControllerBase
     {
+        private readonly IShopDatabaseContext _database;
+
+        /// <summary>
+        /// 建構函式
+        /// </summary>
+        /// <param name="database"></param>
+        public CheckoutController(IShopDatabaseContext database)
+        {
+            _database = database;
+        }
+
         /// <summary>
         /// 建立一個新的結帳交易。每次結帳都會有一個交易 ID (transactionId) 來識別。
         /// </summary>
@@ -31,19 +45,19 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
             if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
             {
                 return Unauthorized();
             }
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
+            var member = _database.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var cart = ShopDatabase.Current.Carts.FindById(request.CartId);
+            var cart = _database.Carts.FindById(request.CartId);
             if (cart == null)
             {
                 return BadRequest("Cart not found");
@@ -56,7 +70,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 CreatedAt = DateTime.UtcNow
             };
 
-            ShopDatabase.Current.CheckoutTransactions.Insert(transaction);
+            _database.CheckoutTransactions.Insert(transaction);
 
             return new CheckoutCreateResponse()
             {
@@ -89,13 +103,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
             if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
             {
                 return Unauthorized();
             }
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
+            var member = _database.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
@@ -105,21 +119,21 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             var ticket = new WaitingRoomTicket();
             await ticket.WaitUntilCanRunAsync();
 
-            var transaction = ShopDatabase.Current.CheckoutTransactions.FindById(request.TransactionId);
+            var transaction = _database.CheckoutTransactions.FindById(request.TransactionId);
             if (transaction == null)
             {
                 return BadRequest("Transaction not found");
             }
 
-            ShopDatabase.Current.CheckoutTransactions.Delete(request.TransactionId);
+            _database.CheckoutTransactions.Delete(request.TransactionId);
 
-            var cart = ShopDatabase.Current.Carts.FindById(transaction.CartId);
+            var cart = _database.Carts.FindById(transaction.CartId);
             if (cart == null)
             {
                 return BadRequest("Cart not found");
             }
 
-            var consumer = ShopDatabase.Current.Members.FindById(transaction.MemberId);
+            var consumer = _database.Members.FindById(transaction.MemberId);
             if (consumer == null)
             {
                 return BadRequest("Consumer not found");
@@ -134,7 +148,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             foreach (var lineitem in cart.LineItems)
             {
-                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId);
+                var product = _database.Products.FindById(lineitem.ProductId);
                 if (product == null)
                 {
                     return BadRequest($"Product {lineitem.ProductId} not found");
@@ -149,7 +163,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 });
             }
 
-            foreach (var discount in DiscountEngine.Calculate(cart, consumer))
+            foreach (var discount in DiscountEngine.Calculate(cart, consumer, _database))
             {
                 order.LineItems.Add(new Order.OrderLineItem
                 {
@@ -167,7 +181,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 Comments = request.ShopComments
             };
 
-            ShopDatabase.Current.Orders.Upsert(order);
+            _database.Orders.Upsert(order);
 
             return new CheckoutCompleteResponse()
             {
@@ -187,20 +201,44 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
 
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class CheckoutCreateRequest
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public int CartId { get; set; }
             //public string AccessToken { get; set; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class CheckoutCreateResponse
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public int TransactionId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public DateTime TransactionStartAt { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public int ConsumerId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public string ConsumerName { get; set; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class CheckoutCompleteRequest
         {
             /// <summary>
@@ -225,14 +263,35 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             public string? ShopComments { get; set; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class CheckoutCompleteResponse
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public int TransactionId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public int PaymentId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public DateTime TransactionCompleteAt { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public int ConsumerId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public string ConsumerName { get; set; }
             
+            /// <summary>
+            /// 
+            /// </summary>
             public Order OrderDetail { get; set; }
         }
     }

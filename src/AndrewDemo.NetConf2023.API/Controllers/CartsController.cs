@@ -4,10 +4,26 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
 {
+
+    /// <summary>
+    /// 
+    /// </summary>
     [Route("api/carts")]
     [ApiController]
     public class CartsController : ControllerBase
     {
+        private readonly IShopDatabaseContext _database;
+
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="database"></param>
+        public CartsController(IShopDatabaseContext database)
+        {
+            _database = database;
+        }
+
         /// <summary>
         /// 取得指定ID的購物車內容
         /// </summary>
@@ -18,7 +34,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Cart> Get(int id)
         {
-            var cart = ShopDatabase.Current.Carts.FindById(id);
+            var cart = _database.Carts.FindById(id);
 
             if (cart != null)
             {
@@ -39,7 +55,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         public ActionResult<Cart> Post()
         {
             var cart = new Cart();
-            ShopDatabase.Current.Carts.Insert(cart);
+            _database.Carts.Insert(cart);
 
             return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
         }
@@ -58,12 +74,12 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Cart> Post(int id, [FromBody] AddItemToCartRequest request)
         {
-            var cart = ShopDatabase.Current.Carts.FindById(id);
+            var cart = _database.Carts.FindById(id);
 
             if (cart != null)
             {
                 cart.AddProducts(request.ProductId, request.Qty);
-                ShopDatabase.Current.Carts.Update(cart);
+                _database.Carts.Update(cart);
                 return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
             }
             else
@@ -82,14 +98,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<CartEstimateResponse> Post(int id)
         {
-            var cart = ShopDatabase.Current.Carts.FindById(id);
+            var cart = _database.Carts.FindById(id);
 
             if (cart != null)
             {
                 return new CartEstimateResponse()
                 {
-                    TotalPrice = cart.EstimatePrice(),
-                    Discounts = cart.EstimateDiscounts().ToList()
+                    TotalPrice = cart.EstimatePrice(_database),
+                    Discounts = cart.EstimateDiscounts(_database).ToList()
                 };
                 
             }
@@ -103,15 +119,33 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
 
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class AddItemToCartRequest
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public int ProductId { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public int Qty { get; set; }
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
         public class CartEstimateResponse
         {
+            /// <summary>
+            /// 
+            /// </summary>
             public decimal TotalPrice { get; set; }
+            /// <summary>
+            /// 
+            /// </summary>
             public List<Cart.CartDiscountHint> Discounts { get; set; }
         }
     }
