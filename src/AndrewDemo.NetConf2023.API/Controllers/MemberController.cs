@@ -74,11 +74,20 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var member = Member.SetShopNotes(accessToken, request.ShopNotes);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return Unauthorized();
+            }
+
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
             }
+
+            member.ShopNotes = request.ShopNotes;
+            ShopDatabase.Current.Members.Update(member);
 
             return member;
         }
@@ -104,7 +113,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var member = Member.GetCurrentMember(accessToken);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return Unauthorized();
+            }
+
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
@@ -131,7 +146,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
 
-            var member = Member.GetCurrentMember(accessToken); 
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return Unauthorized();
+            }
+
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return NotFound();
@@ -139,7 +160,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             int count = 0;
             decimal amount = 0;
-            var orders = Order.GetOrders(member.Id).ToList();
+            var orders = ShopDatabase.Current.Orders.Find(o => o.Buyer.Id == member.Id).ToList();
             
             foreach (var order in orders)
             {

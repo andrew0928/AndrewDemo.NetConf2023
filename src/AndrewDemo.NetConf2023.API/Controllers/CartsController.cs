@@ -18,7 +18,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Cart> Get(int id)
         {
-            var cart = Cart.Get(id);
+            var cart = ShopDatabase.Current.Carts.FindById(id);
 
             if (cart != null)
             {
@@ -38,7 +38,8 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status201Created)]
         public ActionResult<Cart> Post()
         {
-            var cart = Cart.Create();
+            var cart = new Cart();
+            ShopDatabase.Current.Carts.Insert(cart);
 
             return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
         }
@@ -57,11 +58,12 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Cart> Post(int id, [FromBody] AddItemToCartRequest request)
         {
-            var cart = Cart.Get(id);
+            var cart = ShopDatabase.Current.Carts.FindById(id);
 
             if (cart != null)
             {
                 cart.AddProducts(request.ProductId, request.Qty);
+                ShopDatabase.Current.Carts.Update(cart);
                 return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
             }
             else
@@ -80,7 +82,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<CartEstimateResponse> Post(int id)
         {
-            var cart = Cart.Get(id);
+            var cart = ShopDatabase.Current.Carts.FindById(id);
 
             if (cart != null)
             {

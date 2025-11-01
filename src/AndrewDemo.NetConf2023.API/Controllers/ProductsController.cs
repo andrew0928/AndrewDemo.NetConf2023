@@ -20,7 +20,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<Product>> Get()
         {
-            return Product.GetAll().ToList();
+            return ShopDatabase.Current.Products.FindAll().ToList();
         }
 
         /// <summary>
@@ -33,7 +33,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Product> Get(int id)
         {
-            var product = Product.GetById(id);
+            var product = ShopDatabase.Current.Products.FindById(id);
             if (product == null)
             {
                 return NotFound();

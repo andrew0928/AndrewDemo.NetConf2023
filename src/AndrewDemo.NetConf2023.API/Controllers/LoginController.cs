@@ -52,12 +52,29 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             [FromForm(Name = "redirect_uri"), Required] string redirectURL,
             [FromForm(Name = "state")] string? state)
         {
-            string token = Member.Login(name ?? string.Empty, password ?? string.Empty);
-            if (token == null)
+            string token;
+            var member = ShopDatabase.Current.Members.FindOne(m => m.Name == (name ?? string.Empty));
+            
+            if (member == null)
             {
-                Console.WriteLine($"[/api/login/authorize] Login failed: {name}, try register...");
-                token = Member.Register(name ?? string.Empty);
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    Console.WriteLine($"[/api/login/authorize] Login failed: empty name");
+                    return BadRequest("Name is required");
+                }
+
+                Console.WriteLine($"[/api/login/authorize] User not found: {name}, registering...");
+                member = new Member { Name = name };
+                ShopDatabase.Current.Members.Insert(member);
             }
+
+            token = Guid.NewGuid().ToString("N");
+            ShopDatabase.Current.MemberTokens.Upsert(new MemberAccessTokenRecord
+            {
+                Token = token,
+                MemberId = member.Id,
+                Expire = DateTime.MaxValue
+            });
 
             string code = Guid.NewGuid().ToString("N");
             _codes[code] = token;

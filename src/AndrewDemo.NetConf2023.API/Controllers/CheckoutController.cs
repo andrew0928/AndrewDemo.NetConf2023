@@ -31,17 +31,36 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var member = Member.GetCurrentMember(accessToken);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return Unauthorized();
+            }
+
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var transactionId = Checkout.Create(request.CartId, accessToken);            
+            var cart = ShopDatabase.Current.Carts.FindById(request.CartId);
+            if (cart == null)
+            {
+                return BadRequest("Cart not found");
+            }
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            ShopDatabase.Current.CheckoutTransactions.Insert(transaction);
 
             return new CheckoutCreateResponse()
             {
-                TransactionId = transactionId,
+                TransactionId = transaction.TransactionId,
                 TransactionStartAt = DateTime.UtcNow,
                 ConsumerId = member.Id,
                 ConsumerName = member.Name
@@ -70,14 +89,85 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            //var member = this.HttpContext.Items["Consumer"] as Member;
-            var member = Member.GetCurrentMember(accessToken);
+            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return Unauthorized();
+            }
+
+            var member = ShopDatabase.Current.Members.FindById(tokenRecord.MemberId);
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var order = await Checkout.CompleteAsync(request.TransactionId, request.PaymentId, request.Satisfaction, request.ShopComments);
+            // Process checkout transaction
+            var ticket = new WaitingRoomTicket();
+            await ticket.WaitUntilCanRunAsync();
+
+            var transaction = ShopDatabase.Current.CheckoutTransactions.FindById(request.TransactionId);
+            if (transaction == null)
+            {
+                return BadRequest("Transaction not found");
+            }
+
+            ShopDatabase.Current.CheckoutTransactions.Delete(request.TransactionId);
+
+            var cart = ShopDatabase.Current.Carts.FindById(transaction.CartId);
+            if (cart == null)
+            {
+                return BadRequest("Cart not found");
+            }
+
+            var consumer = ShopDatabase.Current.Members.FindById(transaction.MemberId);
+            if (consumer == null)
+            {
+                return BadRequest("Consumer not found");
+            }
+
+            var order = new Order(request.TransactionId)
+            {
+                Buyer = consumer
+            };
+
+            decimal total = 0m;
+
+            foreach (var lineitem in cart.LineItems)
+            {
+                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId);
+                if (product == null)
+                {
+                    return BadRequest($"Product {lineitem.ProductId} not found");
+                }
+
+                total += product.Price * lineitem.Qty;
+
+                order.LineItems.Add(new Order.OrderLineItem
+                {
+                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Qty} 件 = {product.Price * lineitem.Qty:C}",
+                    Price = product.Price * lineitem.Qty
+                });
+            }
+
+            foreach (var discount in DiscountEngine.Calculate(cart, consumer))
+            {
+                order.LineItems.Add(new Order.OrderLineItem
+                {
+                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.DiscountAmount:C}",
+                    Price = discount.DiscountAmount
+                });
+
+                total += discount.DiscountAmount;
+            }
+
+            order.TotalPrice = total;
+            order.ShopNotes = new Order.OrderShopNotes
+            {
+                BuyerSatisfaction = request.Satisfaction,
+                Comments = request.ShopComments
+            };
+
+            ShopDatabase.Current.Orders.Upsert(order);
 
             return new CheckoutCompleteResponse()
             {
