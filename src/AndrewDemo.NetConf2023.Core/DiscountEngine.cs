@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace AndrewDemo.NetConf2023.Core
 {
-    internal class DiscountEngine
+    public static class DiscountEngine
     {
         public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member? consumer)
         {
@@ -16,7 +16,7 @@ namespace AndrewDemo.NetConf2023.Core
 
             if (lineitem != null)
             {
-                var product = Product.GetById(lineitem.ProductId);
+                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId);
                 if (product == null)
                 {
                     yield break;

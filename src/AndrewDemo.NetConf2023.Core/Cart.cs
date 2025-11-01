@@ -58,7 +58,7 @@ namespace AndrewDemo.NetConf2023.Core
             decimal total = 0m;
             foreach (var lineitem in this.LineItems)
             {
-                var product = Product.GetById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
+                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
                 //Console.WriteLine($"- [{product.Id}] {product.Name}(單價: ${product.Price}) x {lineitem.Qty},     ${product.Price * lineitem.Qty}");
                 total += product.Price * lineitem.Qty;
             }

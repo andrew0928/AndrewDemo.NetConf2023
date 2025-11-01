@@ -5,6 +5,7 @@ using System.Threading;
 
 namespace AndrewDemo.NetConf2023.Core
 {
+#pragma warning disable 612, 618
     public class Checkout
     {
         [Obsolete("請改用 IShopDatabaseContext.CheckoutTransactions 直接管理交易紀錄。")]
@@ -142,4 +143,6 @@ namespace AndrewDemo.NetConf2023.Core
         }
     }
 
+    
+#pragma warning restore 612, 618
 }

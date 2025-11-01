@@ -5,7 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace AndrewDemo.NetConf2023.Core
 {
-    internal interface IShopDatabaseContext : IDisposable
+    public interface IShopDatabaseContext : IDisposable
     {
         ILiteDatabase Database { get; }
         ILiteCollection<Cart> Carts { get; }
@@ -87,7 +87,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-    public ILiteCollection<MemberAccessTokenRecord> MemberTokens
+        public ILiteCollection<MemberAccessTokenRecord> MemberTokens
         {
             get
             {
@@ -96,7 +96,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-    public ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions
+        public ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions
         {
             get
             {
@@ -152,12 +152,12 @@ namespace AndrewDemo.NetConf2023.Core
         }
     }
 
-    internal static class ShopDatabase
+    public static class ShopDatabase
     {
         private static readonly object SyncRoot = new();
         private static IShopDatabaseContext? _current;
 
-        internal static IShopDatabaseContext Current
+        public static IShopDatabaseContext Current
         {
             get
             {
@@ -175,7 +175,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        internal static void Use(IShopDatabaseContext context)
+        public static void Use(IShopDatabaseContext context)
         {
             if (context == null)
             {
@@ -188,12 +188,12 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        internal static T Create<T>() where T : class, new()
+        public static T Create<T>() where T : class, new()
         {
             return Create(new T());
         }
 
-        internal static T Create<T>(T entity) where T : class
+        public static T Create<T>(T entity) where T : class
         {
             if (entity == null)
             {
