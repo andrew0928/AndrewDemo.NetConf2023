@@ -5,7 +5,7 @@ namespace AndrewDemo.NetConf2023.Core
 {
     public static class DiscountEngine
     {
-        public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member? consumer)
+        public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member? consumer, IShopDatabaseContext context)
         {
             // 18天(ID: 1) 第二罐六折
             //var p = Product.Database[1];//.Where(p => p.Value.Id.Equals(1)).FirstOrDefault().Value;
@@ -16,7 +16,7 @@ namespace AndrewDemo.NetConf2023.Core
 
             if (lineitem != null)
             {
-                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId);
+                var product = context.Products.FindById(lineitem.ProductId);
                 if (product == null)
                 {
                     yield break;

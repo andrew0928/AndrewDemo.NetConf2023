@@ -8,7 +8,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
     {
         private static int _productSeq = 1000;
 
-        internal static int CreateProduct(decimal price, string? name = null, string? description = null)
+        internal static int CreateProduct(IShopDatabaseContext context, decimal price, string? name = null, string? description = null)
         {
             int seq = Interlocked.Increment(ref _productSeq);
 
@@ -20,11 +20,11 @@ namespace AndrewDemo.NetConf2023.Core.Tests
                 Price = price
             };
 
-            ShopDatabase.Create(product);
+            context.Products.Insert(product);
             return seq;
         }
 
-        internal static (Member member, string token) RegisterMember()
+        internal static (Member member, string token) RegisterMember(IShopDatabaseContext context)
         {
             string memberName = $"member-{Guid.NewGuid():N}";
             var member = new Member
@@ -32,10 +32,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
                 Name = memberName
             };
 
-            ShopDatabase.Create(member);
+            context.Members.Insert(member);
 
             string token = Guid.NewGuid().ToString("N");
-            ShopDatabase.Current.MemberTokens.Upsert(new MemberAccessTokenRecord
+            context.MemberTokens.Upsert(new MemberAccessTokenRecord
             {
                 Token = token,
                 MemberId = member.Id,

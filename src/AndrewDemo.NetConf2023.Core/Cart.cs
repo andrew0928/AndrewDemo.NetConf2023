@@ -16,26 +16,6 @@ namespace AndrewDemo.NetConf2023.Core
 
         public Dictionary<int, int> ProdQtyMap { get; set; } = new Dictionary<int, int>();
 
-        [Obsolete("請改用 IShopDatabaseContext.Carts 插入購物車實體。")] 
-        public static Cart Create()
-        {
-            var cart = new Cart();
-            ShopDatabase.Current.Carts.Insert(cart);
-            return cart;
-        }
-
-        [Obsolete("請改用 IShopDatabaseContext.Carts.FindById 取得購物車。")]
-        public static Cart? Get(int id)
-        {
-            var cart = ShopDatabase.Current.Carts.FindById(id);
-            if (cart != null && cart.ProdQtyMap == null)
-            {
-                cart.ProdQtyMap = new Dictionary<int, int>();
-            }
-
-            return cart;
-        }
-
 
         // sku CRUD
         public bool AddProducts(int productId, int qty = 1)
@@ -49,20 +29,20 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 this.ProdQtyMap[productId] = qty;
             }
-            ShopDatabase.Current.Carts.Upsert(this);
+            // 移除自動 Upsert，改由呼叫端明確處理持久化
             return true;
         }
 
-        public decimal EstimatePrice()
+        public decimal EstimatePrice(IShopDatabaseContext context)
         {
             decimal total = 0m;
             foreach (var lineitem in this.LineItems)
             {
-                var product = ShopDatabase.Current.Products.FindById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
+                var product = context.Products.FindById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
                 //Console.WriteLine($"- [{product.Id}] {product.Name}(單價: ${product.Price}) x {lineitem.Qty},     ${product.Price * lineitem.Qty}");
                 total += product.Price * lineitem.Qty;
             }
-            foreach (var discount in this.EstimateDiscounts())
+            foreach (var discount in this.EstimateDiscounts(context))
             {
                 //Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
                 total += discount.DiscountAmount;
@@ -86,10 +66,10 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public IEnumerable<CartDiscountHint> EstimateDiscounts()
+        public IEnumerable<CartDiscountHint> EstimateDiscounts(IShopDatabaseContext context)
         {
             {
-                foreach (var d in DiscountEngine.Calculate(this, consumer: null!))
+                foreach (var d in DiscountEngine.Calculate(this, consumer: null!, context))
                 {
                     yield return new CartDiscountHint()
                     {

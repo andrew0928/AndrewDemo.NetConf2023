@@ -152,6 +152,7 @@ namespace AndrewDemo.NetConf2023.Core
         }
     }
 
+    [Obsolete("請使用 IShopDatabaseContext 取代 ShopDatabase.Current，避免靜態依賴")]
     public static class ShopDatabase
     {
         private static readonly object SyncRoot = new();

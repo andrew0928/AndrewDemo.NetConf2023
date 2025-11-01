@@ -10,13 +10,13 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         public void ProductUpsertAndGetAll_ReturnsInsertedProduct()
         {
             decimal price = 42m;
-            int productId = TestDataFactory.CreateProduct(price);
+            int productId = TestDataFactory.CreateProduct(Context, price);
 
-            var product = ShopDatabase.Current.Products.FindById(productId);
+            var product = Context.Products.FindById(productId);
             Assert.NotNull(product);
             Assert.Equal(price, product!.Price);
 
-            var allProducts = ShopDatabase.Current.Products.FindAll().ToList();
+            var allProducts = Context.Products.FindAll().ToList();
             Assert.Contains(allProducts, p => p.Id == productId && p.Price == price);
         }
     }

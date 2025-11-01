@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Core
@@ -27,18 +25,6 @@ namespace AndrewDemo.NetConf2023.Core
         // parameterless constructor required by LiteDB
         private Order()
         {
-        }
-
-        [Obsolete("請改用 IShopDatabaseContext.Orders 查詢會員訂單。")]
-        public static IEnumerable<Order> GetOrders(int memberId)
-        {
-            return ShopDatabase.Current.Orders.Find(o => o.Buyer.Id == memberId);
-        }
-
-        [Obsolete("請改用 IShopDatabaseContext.Orders.Upsert 儲存訂單。")]
-        internal static void Upsert(Order order)
-        {
-            ShopDatabase.Current.Orders.Upsert(order);
         }
 
 

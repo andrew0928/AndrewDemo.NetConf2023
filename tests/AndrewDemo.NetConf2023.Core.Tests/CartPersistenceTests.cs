@@ -11,12 +11,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             decimal price = 99.5m;
             int quantity = 2;
-            int productId = TestDataFactory.CreateProduct(price);
+            int productId = TestDataFactory.CreateProduct(Context, price);
 
-            var cart = ShopDatabase.Create(new Cart());
+            var cart = new Cart();
+            Context.Carts.Insert(cart);
             cart.AddProducts(productId, quantity);
+            Context.Carts.Update(cart); // 明確呼叫持久化
 
-            var reloaded = ShopDatabase.Current.Carts.FindById(cart.Id);
+            var reloaded = Context.Carts.FindById(cart.Id);
             Assert.NotNull(reloaded);
 
             var lineItems = reloaded!.LineItems.ToList();
@@ -24,7 +26,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Equal(productId, lineItems[0].ProductId);
             Assert.Equal(quantity, lineItems[0].Qty);
 
-            Assert.Equal(price * quantity, reloaded.EstimatePrice());
+            Assert.Equal(price * quantity, reloaded.EstimatePrice(Context));
         }
     }
 }

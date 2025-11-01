@@ -9,12 +9,12 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         [Fact]
         public void RegisterAndGetCurrentMember_ReturnsPersistedMember()
         {
-            var (member, token) = TestDataFactory.RegisterMember();
+            var (member, token) = TestDataFactory.RegisterMember(Context);
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(token);
+            var tokenRecord = Context.MemberTokens.FindById(token);
             Assert.NotNull(tokenRecord);
 
-            var current = ShopDatabase.Current.Members.FindById(tokenRecord!.MemberId);
+            var current = Context.Members.FindById(tokenRecord!.MemberId);
             Assert.NotNull(current);
             Assert.Equal(member.Id, current!.Id);
             Assert.Equal(member.Name, current.Name);
@@ -23,19 +23,19 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         [Fact]
         public void SetShopNotes_PersistsNotesToLiteDb()
         {
-            var (_, token) = TestDataFactory.RegisterMember();
+            var (_, token) = TestDataFactory.RegisterMember(Context);
             string note = $"note-{Guid.NewGuid():N}";
 
-            var tokenRecord = ShopDatabase.Current.MemberTokens.FindById(token);
+            var tokenRecord = Context.MemberTokens.FindById(token);
             Assert.NotNull(tokenRecord);
 
-            var member = ShopDatabase.Current.Members.FindById(tokenRecord!.MemberId);
+            var member = Context.Members.FindById(tokenRecord!.MemberId);
             Assert.NotNull(member);
 
             member!.ShopNotes = note;
-            ShopDatabase.Current.Members.Upsert(member);
+            Context.Members.Upsert(member);
 
-            var reloaded = ShopDatabase.Current.Members.FindById(member.Id);
+            var reloaded = Context.Members.FindById(member.Id);
             Assert.NotNull(reloaded);
             Assert.Equal(note, reloaded!.ShopNotes);
         }
