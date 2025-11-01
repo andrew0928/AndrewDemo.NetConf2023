@@ -1,23 +1,40 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System.Collections.Generic;
+using System.Linq;
+using LiteDB;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     public class Product
     {
+        [BsonId(true)]
         public int Id { get; set; }
-        public string Name { get; set; }
-        public string Description {  get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
         public decimal Price { get; set; }
 
-
-
-
-
-        private static Dictionary<int, Product> _database = new Dictionary<int, Product>()
+        public static Product? GetById(int id)
         {
-            //{ 1, new Product() { Id = 1, Name = "18天", Price = 65.00m } },
-            //{ 2, new Product() { Id = 2, Name = "可樂", Price = 18.00m} }
-        };
+            return LiteDbContext.Products.FindById(id);
+        }
 
-        [Obsolete("product: cross model data access!")]
-        public static Dictionary<int, Product> Database { get { return _database; } }
+        public static IReadOnlyList<Product> GetAll()
+        {
+            return LiteDbContext.Products.FindAll().ToList();
+        }
+
+        public static void Upsert(Product product)
+        {
+            LiteDbContext.Products.Upsert(product);
+        }
+
+        public static bool Exists(int id)
+        {
+            return LiteDbContext.Products.Exists(p => p.Id == id);
+        }
+
+        public static void Delete(int id)
+        {
+            LiteDbContext.Products.Delete(id);
+        }
     }
 }

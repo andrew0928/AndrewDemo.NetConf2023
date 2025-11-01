@@ -1,23 +1,31 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using LiteDB;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     public class Member
     {
+        [BsonId(true)]
         public int Id { get; set; }
-        public string Name { get; set; }
+        public string Name { get; set; } = string.Empty;
 
-        public string ShopNotes { get; set; }
+        public string? ShopNotes { get; set; }
 
         // not implement password in this demo, just for demo
         // any non-empty string is valid
         public static string Login(string name, string password)
         {
-            var m = _database.Where(x => x.Value.Name == name).Select(x => x.Value).FirstOrDefault();
-            if (m == null) return null;
+            var member = LiteDbContext.Members.FindOne(m => m.Name == name);
+            if (member == null) return null;
 
             // ignore password
             //if (string.IsNullOrEmpty(password)) return null;
 
-            return CreateAccessToken(m);
+            var token = CreateAccessToken(member);
+            MemberLoggedIn?.Invoke(member, EventArgs.Empty);
+            return token;
         }
 
         /// <summary>
@@ -27,74 +35,60 @@
         /// <returns></returns>
         public static string Register(string name)
         {
-            if ((from x in _database where x.Value.Name == name select x.Value).Any())
+            var existing = LiteDbContext.Members.FindOne(m => m.Name == name);
+            if (existing != null)
             {
                 return null;
             }
 
-            var m = new Member()
+            var member = new Member()
             {
-                Id = _current_number++,
                 Name = name,
             };
 
-            _database.Add(m.Id, m);
+            LiteDbContext.Members.Insert(member);
 
-            MemberRegistered?.Invoke(m, new EventArgs() { });
-            return CreateAccessToken(m);
+            MemberRegistered?.Invoke(member, EventArgs.Empty);
+            return CreateAccessToken(member);
         }
 
         public static Member GetCurrentMember(string accessToken)
         {
-            // access token validation
-            if (AccessTokens.ContainsKey(accessToken))
-            {
-                var (expire, consumer) = AccessTokens[accessToken];
-                if (expire > DateTime.Now)
-                {
-                    return consumer;
-                }
-            }
+            var tokenRecord = LiteDbContext.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null) return null;
+            if (tokenRecord.Expire <= DateTime.Now) return null;
 
-            return null;
+            return LiteDbContext.Members.FindById(tokenRecord.MemberId);
         }
 
         public static Member SetShopNotes(string accessToken, string notes)
         {
-            // access token validation
-            if (AccessTokens.ContainsKey(accessToken))
-            {
-                var (expire, consumer) = AccessTokens[accessToken];
-                if (expire > DateTime.Now)
-                {
-                    consumer.ShopNotes = notes;
-                    return consumer;
-                }
-            }
+            var tokenRecord = LiteDbContext.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null) return null;
+            if (tokenRecord.Expire <= DateTime.Now) return null;
 
-            return null;
+            var member = LiteDbContext.Members.FindById(tokenRecord.MemberId);
+            if (member == null) return null;
+
+            member.ShopNotes = notes;
+            LiteDbContext.Members.Upsert(member);
+
+            return member;
         }
 
         public static event EventHandler<EventArgs> MemberRegistered;
         public static event EventHandler<EventArgs> MemberLoggedIn;
 
-        private static int _current_number = 1;
-        private static Dictionary<int, Member> _database = new Dictionary<int, Member>()
-        {
-            //{ 1, new Member() { Id = 1, Name = "andrew" } },
-            //{ 2, new Member() { Id = 2, Name = "poy"} }
-        };
-
-        //[Obsolete("member: cross model data access!")]
-        private static Dictionary<int, Member> Database { get { return _database; } }
-
         //
-        private static Dictionary<string, (DateTime expire, Member consumer)> AccessTokens = new Dictionary<string, (DateTime expire, Member consumer)>();
-
         private static string CreateAccessToken(Member consumer)
         {
             string token = Guid.NewGuid().ToString("N");
-            AccessTokens.Add(token, (DateTime.MaxValue, consumer));
+            LiteDbContext.MemberTokens.Upsert(new MemberAccessTokenRecord()
+            {
+                Token = token,
+                Expire = DateTime.MaxValue,
+                MemberId = consumer.Id
+            });
 
             return token;
         }

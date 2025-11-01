@@ -1,10 +1,12 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     public class Checkout
     {
-        private static int _serial_number = 1;
-        private static Dictionary<int, (int tid, Cart cart, Member consumer)> _database = new Dictionary<int, (int tid, Cart cart, Member consumer)>();
-
         public static int Create(int cartId, string token)
         {
             var cart = Cart.Get(cartId);
@@ -15,14 +17,20 @@
             var consumer = Member.GetCurrentMember(token);
             if (consumer == null) throw new ArgumentOutOfRangeException("token");
 
-            int tid = (_serial_number++);
-            _database.Add(tid, (tid, cart, consumer));
-            return tid;
+            var transaction = new CheckoutTransactionRecord()
+            {
+                CartId = cart.Id,
+                MemberId = consumer.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            LiteDbContext.CheckoutTransactions.Insert(transaction);
+            return transaction.TransactionId;
         }
 
-        public static event EventHandler CheckoutCompleted;
+        public static event EventHandler? CheckoutCompleted;
 
-        public static async Task<Order> CompleteAsync(int transactionId, int paymentId, int satisfaction = 0, string comments = null)
+        public static async Task<Order> CompleteAsync(int transactionId, int paymentId, int satisfaction = 0, string? comments = null)
         {
             // 這邊要處理:
             // 1. 分散式交易
@@ -38,18 +46,32 @@
             //Console.WriteLine($"[checkout] checkout process start...");
 
 
-            var transaction = _database[transactionId];
-            _database.Remove(transactionId);
-            var order = new Order(transactionId);
+            var transaction = LiteDbContext.CheckoutTransactions.FindById(transactionId);
+            if (transaction == null)
+            {
+                throw new ArgumentOutOfRangeException(nameof(transactionId));
+            }
 
-            order.Buyer = transaction.consumer;
+            LiteDbContext.CheckoutTransactions.Delete(transactionId);
+
+            var cart = Cart.Get(transaction.CartId) ?? throw new InvalidOperationException($"cart {transaction.CartId} not found");
+            var consumer = LiteDbContext.Members.FindById(transaction.MemberId) ?? throw new InvalidOperationException($"member {transaction.MemberId} not found");
+
+            var order = new Order(transactionId)
+            {
+                Buyer = consumer
+            };
 
             decimal total = 0m;
 
             //foreach (var p in transaction.cart.ProdQtyMap)
-            foreach (var lineitem in transaction.cart.LineItems)
+            foreach (var lineitem in cart.LineItems)
             {
-                Product product = Product.Database[lineitem.ProductId];
+                var product = Product.GetById(lineitem.ProductId);
+                if (product == null)
+                {
+                    throw new InvalidOperationException($"product {lineitem.ProductId} not found");
+                }
                 
                 total += product.Price * lineitem.Qty;
 
@@ -60,7 +82,7 @@
                 });
             }
 
-            foreach (var dr in DiscountEngine.Calculate(transaction.cart, transaction.consumer))
+            foreach (var dr in DiscountEngine.Calculate(cart, consumer))
             {
                 order.LineItems.Add(new Order.OrderLineItem()
                 {
@@ -79,11 +101,13 @@
                 Comments = comments
             };
 
+            Order.Upsert(order);
+
 
             //Console.WriteLine($"[checkout] checkout process complete... order created({order.Id})");
             //Console.WriteLine();
 
-            CheckoutCompleted?.Invoke(order, new EventArgs());
+            CheckoutCompleted?.Invoke(order, EventArgs.Empty);
 
             return order;
         }

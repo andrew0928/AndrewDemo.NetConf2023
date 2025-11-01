@@ -1,8 +1,11 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     internal class DiscountEngine
     {
-        public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member consumer)
+        public static IEnumerable<DiscountRecord> Calculate(Cart cart, Member? consumer)
         {
             // 18天(ID: 1) 第二罐六折
             //var p = Product.Database[1];//.Where(p => p.Value.Id.Equals(1)).FirstOrDefault().Value;
@@ -13,14 +16,18 @@
 
             if (lineitem != null)
             {
-                var p = Product.Database[lineitem.ProductId];
+                var product = Product.GetById(lineitem.ProductId);
+                if (product == null)
+                {
+                    yield break;
+                }
                 for (int index = 1; index <= lineitem.Qty; index++)
                 {
                     if (index % 2 == 0) yield return new DiscountRecord()
                     {
                         Name = $"第二件六折",
-                        Description = $"符合商品: {p.Name} x 2",
-                        DiscountAmount = p.Price * -0.4m,
+                        Description = $"符合商品: {product.Name} x 2",
+                        DiscountAmount = product.Price * -0.4m,
                     };
                 }
             }
@@ -28,8 +35,8 @@
 
         public class DiscountRecord
         {
-            public string Name { get; set; }
-            public string Description { get; set; }
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
             public decimal DiscountAmount { get; set; }
         }
     }

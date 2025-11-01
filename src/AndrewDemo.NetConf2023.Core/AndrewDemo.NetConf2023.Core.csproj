@@ -14,4 +14,8 @@
     <NoWarn>1701;1702;CS8603;CS8602;</NoWarn>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="LiteDB" Version="5.0.17" />
+  </ItemGroup>
+
 </Project>

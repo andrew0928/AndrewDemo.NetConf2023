@@ -1,40 +1,44 @@
-﻿namespace AndrewDemo.NetConf2023.Core
+﻿using System;
+using System.Collections.Generic;
+using LiteDB;
+
+namespace AndrewDemo.NetConf2023.Core
 {
     public class Cart
     {
-        private Dictionary<int, int> ProdQtyMap = new Dictionary<int, int>();
+        public Cart()
+        {
+            ProdQtyMap ??= new Dictionary<int, int>();
+        }
 
-        public int Id { get; private set; }
+        [BsonId(true)]
+        public int Id { get; set; }
 
-        private static int _sn = 1;
-        internal static Dictionary<int, Cart> _database = new Dictionary<int, Cart>();
+        public Dictionary<int, int> ProdQtyMap { get; set; } = new Dictionary<int, int>();
 
         public static Cart Create()
         {
-            var c = new Cart()
+            var cart = new Cart();
+            LiteDbContext.Carts.Insert(cart);
+            return cart;
+        }
+
+        public static Cart? Get(int id)
+        {
+            var cart = LiteDbContext.Carts.FindById(id);
+            if (cart != null && cart.ProdQtyMap == null)
             {
-                Id = _sn++
-            };
+                cart.ProdQtyMap = new Dictionary<int, int>();
+            }
 
-            _database.Add(c.Id, c);
-
-            return c;
-        }
-
-        public Cart()
-        {
-        }
-
-        public static Cart Get(int id)
-        {
-            if (!_database.ContainsKey(id)) return null;
-            return _database[id];
+            return cart;
         }
 
 
         // sku CRUD
         public bool AddProducts(int productId, int qty = 1)
         {
+            ProdQtyMap ??= new Dictionary<int, int>();
             if (this.ProdQtyMap.ContainsKey(productId))
             {
                 this.ProdQtyMap[productId] += qty;
@@ -43,6 +47,7 @@
             {
                 this.ProdQtyMap[productId] = qty;
             }
+            LiteDbContext.Carts.Upsert(this);
             return true;
         }
 
@@ -51,9 +56,9 @@
             decimal total = 0m;
             foreach (var lineitem in this.LineItems)
             {
-                Product p = Product.Database[lineitem.ProductId];
-                //Console.WriteLine($"- [{p.Id}] {p.Name}(單價: ${p.Price}) x {lineitem.Qty},     ${p.Price * lineitem.Qty}");
-                total += p.Price * lineitem.Qty;
+                var product = Product.GetById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
+                //Console.WriteLine($"- [{product.Id}] {product.Name}(單價: ${product.Price}) x {lineitem.Qty},     ${product.Price * lineitem.Qty}");
+                total += product.Price * lineitem.Qty;
             }
             foreach (var discount in this.EstimateDiscounts())
             {
@@ -82,7 +87,7 @@
         public IEnumerable<CartDiscountHint> EstimateDiscounts()
         {
             {
-                foreach (var d in DiscountEngine.Calculate(this, null))
+                foreach (var d in DiscountEngine.Calculate(this, consumer: null!))
                 {
                     yield return new CartDiscountHint()
                     {
