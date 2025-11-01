@@ -1,4 +1,5 @@
-﻿using AndrewDemo.NetConf2023.Core;
+﻿using System;
+using AndrewDemo.NetConf2023.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -13,7 +14,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     internal partial class Program
     {
         #region semantic kernel context
-        private static Kernel _kernel = null;
+    private static Kernel? _kernel;
         private static ChatHistory _chatMessages = new ChatHistory();
 
         private static OpenAIPromptExecutionSettings _settings = new()
@@ -26,7 +27,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static bool _enable_copilot_ask = true;
         
 
-        private static IChatCompletionService _chatCompletionService = null;
+    private static IChatCompletionService? _chatCompletionService;
         #endregion
 
 
@@ -39,7 +40,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             var builder = Kernel.CreateBuilder()
                 //.AddAzureOpenAIChatCompletion("SKDemo_GPT4_Preview", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
-                .AddAzureOpenAIChatCompletion("SKDemo_GPT4o", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"]);
+                .AddAzureOpenAIChatCompletion("SKDemo_GPT4o", "https://andrewskdemo.openai.azure.com/", config["azure-openai:apikey"] ?? string.Empty);
 
 
 
@@ -124,6 +125,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
              */
 
+#pragma warning disable CS0618
             _kernel.FunctionInvoking += (sender, args) =>
             {
                 string argline = "";
@@ -138,6 +140,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 Console.ResetColor();
 
             };
+#pragma warning restore CS0618
 
             //_kernel.FunctionInvoked += (sender, args) =>
             //{
@@ -152,7 +155,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static async Task<string> CallCopilotAsync(params string[] user_messages)
         {
             if (user_messages == null ||
-                user_messages.Length == 0) return null;
+                user_messages.Length == 0) return string.Empty;
+
+            if (_chatCompletionService == null || _kernel == null)
+            {
+                throw new InvalidOperationException("semantic kernel 尚未初始化");
+            }
 
             foreach(var message in user_messages)
             {
@@ -164,25 +172,32 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 _chatMessages.AddUserMessage(message);
             }
 
-            var result = _chatCompletionService.GetChatMessageContentsAsync(
-                _chatMessages,
-                _settings,
-                _kernel);
-
             Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine("copilot > 等待回應...");
+            Console.ResetColor();
+
+            IReadOnlyList<ChatMessageContent> contents;
             try
             {
-                while (!result.Wait(500)) Console.Write(".");
+                contents = await _chatCompletionService.GetChatMessageContentsAsync(
+                    _chatMessages,
+                    _settings,
+                    _kernel);
             }
             catch (Exception ex)
             {
+                Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"copilot > error: {ex.Message}");
+                Console.ResetColor();
+                return string.Empty;
             }
-            Console.WriteLine();
+
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.WriteLine("copilot > assistant 回應完成");
             Console.ResetColor();
 
             string response = "";
-            foreach (var content in result.Result)
+            foreach (var content in contents)
             {
                 if (content == null) continue;
                 if (content.Role != AuthorRole.Assistant) continue;
@@ -229,15 +244,23 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         }
 
 
-        private static (bool confirm, string message) CopilotCheckoutConfirm(string prompt)
+        private static (bool confirm, string message) CopilotCheckoutConfirm(string? prompt)
         {
             if (!_enable_checkout_confirm) return (true, "");
 
             string items = "";
-            foreach(var item in Cart.Get(_cartId).LineItems)
+            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            foreach(var item in cart.LineItems)
             {
-                Product product = Product.Database[item.ProductId];
-                items = items + $"\n- [{product.Id}] {product.Name}, 單價 {product.Price:C} x {item.Qty} 件";
+                var product = Product.GetById(item.ProductId);
+                if (product == null)
+                {
+                    items += $"\n- [{item.ProductId}] (已下架) x {item.Qty} 件";
+                }
+                else
+                {
+                    items += $"\n- [{product.Id}] {product.Name}, 單價 {product.Price:C} x {item.Qty} 件";
+                }
             }
 
             var result = CallCopilotAsync(
@@ -248,7 +271,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 """,
                 $"""
                 以下是我購物車內的清單:{items}
-                預估結帳金額: {Cart.Get(_cartId).EstimatePrice():C}
+                預估結帳金額: {cart.EstimatePrice():C}
                 """,
                 $"""
                 購買註記:
@@ -257,7 +280,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             return (result.StartsWith("OK"), result);
         }
 
-        private static string CopilotAsk(string prompt)
+        private static string CopilotAsk(string? prompt)
         {
             if (!_enable_copilot_ask) return "";
 
@@ -285,6 +308,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品數量")] int quanty)
         {
             var cart = Cart.Get(_cartId);
+            if (cart == null) return false;
             return cart.AddProducts(productId, quanty);
         }
 
@@ -295,6 +319,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定要從購物車移除的商品數量")] int quanty)
         {
             var cart = Cart.Get(_cartId);
+            if (cart == null) return false;
             return cart.AddProducts(productId, -quanty);
         }
 
@@ -302,22 +327,25 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("試算目前購物車的結帳金額 (包含可能發生的折扣)")]
         public static decimal ShopFunction_EstimatePrice()
         {
-            return Cart.Get(_cartId).EstimatePrice();
+            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            return cart.EstimatePrice();
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
         public static Cart.CartLineItem[] ShopFunction_ShowMyCartItems()
         {
-            return Cart.Get(_cartId).LineItems.ToArray();
+            var cart = Cart.Get(_cartId) ?? throw new InvalidOperationException("cart not found");
+            return cart.LineItems.ToArray();
         }
 
 
         // Cart_Checkout
         [KernelFunction, Description("購買目前購物車內的商品清單，提供支付代碼，完成結帳程序，傳回訂單內容")]
-        public static Order ShopFunction_Checkout(
+        public static Order? ShopFunction_Checkout(
             [Description("支付代碼，此代碼代表客戶已經在外部系統完成付款")] int paymentId)
         {
-            int checkout_id = Checkout.Create(_cartId, _access_token);
+            var token = _access_token ?? throw new InvalidOperationException("access token not set");
+            int checkout_id = Checkout.Create(_cartId, token);
             var response = Checkout.CompleteAsync(checkout_id, paymentId);
             while (!response.Wait(1000))
             {
@@ -337,30 +365,31 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回店內所有出售的商品品項資訊")]
         public static Product[] ShopFunction_ListProducts()
         {
-            return Product.Database.Values.ToArray();
+            return Product.GetAll().ToArray();
         }
 
         // Product_Get
         [KernelFunction, Description("傳回指定商品 ID 的商品內容")]
-        public static Product ShopFunction_GetProduct(
+        public static Product? ShopFunction_GetProduct(
             [Description("指定查詢的商品 ID")] int productId)
         {
-            if (!Product.Database.ContainsKey(productId)) return null;
-            return Product.Database[productId];
+            return Product.GetById(productId);
         }
 
         // Member_Get
         [KernelFunction, Description("傳回我 (目前登入) 的個人資訊")]
-        public static Member ShopFunction_GetMyInfo()
+        public static Member? ShopFunction_GetMyInfo()
         {
-            return Member.GetCurrentMember(_access_token);
+            var token = _access_token ?? throw new InvalidOperationException("access token not set");
+            return Member.GetCurrentMember(token);
         }
 
         // Member_GetOrders
         [KernelFunction, Description("傳回我 (目前登入) 的過去訂購紀錄")]
         public static Order[] ShopFunction_GetMyOrders()
         {
-            var member = Member.GetCurrentMember(_access_token);
+            var token = _access_token ?? throw new InvalidOperationException("access token not set");
+            var member = Member.GetCurrentMember(token) ?? throw new InvalidOperationException("member not found");
             return Order.GetOrders(member.Id).ToArray();
         }
 

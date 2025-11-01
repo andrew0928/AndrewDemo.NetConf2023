@@ -1,4 +1,5 @@
-﻿using AndrewDemo.NetConf2023.Core;
+﻿using System;
+using AndrewDemo.NetConf2023.Core;
 using System.Data;
 using System.Runtime.CompilerServices;
 
@@ -10,7 +11,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private delegate void CommandProcessor(string[] args);
 
         // command id => command processor mapping table
-        private static Dictionary<string, CommandProcessor> commandProcessors = new Dictionary<string, CommandProcessor>()
+    private static readonly Dictionary<string, CommandProcessor> commandProcessors = new Dictionary<string, CommandProcessor>()
         {
             //{ "0", ShowMenuCommandProcessor },
             { "1",  ListProductsCommandProcessor },
@@ -27,7 +28,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
 
         #region current login user context
-        private static string _access_token = null;
+    private static string? _access_token;
         private static int _cartId = 0;
         #endregion
 
@@ -41,17 +42,16 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 return;
             }
 
-            var member = Member.GetCurrentMember(_access_token);
+            var member = Member.GetCurrentMember(_access_token ?? string.Empty) ?? throw new InvalidOperationException("member not found");
             Console.WriteLine($"Hello {member.Name}({member.Id}), Welcome to Andrew's Shop!");
             Console.WriteLine();
 
             bool exit = false;
-            int count = 0;
-            string commandline = null;
+            string? commandline = null;
 
             do
             {
-                (string command, string[] parameters) = ParseCommand(commandline);
+                (string? command, string[] parameters) = ParseCommand(commandline);
                 if (command == null || command == "0")
                 {
                     Console.WriteLine("\t0. show me (this menu)");
