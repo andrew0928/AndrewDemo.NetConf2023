@@ -38,11 +38,18 @@ done
 # build solution
 dotnet publish src/AndrewDemo.NetConf2023.sln -c Release /t:PublishContainer -m
 
+# build init container (seed)
+docker build -t andrewdemo-netconf2023-seed:develop -t andrewdemo-netconf2023-seed:$(date +%Y%m%d) src/seed/
+
 # tag images
 docker tag andrewdemo-netconf2023-api:develop         andrew0928.azurecr.io/andrewdemo-shop-api:develop
 docker tag andrewdemo-netconf2023-api:$(date +%Y%m%d) andrew0928.azurecr.io/andrewdemo-shop-api:$(date +%Y%m%d)
 
+docker tag andrewdemo-netconf2023-seed:develop         andrew0928.azurecr.io/andrewdemo-shop-seed:develop
+docker tag andrewdemo-netconf2023-seed:$(date +%Y%m%d) andrew0928.azurecr.io/andrewdemo-shop-seed:$(date +%Y%m%d)
+
 # push images
 if [ "$PUSH_IMAGES" = true ]; then
     docker push andrew0928.azurecr.io/andrewdemo-shop-api:$(date +%Y%m%d)
+    docker push andrew0928.azurecr.io/andrewdemo-shop-seed:$(date +%Y%m%d)
 fi

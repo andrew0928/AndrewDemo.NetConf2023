@@ -1,0 +1,29 @@
+services:
+  # Init Container: 初始化資料庫檔案到共享 volume
+  seed:
+    image: andrewdemo-netconf2023-seed:develop
+    volumes:
+      - shared-data:/data
+    restart: "no"
+    
+  # API Container: 使用共享 volume 中的資料庫
+  api:
+    image: andrewdemo-netconf2023-api:develop
+    ports:
+      - "5108:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - shared-data:/data
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  # 模擬 Azure Container App 的 emptyDir
+  # 生命週期限於此 compose 環境 (replica 範圍)
+  shared-data:
+    driver: local

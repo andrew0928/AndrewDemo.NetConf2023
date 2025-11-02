@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndrewDemo.NetConf2023.Cons
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndrewDemo.NetConf2023.Core.Tests", "..\tests\AndrewDemo.NetConf2023.Core.Tests\AndrewDemo.NetConf2023.Core.Tests.csproj", "{661E7482-1EB7-4807-8B45-AECF9E96DB97}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AndrewDemo.NetConf2023.DatabaseInit", "AndrewDemo.NetConf2023.DatabaseInit\AndrewDemo.NetConf2023.DatabaseInit.csproj", "{2F173843-6BB0-4074-8F3B-6128799DF26F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{661E7482-1EB7-4807-8B45-AECF9E96DB97}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{661E7482-1EB7-4807-8B45-AECF9E96DB97}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{661E7482-1EB7-4807-8B45-AECF9E96DB97}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F173843-6BB0-4074-8F3B-6128799DF26F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F173843-6BB0-4074-8F3B-6128799DF26F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F173843-6BB0-4074-8F3B-6128799DF26F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F173843-6BB0-4074-8F3B-6128799DF26F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
