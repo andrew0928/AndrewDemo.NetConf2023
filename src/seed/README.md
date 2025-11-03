@@ -5,6 +5,7 @@
 ## 檔案說明
 
 - `Dockerfile`: Init container 映像定義
+- `seed-entrypoint.sh`: 初始化執行 script (含錯誤處理和日誌)
 - `shop-database.db`: 要部署的資料庫檔案
 
 ## 使用方式
@@ -39,10 +40,21 @@ docker build -t andrewdemo-netconf2023-seed:develop src/seed/
 # 本地測試 init container
 docker run --rm -v $(pwd)/test-data:/data andrewdemo-netconf2023-seed:develop
 ls -lh test-data/shop-database.db
+cat test-data/.seed_done
 ```
+
+## 環境變數
+
+- `SEED_DEST`: 目標掛載點 (預設: `/data`)
+- `SEED_CHOWN_UID`: 設定檔案擁有者 UID (選填)
+- `SEED_CHOWN_GID`: 設定檔案擁有者 GID (選填)
 
 ## 注意事項
 
+- Init container 使用 ENTRYPOINT 模式，確保 Azure Container Apps 正確執行
+- 包含錯誤處理機制 (`set -euo pipefail`)，任何錯誤都會導致容器失敗
+- 執行過程會輸出帶時間戳記的日誌，方便追蹤和除錯
+- 完成後會建立 `.seed_done` 旗標檔案，可用於驗證執行狀態
 - 資料庫檔案會被複製到 `/data/shop-database.db` (emptyDir mount point)
-- 檔案權限設定為 666，確保 API container 可以讀寫
+- 檔案權限設定為 666，目錄權限 777，確保 API container 可以讀寫
 - 此容器執行完成後即退出 (init container 模式)
