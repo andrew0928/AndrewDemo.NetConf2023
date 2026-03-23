@@ -1,5 +1,7 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-@baseURL= http://localhost:5108
+# @baseURL= http://localhost:5108
+@baseURL= https://shop.chicken-house.net
+
 @oauth2_accesstoken=6aa0d76638274595a6d1dea5f0f4d7a6
 
 #
@@ -8,12 +10,13 @@
 # {{baseURL}}/api/login/authorize?client_id=1234&redirect_uri=about:blank&state=ready
 # 2. get code from console log, or detect it from 302 redirurl query
 
+
  
 ### get token from code
 POST {{baseURL}}/api/login/token
 Content-Type: application/x-www-form-urlencoded
 
-code=ee49cbc641ff4d528fd13c70ce48cbe5
+code=3a2057a03c3444f9a9b8610bb239da45
 
 
 
