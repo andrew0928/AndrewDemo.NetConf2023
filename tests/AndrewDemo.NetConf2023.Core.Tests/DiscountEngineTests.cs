@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
@@ -14,13 +15,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             Context.Products.Upsert(new Product
             {
-                Id = 1,
+                Id = "1",
                 Name = "Test Beer",
-                Price = 50m
+                Price = 50m,
+                IsPublished = true
             });
 
             var cart = new Cart();
-            cart.AddProducts(1, 2);
+            cart.AddProducts("1", 2);
 
             var manifest = new ShopManifest
             {
@@ -46,13 +48,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             Context.Products.Upsert(new Product
             {
-                Id = 1,
+                Id = "1",
                 Name = "Test Beer",
-                Price = 50m
+                Price = 50m,
+                IsPublished = true
             });
 
             var cart = new Cart();
-            cart.AddProducts(1, 2);
+            cart.AddProducts("1", 2);
 
             var manifest = new ShopManifest
             {

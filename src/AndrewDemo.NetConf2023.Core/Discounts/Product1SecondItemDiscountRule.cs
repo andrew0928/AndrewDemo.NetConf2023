@@ -16,7 +16,7 @@ namespace AndrewDemo.NetConf2023.Core.Discounts
         public IReadOnlyList<DiscountRecord> Evaluate(CartContext context)
         {
             var lineItem = context.LineItems
-                .Where(x => x.ProductId == 1 && x.Quantity >= 2)
+                .Where(x => x.ProductId == "1" && x.Quantity >= 2)
                 .FirstOrDefault();
 
             if (lineItem == null)

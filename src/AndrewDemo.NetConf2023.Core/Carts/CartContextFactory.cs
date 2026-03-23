@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using AndrewDemo.NetConf2023.Abstract.Carts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 
 namespace AndrewDemo.NetConf2023.Core

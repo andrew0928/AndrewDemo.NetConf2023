@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
@@ -8,20 +9,21 @@ namespace AndrewDemo.NetConf2023.Core.Tests
     {
         private static int _productSeq = 1000;
 
-        internal static int CreateProduct(IShopDatabaseContext context, decimal price, string? name = null, string? description = null)
+        internal static string CreateProduct(IShopDatabaseContext context, decimal price, string? name = null, string? description = null)
         {
             int seq = Interlocked.Increment(ref _productSeq);
 
             var product = new Product
             {
-                Id = seq,
+                Id = seq.ToString(),
                 Name = name ?? $"TestProduct-{seq}",
                 Description = description,
-                Price = price
+                Price = price,
+                IsPublished = true
             };
 
             context.Products.Insert(product);
-            return seq;
+            return product.Id;
         }
 
         internal static (Member member, string token) RegisterMember(IShopDatabaseContext context)

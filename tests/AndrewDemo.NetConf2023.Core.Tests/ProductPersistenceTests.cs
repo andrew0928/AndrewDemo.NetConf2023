@@ -1,4 +1,5 @@
 using System.Linq;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         public void ProductUpsertAndGetAll_ReturnsInsertedProduct()
         {
             decimal price = 42m;
-            int productId = TestDataFactory.CreateProduct(Context, price);
+            string productId = TestDataFactory.CreateProduct(Context, price);
 
             var product = Context.Products.FindById(productId);
             Assert.NotNull(product);

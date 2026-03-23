@@ -8,19 +8,19 @@ namespace AndrewDemo.NetConf2023.Core
     {
         public Cart()
         {
-            ProdQtyMap ??= new Dictionary<int, int>();
+            ProdQtyMap ??= new Dictionary<string, int>();
         }
 
         [BsonId(true)]
         public int Id { get; set; }
 
-        public Dictionary<int, int> ProdQtyMap { get; set; } = new Dictionary<int, int>();
+        public Dictionary<string, int> ProdQtyMap { get; set; } = new Dictionary<string, int>();
 
 
         // sku CRUD
-        public bool AddProducts(int productId, int qty = 1)
+        public bool AddProducts(string productId, int qty = 1)
         {
-            ProdQtyMap ??= new Dictionary<int, int>();
+            ProdQtyMap ??= new Dictionary<string, int>();
             if (this.ProdQtyMap.ContainsKey(productId))
             {
                 this.ProdQtyMap[productId] += qty;

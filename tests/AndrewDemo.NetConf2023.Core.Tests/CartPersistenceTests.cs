@@ -12,7 +12,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             decimal price = 99.5m;
             int quantity = 2;
-            int productId = TestDataFactory.CreateProduct(Context, price);
+            string productId = TestDataFactory.CreateProduct(Context, price);
 
             var cart = new Cart();
             Context.Carts.Insert(cart);

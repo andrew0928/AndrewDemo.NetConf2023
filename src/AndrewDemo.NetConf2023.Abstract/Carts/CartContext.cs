@@ -13,7 +13,7 @@ namespace AndrewDemo.NetConf2023.Abstract.Carts
 
     public sealed record LineItem
     {
-        public int ProductId { get; init; }
+        public string ProductId { get; init; } = string.Empty;
         public int Quantity { get; init; }
         public string? ProductName { get; init; }
         public decimal? UnitPrice { get; init; }

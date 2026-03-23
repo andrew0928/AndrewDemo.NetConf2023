@@ -147,7 +147,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 
             /// </summary>
-            public int ProductId { get; set; }
+            public string ProductId { get; set; } = string.Empty;
             /// <summary>
             /// 
             /// </summary>

@@ -1,4 +1,5 @@
-﻿using AndrewDemo.NetConf2023.Core;
+﻿using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -41,7 +42,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [HttpGet("{id}", Name = "GetProduct")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public ActionResult<Product> Get(int id)
+        public ActionResult<Product> Get(string id)
         {
             var product = _database.Products.FindById(id);
             if (product == null)
