@@ -1,4 +1,8 @@
+using System;
+using System.Linq;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
@@ -18,20 +22,20 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var cart = new Cart();
             cart.AddProducts(1, 2);
 
-            var runtime = new ShopRuntimeContext(new ShopManifest
+            var manifest = new ShopManifest
             {
                 ShopId = "default",
                 DatabaseFilePath = "shop-database.db",
                 EnabledDiscountRuleIds =
                 {
-                    Product1SecondItemDiscountRulePlugin.BuiltInRuleId
+                    Product1SecondItemDiscountRule.BuiltInRuleId
                 }
-            });
+            };
 
-            var engine = new DefaultDiscountEngine(runtime, new[] { new Product1SecondItemDiscountRulePlugin() });
-            var evaluationContext = DiscountEvaluationContextFactory.Create(runtime.ShopId, cart, consumer: null, Context);
+            var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, Context);
 
-            var discounts = engine.Evaluate(evaluationContext);
+            var discounts = engine.Evaluate(cartContext);
 
             Assert.Single(discounts);
             Assert.Equal(-20m, discounts[0].Amount);
@@ -50,18 +54,26 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var cart = new Cart();
             cart.AddProducts(1, 2);
 
-            var runtime = new ShopRuntimeContext(new ShopManifest
+            var manifest = new ShopManifest
             {
                 ShopId = "default",
                 DatabaseFilePath = "shop-database.db"
-            });
+            };
 
-            var engine = new DefaultDiscountEngine(runtime, new[] { new Product1SecondItemDiscountRulePlugin() });
-            var evaluationContext = DiscountEvaluationContextFactory.Create(runtime.ShopId, cart, consumer: null, Context);
+            var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, Context);
 
-            var discounts = engine.Evaluate(evaluationContext);
+            var discounts = engine.Evaluate(cartContext);
 
             Assert.Empty(discounts);
+        }
+
+        private static DiscountEngine CreateEngine(ShopManifest manifest, params IDiscountRule[] rules)
+        {
+            var enabledRules = rules.Where(rule =>
+                manifest.EnabledDiscountRuleIds.Contains(rule.RuleId, StringComparer.OrdinalIgnoreCase));
+
+            return new DiscountEngine(enabledRules);
         }
     }
 }

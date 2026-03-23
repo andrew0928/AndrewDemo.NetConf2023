@@ -20,14 +20,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private static Dictionary<string, string> _codes = new Dictionary<string, string>();
         private readonly IShopDatabaseContext _database;
+        private readonly IWebHostEnvironment _environment;
 
         /// <summary>
         /// 建構函式
         /// </summary>
-        /// <param name="database"></param>
-        public LoginController(IShopDatabaseContext database)
+        /// <param name="database">商店資料庫內容。</param>
+        /// <param name="environment">目前主機執行環境。</param>
+        public LoginController(IShopDatabaseContext database, IWebHostEnvironment environment)
         {
             _database = database;
+            _environment = environment;
         }
 
 
@@ -89,6 +92,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             string code = Guid.NewGuid().ToString("N");
             _codes[code] = token;
             Console.WriteLine($"[/api/login/authorize] Authorize success: {name}, code: {code}, token: {token}");
+
+            if (_environment.IsDevelopment())
+            {
+                Response.Headers.Append("X-OAuth-Code", code);
+            }
 
             Console.WriteLine($"[/api/login/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
             return Redirect($"{redirectURL}?code={code}&state={state}");

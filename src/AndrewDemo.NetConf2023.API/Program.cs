@@ -1,4 +1,6 @@
-﻿
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.API.Configuration;
@@ -23,24 +25,19 @@ namespace AndrewDemo.NetConf2023.API
             Env.Load();
 
             var builder = WebApplication.CreateBuilder(args);
+            var requestedShopId = Environment.GetEnvironmentVariable("SHOP_ID")
+                ?? builder.Configuration["shop-id"];
 
             builder.Services.AddSingleton<IShopManifestResolver>(_ => new ConfigurationShopManifestResolver(builder.Configuration));
-            builder.Services.AddSingleton<IShopRuntimeContext>(sp =>
-            {
-                var requestedShopId = Environment.GetEnvironmentVariable("SHOP_ID")
-                    ?? builder.Configuration["shop-id"];
-
-                var manifest = sp.GetRequiredService<IShopManifestResolver>().Resolve(requestedShopId);
-                return new ShopRuntimeContext(manifest);
-            });
+            builder.Services.AddSingleton(sp => sp.GetRequiredService<IShopManifestResolver>().Resolve(requestedShopId));
 
             builder.Services.AddShopDatabase(sp =>
             {
-                var runtime = sp.GetRequiredService<IShopRuntimeContext>();
-                var dbFilePath = runtime.Manifest.DatabaseFilePath;
+                var manifest = sp.GetRequiredService<ShopManifest>();
+                var dbFilePath = manifest.DatabaseFilePath;
                 if (string.IsNullOrWhiteSpace(dbFilePath))
                 {
-                    throw new InvalidOperationException($"database file path is required for shop {runtime.ShopId}");
+                    throw new InvalidOperationException($"database file path is required for shop {manifest.ShopId}");
                 }
 
                 if (!Path.IsPathRooted(dbFilePath))
@@ -54,8 +51,19 @@ namespace AndrewDemo.NetConf2023.API
                 };
             });
 
-            builder.Services.AddSingleton<IDiscountRulePlugin, Product1SecondItemDiscountRulePlugin>();
-            builder.Services.AddSingleton<IDiscountEngine, DefaultDiscountEngine>();
+            builder.Services.AddSingleton<IDiscountRule, Product1SecondItemDiscountRule>();
+            builder.Services.AddSingleton<DiscountEngine>(sp =>
+            {
+                var manifest = sp.GetRequiredService<ShopManifest>();
+                var enabledRuleIds = new HashSet<string>(
+                    manifest.EnabledDiscountRuleIds ?? Enumerable.Empty<string>(),
+                    StringComparer.OrdinalIgnoreCase);
+
+                var rules = sp.GetServices<IDiscountRule>()
+                    .Where(rule => enabledRuleIds.Contains(rule.RuleId));
+
+                return new DiscountEngine(rules);
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -70,8 +78,8 @@ namespace AndrewDemo.NetConf2023.API
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
-            var shopRuntime = app.Services.GetRequiredService<IShopRuntimeContext>();
-            Console.WriteLine($"[system] shop runtime initialized: {shopRuntime.ShopId}");
+            var shopManifest = app.Services.GetRequiredService<ShopManifest>();
+            Console.WriteLine($"[system] shop runtime initialized: {shopManifest.ShopId}");
 
 
 

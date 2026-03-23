@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using AndrewDemo.NetConf2023.Abstract.Discounts;
-using AndrewDemo.NetConf2023.Core.Discounts;
+﻿using System.Collections.Generic;
+using AndrewDemo.NetConf2023.Abstract.Carts;
 using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Core
@@ -35,66 +33,19 @@ namespace AndrewDemo.NetConf2023.Core
             return true;
         }
 
-        public decimal EstimatePrice(IShopDatabaseContext context, IDiscountEngine discountEngine, string shopId, Member? consumer = null)
-        {
-            decimal total = 0m;
-            foreach (var lineitem in this.LineItems)
-            {
-                var product = context.Products.FindById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
-                //Console.WriteLine($"- [{product.Id}] {product.Name}(單價: ${product.Price}) x {lineitem.Qty},     ${product.Price * lineitem.Qty}");
-                total += product.Price * lineitem.Qty;
-            }
-            foreach (var discount in this.EstimateDiscounts(context, discountEngine, shopId, consumer))
-            {
-                //Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
-                total += discount.DiscountAmount;
-            }
-
-            return total;
-        }
-
-        public IEnumerable<CartLineItem> LineItems
+        public IEnumerable<LineItem> LineItems
         {
             get 
             {
                 foreach (var ci in this.ProdQtyMap)
                 {
-                    yield return new CartLineItem()
+                    yield return new LineItem()
                     {
                         ProductId = ci.Key,
-                        Qty = ci.Value
+                        Quantity = ci.Value
                     };
                 }
             }
-        }
-
-        public IEnumerable<CartDiscountHint> EstimateDiscounts(IShopDatabaseContext context, IDiscountEngine discountEngine, string shopId, Member? consumer = null)
-        {
-            var discountContext = DiscountEvaluationContextFactory.Create(shopId, this, consumer, context);
-            {
-                foreach (var d in discountEngine.Evaluate(discountContext))
-                {
-                    yield return new CartDiscountHint()
-                    {
-                        Name = d.Name,
-                        Description = d.Description,
-                        DiscountAmount = d.Amount
-                    };
-                }
-            }
-        }
-
-        public class CartLineItem
-        {
-            public int ProductId { get; set; }
-            public int Qty { get; set; }
-        }
-
-        public class CartDiscountHint
-        {
-            public string Name { get; set; }
-            public string Description { get; set; }
-            public decimal DiscountAmount { get; set; }
         }
     }
 }

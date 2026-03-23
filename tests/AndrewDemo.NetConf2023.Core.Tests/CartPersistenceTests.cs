@@ -1,7 +1,6 @@
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
-using AndrewDemo.NetConf2023.Core.Discounts;
 using Xunit;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
@@ -26,16 +25,21 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var lineItems = reloaded!.LineItems.ToList();
             Assert.Single(lineItems);
             Assert.Equal(productId, lineItems[0].ProductId);
-            Assert.Equal(quantity, lineItems[0].Qty);
+            Assert.Equal(quantity, lineItems[0].Quantity);
 
-            var runtime = new ShopRuntimeContext(new ShopManifest
+            var manifest = new ShopManifest
             {
                 ShopId = "test",
                 DatabaseFilePath = "test.db"
-            });
-            var engine = new DefaultDiscountEngine(runtime, new[] { new Product1SecondItemDiscountRulePlugin() });
+            };
+            var cartContext = CartContextFactory.Create(manifest, reloaded, consumer: null, Context);
 
-            Assert.Equal(price * quantity, reloaded.EstimatePrice(Context, engine, runtime.ShopId));
+            Assert.Equal("test", cartContext.ShopId);
+            Assert.Single(cartContext.LineItems);
+            Assert.Equal(productId, cartContext.LineItems[0].ProductId);
+            Assert.Equal(price, cartContext.LineItems[0].UnitPrice);
+            Assert.Equal(quantity, cartContext.LineItems[0].Quantity);
+            Assert.Equal(price * quantity, cartContext.LineItems.Sum(x => x.UnitPrice!.Value * x.Quantity));
         }
     }
 }

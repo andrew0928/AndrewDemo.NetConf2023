@@ -1,7 +1,7 @@
 ﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
-using Microsoft.AspNetCore.Http;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
@@ -15,8 +15,8 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class CartsController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
-        private readonly IDiscountEngine _discountEngine;
-        private readonly IShopRuntimeContext _shopRuntime;
+        private readonly DiscountEngine _discountEngine;
+        private readonly ShopManifest _shopManifest;
 
         
         /// <summary>
@@ -24,12 +24,12 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
         /// <param name="discountEngine">折扣計算引擎。</param>
-        /// <param name="shopRuntime">目前啟動中的商店 runtime。</param>
-        public CartsController(IShopDatabaseContext database, IDiscountEngine discountEngine, IShopRuntimeContext shopRuntime)
+        /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
+        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, ShopManifest shopManifest)
         {
             _database = database;
             _discountEngine = discountEngine;
-            _shopRuntime = shopRuntime;
+            _shopManifest = shopManifest;
         }
 
         /// <summary>
@@ -110,10 +110,22 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             if (cart != null)
             {
+                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer: null, _database);
+                var discountRecords = _discountEngine.Evaluate(cartContext);
+
                 return new CartEstimateResponse()
                 {
-                    TotalPrice = cart.EstimatePrice(_database, _discountEngine, _shopRuntime.ShopId),
-                    Discounts = cart.EstimateDiscounts(_database, _discountEngine, _shopRuntime.ShopId).ToList()
+                    TotalPrice = cartContext.LineItems.Sum(x =>
+                        (x.UnitPrice ?? throw new InvalidOperationException($"unit price is required for product {x.ProductId}")) * x.Quantity)
+                        + discountRecords.Sum(x => x.Amount),
+                    Discounts = discountRecords
+                        .Select(x => new CartDiscountHint
+                        {
+                            Name = x.Name,
+                            Description = x.Description,
+                            DiscountAmount = x.Amount
+                        })
+                        .ToList()
                 };
                 
             }
@@ -154,7 +166,28 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 
             /// </summary>
-            public List<Cart.CartDiscountHint> Discounts { get; set; }
+            public List<CartDiscountHint> Discounts { get; set; }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public class CartDiscountHint
+        {
+            /// <summary>
+            /// 
+            /// </summary>
+            public string Name { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public string Description { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public decimal DiscountAmount { get; set; }
         }
     }
 }

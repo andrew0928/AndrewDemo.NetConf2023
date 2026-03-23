@@ -1,31 +1,55 @@
 # For more info on HTTP files go to https://aka.ms/vs/httpfile
-# @baseURL= http://localhost:5108
-@baseURL= https://shop.chicken-house.net
+@baseURL=http://localhost:5108
+# @baseURL=https://shop.chicken-house.net
 
-@oauth2_accesstoken=6aa0d76638274595a6d1dea5f0f4d7a6
+@client_id=1234
+@redirect_uri=https://oauth.local/callback
+@state=ready
+@member_name=demo-user
+@member_password=unused
 
 #
-# how to get access token?
-# 1. use this url to login
-# {{baseURL}}/api/login/authorize?client_id=1234&redirect_uri=about:blank&state=ready
-# 2. get code from console log, or detect it from 302 redirurl query
+# Development 模式下，
+# POST /api/login/authorize 會額外回傳 X-OAuth-Code header。
+# 因此這份檔案可以在 VS Code REST Client 直接串接：
+# 1. 先送 authorize
+# 2. 從 response header 自動取得 oauth_code
+# 3. 再送 token
+# 4. 後續 API 自動沿用 oauth_token 的 response body
+#
+@oauth_code={{oauth_authorize.response.headers.X-OAuth-Code}}
 
+### OAuth2 Step 1: authorize
+# @name oauth_authorize
+# @no-redirect
+POST {{baseURL}}/api/login/authorize
+Content-Type: application/x-www-form-urlencoded
 
- 
-### get token from code
+name={{member_name}}&password={{member_password}}&client_id={{client_id}}&redirect_uri={{redirect_uri}}&state={{state}}
+
+###
+
+### OAuth2 Step 2: exchange code for access token
+# @name oauth_token
 POST {{baseURL}}/api/login/token
 Content-Type: application/x-www-form-urlencoded
 
-code=3a2057a03c3444f9a9b8610bb239da45
+code={{oauth_code}}
 
-
-
-
+###
 
 ### list products
 GET {{baseURL}}/api/products
-Authorization: Bearer {{oauth2_accesstoken}}
+Authorization: Bearer {{oauth_token.response.body.$.access_token}}
+
+###
 
 ### create cart
 POST {{baseURL}}/api/carts/create
-Authorization: Bearer {{oauth2_accesstoken}}
+Authorization: Bearer {{oauth_token.response.body.$.access_token}}
+
+###
+
+### current member profile
+GET {{baseURL}}/api/member/
+Authorization: Bearer {{oauth_token.response.body.$.access_token}}

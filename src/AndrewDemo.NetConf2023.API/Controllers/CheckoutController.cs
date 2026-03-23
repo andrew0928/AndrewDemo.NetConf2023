@@ -15,20 +15,20 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class CheckoutController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
-        private readonly IDiscountEngine _discountEngine;
-        private readonly IShopRuntimeContext _shopRuntime;
+        private readonly DiscountEngine _discountEngine;
+        private readonly ShopManifest _shopManifest;
 
         /// <summary>
         /// 建構函式
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
         /// <param name="discountEngine">折扣計算引擎。</param>
-        /// <param name="shopRuntime">目前啟動中的商店 runtime。</param>
-        public CheckoutController(IShopDatabaseContext database, IDiscountEngine discountEngine, IShopRuntimeContext shopRuntime)
+        /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
+        public CheckoutController(IShopDatabaseContext database, DiscountEngine discountEngine, ShopManifest shopManifest)
         {
             _database = database;
             _discountEngine = discountEngine;
-            _shopRuntime = shopRuntime;
+            _shopManifest = shopManifest;
         }
 
         /// <summary>
@@ -163,16 +163,16 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                     return BadRequest($"Product {lineitem.ProductId} not found");
                 }
 
-                total += product.Price * lineitem.Qty;
+                total += product.Price * lineitem.Quantity;
 
                 order.LineItems.Add(new Order.OrderLineItem
                 {
-                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Qty} 件 = {product.Price * lineitem.Qty:C}",
-                    Price = product.Price * lineitem.Qty
+                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Quantity} 件 = {product.Price * lineitem.Quantity:C}",
+                    Price = product.Price * lineitem.Quantity
                 });
             }
 
-            var discountContext = DiscountEvaluationContextFactory.Create(_shopRuntime.ShopId, cart, consumer, _database);
+            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _database);
             foreach (var discount in _discountEngine.Evaluate(discountContext))
             {
                 order.LineItems.Add(new Order.OrderLineItem
