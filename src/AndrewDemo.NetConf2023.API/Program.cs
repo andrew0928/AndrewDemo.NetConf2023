@@ -1,5 +1,9 @@
 ﻿
+using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using DotNetEnv;
 
 namespace AndrewDemo.NetConf2023.API
@@ -20,18 +24,38 @@ namespace AndrewDemo.NetConf2023.API
 
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-            
-            // 註冊 ShopDatabaseContext 到 DI 容器
-            // 優先順序: 環境變數 > appsettings.json
-            var dbFilePath = Environment.GetEnvironmentVariable("SHOP_DATABASE_FILEPATH") 
-                ?? builder.Configuration["ShopDatabase:FilePath"] 
-                ?? "shop-database.db";
-            
-            builder.Services.AddShopDatabase(c =>
+            builder.Services.AddSingleton<IShopManifestResolver>(_ => new ConfigurationShopManifestResolver(builder.Configuration));
+            builder.Services.AddSingleton<IShopRuntimeContext>(sp =>
             {
-                c.ConnectionString = $"Filename={dbFilePath};Connection=Direct";
+                var requestedShopId = Environment.GetEnvironmentVariable("SHOP_ID")
+                    ?? builder.Configuration["shop-id"];
+
+                var manifest = sp.GetRequiredService<IShopManifestResolver>().Resolve(requestedShopId);
+                return new ShopRuntimeContext(manifest);
             });
+
+            builder.Services.AddShopDatabase(sp =>
+            {
+                var runtime = sp.GetRequiredService<IShopRuntimeContext>();
+                var dbFilePath = runtime.Manifest.DatabaseFilePath;
+                if (string.IsNullOrWhiteSpace(dbFilePath))
+                {
+                    throw new InvalidOperationException($"database file path is required for shop {runtime.ShopId}");
+                }
+
+                if (!Path.IsPathRooted(dbFilePath))
+                {
+                    dbFilePath = Path.Combine(AppContext.BaseDirectory, dbFilePath);
+                }
+
+                return new ShopDatabaseOptions
+                {
+                    ConnectionString = $"Filename={dbFilePath};Connection=Direct"
+                };
+            });
+
+            builder.Services.AddSingleton<IDiscountRulePlugin, Product1SecondItemDiscountRulePlugin>();
+            builder.Services.AddSingleton<IDiscountEngine, DefaultDiscountEngine>();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -46,6 +70,8 @@ namespace AndrewDemo.NetConf2023.API
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
+            var shopRuntime = app.Services.GetRequiredService<IShopRuntimeContext>();
+            Console.WriteLine($"[system] shop runtime initialized: {shopRuntime.ShopId}");
 
 
 

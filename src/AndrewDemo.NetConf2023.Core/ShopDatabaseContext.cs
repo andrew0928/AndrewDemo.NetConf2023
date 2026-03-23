@@ -235,6 +235,19 @@ namespace AndrewDemo.NetConf2023.Core
 
             return services;
         }
+
+        public static IServiceCollection AddShopDatabase(this IServiceCollection services, Func<IServiceProvider, ShopDatabaseOptions> configure)
+        {
+            services.AddSingleton<IShopDatabaseContext>(sp =>
+            {
+                var options = configure(sp) ?? throw new InvalidOperationException("shop database options cannot be null");
+                var context = new ShopDatabaseContext(options);
+                ShopDatabase.Use(context);
+                return context;
+            });
+
+            return services;
+        }
     }
 
     public sealed class ShopDatabaseOptions

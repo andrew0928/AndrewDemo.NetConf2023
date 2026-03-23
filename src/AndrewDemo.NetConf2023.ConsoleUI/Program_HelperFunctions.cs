@@ -2,7 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
@@ -16,6 +19,30 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     {
         #region console application helper methods
         private static IShopDatabaseContext Database { get; set; } = null!;
+        private static IShopRuntimeContext ShopRuntime { get; } = new ShopRuntimeContext(new ShopManifest
+        {
+            ShopId = "console",
+            DatabaseFilePath = "shop-database.db",
+            EnabledDiscountRuleIds = new List<string>
+            {
+                Product1SecondItemDiscountRulePlugin.BuiltInRuleId
+            }
+        });
+
+        private static IDiscountEngine DiscountEngineService { get; } = new DefaultDiscountEngine(
+            new ShopRuntimeContext(new ShopManifest
+            {
+                ShopId = "console",
+                DatabaseFilePath = "shop-database.db",
+                EnabledDiscountRuleIds = new List<string>
+                {
+                    Product1SecondItemDiscountRulePlugin.BuiltInRuleId
+                }
+            }),
+            new IDiscountRulePlugin[]
+            {
+                new Product1SecondItemDiscountRulePlugin()
+            });
 
         private static Member? GetMemberByToken(string token)
         {
@@ -127,15 +154,16 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 });
             }
 
-            foreach (var discount in DiscountEngine.Calculate(cart, consumer, Database))
+            var discountContext = DiscountEvaluationContextFactory.Create(ShopRuntime.ShopId, cart, consumer, Database);
+            foreach (var discount in DiscountEngineService.Evaluate(discountContext))
             {
                 order.LineItems.Add(new Order.OrderLineItem
                 {
-                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.DiscountAmount:C}",
-                    Price = discount.DiscountAmount
+                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.Amount:C}",
+                    Price = discount.Amount
                 });
 
-                total += discount.DiscountAmount;
+                total += discount.Amount;
             }
 
             order.TotalPrice = total;

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>74e2f963-9106-4cad-b4b5-ee02c5e63597</UserSecretsId>
@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
+    <ProjectReference Include="..\AndrewDemo.NetConf2023.Abstract\AndrewDemo.NetConf2023.Abstract.csproj" />
   </ItemGroup>
 
   <ItemGroup>

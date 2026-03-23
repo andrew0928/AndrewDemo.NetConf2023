@@ -1,4 +1,7 @@
-﻿using AndrewDemo.NetConf2023.Core;
+﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +15,20 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class CheckoutController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
+        private readonly IDiscountEngine _discountEngine;
+        private readonly IShopRuntimeContext _shopRuntime;
 
         /// <summary>
         /// 建構函式
         /// </summary>
-        /// <param name="database"></param>
-        public CheckoutController(IShopDatabaseContext database)
+        /// <param name="database">商店資料庫內容。</param>
+        /// <param name="discountEngine">折扣計算引擎。</param>
+        /// <param name="shopRuntime">目前啟動中的商店 runtime。</param>
+        public CheckoutController(IShopDatabaseContext database, IDiscountEngine discountEngine, IShopRuntimeContext shopRuntime)
         {
             _database = database;
+            _discountEngine = discountEngine;
+            _shopRuntime = shopRuntime;
         }
 
         /// <summary>
@@ -163,15 +172,16 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 });
             }
 
-            foreach (var discount in DiscountEngine.Calculate(cart, consumer, _database))
+            var discountContext = DiscountEvaluationContextFactory.Create(_shopRuntime.ShopId, cart, consumer, _database);
+            foreach (var discount in _discountEngine.Evaluate(discountContext))
             {
                 order.LineItems.Add(new Order.OrderLineItem
                 {
-                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.DiscountAmount:C}",
-                    Price = discount.DiscountAmount
+                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.Amount:C}",
+                    Price = discount.Amount
                 });
 
-                total += discount.DiscountAmount;
+                total += discount.Amount;
             }
 
             order.TotalPrice = total;

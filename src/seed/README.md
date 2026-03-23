@@ -16,7 +16,7 @@
 ```bash
 cd /home/andrew/code-work/andrew-demo/AndrewDemo.NetConf2023
 dotnet run --project src/AndrewDemo.NetConf2023.DatabaseInit
-cp src/AndrewDemo.NetConf2023.DatabaseInit/bin/Debug/net9.0/shop-database.db src/seed/
+cp src/AndrewDemo.NetConf2023.DatabaseInit/bin/Debug/net10.0/shop-database.db src/seed/
 ```
 
 **選項 B: 使用現有的資料庫 snapshot**

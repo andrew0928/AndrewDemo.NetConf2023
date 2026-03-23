@@ -1,0 +1,16 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+  </Folder>
+  <Project Path="../tests/AndrewDemo.NetConf2023.Core.Tests/AndrewDemo.NetConf2023.Core.Tests.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.Abstract/AndrewDemo.NetConf2023.Abstract.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.API/AndrewDemo.NetConf2023.API.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.Core/AndrewDemo.NetConf2023.Core.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.DatabaseInit/AndrewDemo.NetConf2023.DatabaseInit.csproj" />
+</Solution>

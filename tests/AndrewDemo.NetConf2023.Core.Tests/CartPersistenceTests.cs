@@ -1,5 +1,7 @@
 using System.Linq;
+using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using Xunit;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
@@ -26,7 +28,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Equal(productId, lineItems[0].ProductId);
             Assert.Equal(quantity, lineItems[0].Qty);
 
-            Assert.Equal(price * quantity, reloaded.EstimatePrice(Context));
+            var runtime = new ShopRuntimeContext(new ShopManifest
+            {
+                ShopId = "test",
+                DatabaseFilePath = "test.db"
+            });
+            var engine = new DefaultDiscountEngine(runtime, new[] { new Product1SecondItemDiscountRulePlugin() });
+
+            Assert.Equal(price * quantity, reloaded.EstimatePrice(Context, engine, runtime.ShopId));
         }
     }
 }

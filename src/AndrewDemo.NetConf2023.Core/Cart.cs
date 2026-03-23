@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Core.Discounts;
 using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Core
@@ -33,7 +35,7 @@ namespace AndrewDemo.NetConf2023.Core
             return true;
         }
 
-        public decimal EstimatePrice(IShopDatabaseContext context)
+        public decimal EstimatePrice(IShopDatabaseContext context, IDiscountEngine discountEngine, string shopId, Member? consumer = null)
         {
             decimal total = 0m;
             foreach (var lineitem in this.LineItems)
@@ -42,7 +44,7 @@ namespace AndrewDemo.NetConf2023.Core
                 //Console.WriteLine($"- [{product.Id}] {product.Name}(單價: ${product.Price}) x {lineitem.Qty},     ${product.Price * lineitem.Qty}");
                 total += product.Price * lineitem.Qty;
             }
-            foreach (var discount in this.EstimateDiscounts(context))
+            foreach (var discount in this.EstimateDiscounts(context, discountEngine, shopId, consumer))
             {
                 //Console.WriteLine($"- [優惠] {discount.Name},   ${discount.DiscountAmount}");
                 total += discount.DiscountAmount;
@@ -66,16 +68,17 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public IEnumerable<CartDiscountHint> EstimateDiscounts(IShopDatabaseContext context)
+        public IEnumerable<CartDiscountHint> EstimateDiscounts(IShopDatabaseContext context, IDiscountEngine discountEngine, string shopId, Member? consumer = null)
         {
+            var discountContext = DiscountEvaluationContextFactory.Create(shopId, this, consumer, context);
             {
-                foreach (var d in DiscountEngine.Calculate(this, consumer: null!, context))
+                foreach (var d in discountEngine.Evaluate(discountContext))
                 {
                     yield return new CartDiscountHint()
                     {
                         Name = d.Name,
-                        Description = d.Description, //$"[{d.Name}]: ${d.DiscountAmount}",
-                        DiscountAmount = d.DiscountAmount
+                        Description = d.Description,
+                        DiscountAmount = d.Amount
                     };
                 }
             }
