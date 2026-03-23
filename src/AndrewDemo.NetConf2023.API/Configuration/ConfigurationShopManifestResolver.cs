@@ -48,6 +48,7 @@ namespace AndrewDemo.NetConf2023.API.Configuration
             {
                 ShopId = string.IsNullOrWhiteSpace(manifest.ShopId) ? resolvedShopId : manifest.ShopId,
                 DatabaseFilePath = manifest.DatabaseFilePath,
+                ProductServiceId = manifest.ProductServiceId,
                 EnabledDiscountRuleIds = manifest.EnabledDiscountRuleIds?.ToList() ?? new List<string>()
             };
         }

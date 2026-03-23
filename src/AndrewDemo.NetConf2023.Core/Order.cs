@@ -3,6 +3,12 @@ using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Core
 {
+    public enum OrderFulfillmentStatus
+    {
+        Pending = 0,
+        Succeeded = 1,
+        Failed = 2
+    }
 
     public class Order
     {
@@ -11,9 +17,13 @@ namespace AndrewDemo.NetConf2023.Core
 
         public Member Buyer { get; set; } = null!;
 
-        public List<OrderLineItem> LineItems { get; set; } = new List<OrderLineItem>();
+        public List<OrderProductLine> ProductLines { get; set; } = new List<OrderProductLine>();
+
+        public List<OrderDiscountLine> DiscountLines { get; set; } = new List<OrderDiscountLine>();
 
         public decimal TotalPrice { get; set; }
+
+        public OrderFulfillmentStatus FulfillmentStatus { get; set; } = OrderFulfillmentStatus.Pending;
 
         public OrderShopNotes? ShopNotes { get; set; }
 
@@ -28,10 +38,21 @@ namespace AndrewDemo.NetConf2023.Core
         }
 
 
-        public class OrderLineItem
+        public class OrderProductLine
         {
-            public string Title { get; set; } = string.Empty;
-            public decimal Price { get; set; }
+            public string ProductId { get; set; } = string.Empty;
+            public string ProductName { get; set; } = string.Empty;
+            public decimal UnitPrice { get; set; }
+            public int Quantity { get; set; }
+            public decimal LineAmount { get; set; }
+        }
+
+        public class OrderDiscountLine
+        {
+            public string RuleId { get; set; } = string.Empty;
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public decimal Amount { get; set; }
         }
 
         public class OrderShopNotes

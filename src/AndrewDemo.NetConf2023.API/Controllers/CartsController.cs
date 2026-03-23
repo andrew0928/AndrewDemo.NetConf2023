@@ -1,4 +1,5 @@
 ﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
@@ -16,6 +17,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private readonly IShopDatabaseContext _database;
         private readonly DiscountEngine _discountEngine;
+        private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
 
         
@@ -24,11 +26,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
         /// <param name="discountEngine">折扣計算引擎。</param>
+        /// <param name="productService">商品服務。</param>
         /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
-        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, ShopManifest shopManifest)
+        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest)
         {
             _database = database;
             _discountEngine = discountEngine;
+            _productService = productService;
             _shopManifest = shopManifest;
         }
 
@@ -86,6 +90,12 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             if (cart != null)
             {
+                var product = _productService.GetProductById(request.ProductId);
+                if (product == null)
+                {
+                    return BadRequest($"Product {request.ProductId} not found");
+                }
+
                 cart.AddProducts(request.ProductId, request.Qty);
                 _database.Carts.Update(cart);
                 return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
@@ -110,7 +120,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             if (cart != null)
             {
-                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer: null, _database);
+                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer: null, _productService);
                 var discountRecords = _discountEngine.Evaluate(cartContext);
 
                 return new CartEstimateResponse()

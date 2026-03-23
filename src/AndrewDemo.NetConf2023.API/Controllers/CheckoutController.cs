@@ -1,7 +1,9 @@
 ﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Products;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,6 +18,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private readonly IShopDatabaseContext _database;
         private readonly DiscountEngine _discountEngine;
+        private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
 
         /// <summary>
@@ -23,11 +26,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
         /// <param name="discountEngine">折扣計算引擎。</param>
+        /// <param name="productService">商品服務。</param>
         /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
-        public CheckoutController(IShopDatabaseContext database, DiscountEngine discountEngine, ShopManifest shopManifest)
+        public CheckoutController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest)
         {
             _database = database;
             _discountEngine = discountEngine;
+            _productService = productService;
             _shopManifest = shopManifest;
         }
 
@@ -150,14 +155,16 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             var order = new Order(request.TransactionId)
             {
-                Buyer = consumer
+                Buyer = consumer,
+                FulfillmentStatus = OrderFulfillmentStatus.Pending
             };
 
             decimal total = 0m;
+            var completedAt = DateTime.UtcNow;
 
             foreach (var lineitem in cart.LineItems)
             {
-                var product = _database.Products.FindById(lineitem.ProductId);
+                var product = _productService.GetProductById(lineitem.ProductId);
                 if (product == null)
                 {
                     return BadRequest($"Product {lineitem.ProductId} not found");
@@ -165,20 +172,25 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
                 total += product.Price * lineitem.Quantity;
 
-                order.LineItems.Add(new Order.OrderLineItem
+                order.ProductLines.Add(new Order.OrderProductLine
                 {
-                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Quantity} 件 = {product.Price * lineitem.Quantity:C}",
-                    Price = product.Price * lineitem.Quantity
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    UnitPrice = product.Price,
+                    Quantity = lineitem.Quantity,
+                    LineAmount = product.Price * lineitem.Quantity
                 });
             }
 
-            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _database);
+            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
             foreach (var discount in _discountEngine.Evaluate(discountContext))
             {
-                order.LineItems.Add(new Order.OrderLineItem
+                order.DiscountLines.Add(new Order.OrderDiscountLine
                 {
-                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.Amount:C}",
-                    Price = discount.Amount
+                    RuleId = discount.RuleId,
+                    Name = discount.Name,
+                    Description = discount.Description,
+                    Amount = discount.Amount
                 });
 
                 total += discount.Amount;
@@ -193,12 +205,26 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             _database.Orders.Upsert(order);
 
+            try
+            {
+                var productEvent = ProductOrderEventFactory.CreateCompletedEvent(_shopManifest, order, completedAt);
+                _productService.HandleOrderCompleted(productEvent);
+                order.FulfillmentStatus = OrderFulfillmentStatus.Succeeded;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[checkout] product fulfillment failed for order {order.Id}: {ex}");
+                order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
+            }
+
+            _database.Orders.Upsert(order);
+
             return new CheckoutCompleteResponse()
             {
                 TransactionId = request.TransactionId,
                 PaymentId = request.PaymentId,
 
-                TransactionCompleteAt = DateTime.UtcNow,
+                TransactionCompleteAt = completedAt,
                 ConsumerId = member.Id,
                 ConsumerName = member.Name,
 

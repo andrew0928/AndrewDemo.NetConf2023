@@ -1,5 +1,4 @@
 ﻿using AndrewDemo.NetConf2023.Abstract.Products;
-using AndrewDemo.NetConf2023.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,15 +11,15 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IShopDatabaseContext _database;
+        private readonly IProductService _productService;
 
         /// <summary>
         /// 建構函式
         /// </summary>
-        /// <param name="database"></param>
-        public ProductsController(IShopDatabaseContext database)
+        /// <param name="productService">商品服務。</param>
+        public ProductsController(IProductService productService)
         {
-            _database = database;
+            _productService = productService;
         }
 
         /// <summary>
@@ -31,7 +30,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IEnumerable<Product>> Get()
         {
-            return _database.Products.FindAll().ToList();
+            return _productService.GetPublishedProducts().ToList();
         }
 
         /// <summary>
@@ -44,7 +43,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<Product> Get(string id)
         {
-            var product = _database.Products.FindById(id);
+            var product = _productService.GetProductById(id);
             if (product == null)
             {
                 return NotFound();

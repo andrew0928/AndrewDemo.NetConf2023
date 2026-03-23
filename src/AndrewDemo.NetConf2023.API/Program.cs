@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Products;
 using DotNetEnv;
 
 namespace AndrewDemo.NetConf2023.API
@@ -48,6 +50,18 @@ namespace AndrewDemo.NetConf2023.API
                 return new ShopDatabaseOptions
                 {
                     ConnectionString = $"Filename={dbFilePath};Connection=Direct"
+                };
+            });
+
+            builder.Services.AddSingleton<DefaultProductService>();
+            builder.Services.AddSingleton<IProductService>(sp =>
+            {
+                var manifest = sp.GetRequiredService<ShopManifest>();
+
+                return manifest.ProductServiceId switch
+                {
+                    DefaultProductService.ServiceId => sp.GetRequiredService<DefaultProductService>(),
+                    _ => throw new InvalidOperationException($"unsupported product service id: {manifest.ProductServiceId}")
                 };
             });
 

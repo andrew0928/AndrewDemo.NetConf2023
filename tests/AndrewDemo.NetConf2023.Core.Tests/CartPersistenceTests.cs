@@ -1,6 +1,7 @@
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Products;
 using Xunit;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
@@ -30,9 +31,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var manifest = new ShopManifest
             {
                 ShopId = "test",
-                DatabaseFilePath = "test.db"
+                DatabaseFilePath = "test.db",
+                ProductServiceId = DefaultProductService.ServiceId
             };
-            var cartContext = CartContextFactory.Create(manifest, reloaded, consumer: null, Context);
+            var cartContext = CartContextFactory.Create(manifest, reloaded, consumer: null, new DefaultProductService(Context));
 
             Assert.Equal("test", cartContext.ShopId);
             Assert.Single(cartContext.LineItems);

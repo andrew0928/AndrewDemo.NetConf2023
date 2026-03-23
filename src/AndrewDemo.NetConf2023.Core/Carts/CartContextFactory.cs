@@ -8,7 +8,7 @@ namespace AndrewDemo.NetConf2023.Core
 {
     public static class CartContextFactory
     {
-        public static CartContext Create(ShopManifest manifest, Cart cart, Member? consumer, IShopDatabaseContext context)
+        public static CartContext Create(ShopManifest manifest, Cart cart, Member? consumer, IProductService productService)
         {
             if (manifest == null)
             {
@@ -25,16 +25,16 @@ namespace AndrewDemo.NetConf2023.Core
                 throw new ArgumentNullException(nameof(cart));
             }
 
-            if (context == null)
+            if (productService == null)
             {
-                throw new ArgumentNullException(nameof(context));
+                throw new ArgumentNullException(nameof(productService));
             }
 
             var lineItems = new List<LineItem>();
 
             foreach (var lineItem in cart.LineItems)
             {
-                var product = context.Products.FindById(lineItem.ProductId)
+                var product = productService.GetProductById(lineItem.ProductId)
                     ?? throw new InvalidOperationException($"product {lineItem.ProductId} not found");
 
                 lineItems.Add(new LineItem

@@ -5,6 +5,7 @@ using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Products;
 
 namespace AndrewDemo.NetConf2023.Core.Tests
 {
@@ -28,6 +29,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 ShopId = "default",
                 DatabaseFilePath = "shop-database.db",
+                ProductServiceId = DefaultProductService.ServiceId,
                 EnabledDiscountRuleIds =
                 {
                     Product1SecondItemDiscountRule.BuiltInRuleId
@@ -35,7 +37,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, Context);
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
 
             var discounts = engine.Evaluate(cartContext);
 
@@ -60,11 +62,12 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var manifest = new ShopManifest
             {
                 ShopId = "default",
-                DatabaseFilePath = "shop-database.db"
+                DatabaseFilePath = "shop-database.db",
+                ProductServiceId = DefaultProductService.ServiceId
             };
 
             var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, Context);
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
 
             var discounts = engine.Evaluate(cartContext);
 
