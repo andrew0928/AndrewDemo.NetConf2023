@@ -31,9 +31,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             foreach (var order in orders)
             {
                 Console.WriteLine($"- {order.Id}\t{order.TotalPrice}");
-                foreach (var item in order.LineItems)
+                foreach (var item in order.ProductLines)
                 {
-                    Console.WriteLine($"  - {item.Title}\t{item.Price:C}");
+                    Console.WriteLine($"  - 商品: [{item.ProductId}] {item.ProductName}\t{item.UnitPrice:C} x {item.Quantity} = {item.LineAmount:C}");
+                }
+
+                foreach (var item in order.DiscountLines)
+                {
+                    Console.WriteLine($"  - 折扣: [{item.Name}] {item.Description}\t{item.Amount:C}");
                 }
                 Console.WriteLine();
             }
@@ -101,7 +106,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             }
             if (args.Length < 2 || !int.TryParse(args[1], out int qty)) qty = 1;
 
-            if (ShopFunction_AddItemToCart(pid, -qty))
+            if (ShopFunction_RemoveItemToCart(pid, qty))
             {
                 AssistantOutput($"商品 [{pid}] 已經從您的購物車中移除了 {qty} 件.");
                 CopilotNotify($"我在購物車內移除了 {qty} 件商品 (商品 ID: {pid}, {product.Name})");
@@ -148,7 +153,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             }
 
 
-            if (cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId) > budget)
+            if (EstimatePrice(cart) > budget)
             {
                 AssistantOutput($"您的預算 {budget:C} 不足以購買商品 [{pid}]。");
                 CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。不過目前購物車商品已經超出預算，最後沒有放任何商品進購物車");
@@ -157,24 +162,26 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             // add product to cart as much as possible, until reach the budget
             int total = 0;
-            while (cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId) <= budget)
+            while (EstimatePrice(cart) <= budget)
             {
-                cart.AddProducts(pid, 1);
+                UpdateCartItemQuantity(pid, 1);
                 total++;
-                InfoOutput($"add {pid} x 1, estimate: {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId)}");
+                cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
+                InfoOutput($"add {pid} x 1, estimate: {EstimatePrice(cart)}");
             }
-            cart.AddProducts(pid, -1); // remove the last one
+            UpdateCartItemQuantity(pid, -1); // remove the last one
             total--;
-            InfoOutput($"rmv  {pid} x 1, estimate: {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId)}");
-            AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId):C}, 已為您加入購物車了。");
+            cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
+            InfoOutput($"rmv  {pid} x 1, estimate: {EstimatePrice(cart)}");
+            AssistantOutput($"您的預算 {budget:C} 可以再購買商品 [{pid}] {product.Name} x {total} 件, 總金額為 {EstimatePrice(cart):C}, 已為您加入購物車了。");
             CopilotNotify($"我有預算 {budget:C}, 想要拿來購買商品 (ID: {pid}, {product.Name})。經過計算，在預算範圍內多放了 {total} 件商品進購物車。");
         }
 
         private static void ShowMyItemsCommandProcessor(string[] args)
         {
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId):C} 元.");
-            CopilotNotify($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId):C} 元");
+            AssistantOutput($"您好, 你目前購物車內共有 {cart.LineItems.Count()} 件商品, 總共 {EstimatePrice(cart):C} 元.");
+            CopilotNotify($"我查詢了購物車目前的內容，共有 {cart.LineItems.Count()} 種不同的商品，現在結帳的話我需要付 {EstimatePrice(cart):C} 元");
 
             if (cart.LineItems.Count() == 0)
             {
@@ -190,12 +197,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                     Console.WriteLine($"- 商品: [{item.ProductId}] (已下架)");
                     continue;
                 }
-                Console.WriteLine($"- 商品: [{product.Id}] {product.Name}\t{product.Price:C} x {item.Qty}");
+                Console.WriteLine($"- 商品: [{product.Id}] {product.Name}\t{product.Price:C} x {item.Quantity}");
             }
 
-            foreach (var discount in cart.EstimateDiscounts(Database, DiscountEngineService, ShopRuntime.ShopId))
+            foreach (var discount in EstimateDiscounts(cart))
             {
-                Console.WriteLine($"- 折扣: [{discount.Name}], {discount.Description}\t{discount.DiscountAmount:C}");
+                Console.WriteLine($"- 折扣: [{discount.Name}], {discount.Description}\t{discount.Amount:C}");
             }
         }
 

@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
-using Microsoft.Extensions.Configuration;
-using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.ChatCompletion;
-using Microsoft.SemanticKernel.Connectors.OpenAI;
-using System.Data;
-using System.Runtime.CompilerServices;
+using AndrewDemo.NetConf2023.Core.Products;
 
 namespace AndrewDemo.NetConf2023.ConsoleUI
 {
@@ -19,30 +16,29 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
     {
         #region console application helper methods
         private static IShopDatabaseContext Database { get; set; } = null!;
-        private static IShopRuntimeContext ShopRuntime { get; } = new ShopRuntimeContext(new ShopManifest
+        private static ShopManifest ShopManifest { get; } = new ShopManifest
         {
             ShopId = "console",
             DatabaseFilePath = "shop-database.db",
+            ProductServiceId = DefaultProductService.ServiceId,
             EnabledDiscountRuleIds = new List<string>
             {
-                Product1SecondItemDiscountRulePlugin.BuiltInRuleId
+                Product1SecondItemDiscountRule.BuiltInRuleId
             }
-        });
+        };
 
-        private static IDiscountEngine DiscountEngineService { get; } = new DefaultDiscountEngine(
-            new ShopRuntimeContext(new ShopManifest
+        private static DiscountEngine DiscountEngineService { get; } = new DiscountEngine(
+            new IDiscountRule[]
             {
-                ShopId = "console",
-                DatabaseFilePath = "shop-database.db",
-                EnabledDiscountRuleIds = new List<string>
-                {
-                    Product1SecondItemDiscountRulePlugin.BuiltInRuleId
-                }
-            }),
-            new IDiscountRulePlugin[]
-            {
-                new Product1SecondItemDiscountRulePlugin()
+                new Product1SecondItemDiscountRule()
             });
+
+        private static IProductService ProductService => new DefaultProductService(Database);
+
+        private static CheckoutService BuildCheckoutService()
+        {
+            return new CheckoutService(Database, DiscountEngineService, ProductService, ShopManifest);
+        }
 
         private static Member? GetMemberByToken(string token)
         {
@@ -73,14 +69,24 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             return Database.Carts.FindById(_cartId);
         }
 
+        private static Member? GetCurrentMemberOrNull()
+        {
+            return _access_token == null ? null : GetMemberByToken(_access_token);
+        }
+
+        private static Product? GetProductById(string productId)
+        {
+            return ProductService.GetProductById(productId);
+        }
+
         private static Product? GetProductById(int productId)
         {
-            return Database.Products.FindById(productId);
+            return GetProductById(productId.ToString());
         }
 
         private static IReadOnlyList<Product> GetAllProducts()
         {
-            return Database.Products.FindAll().ToList();
+            return ProductService.GetPublishedProducts();
         }
 
         private static IEnumerable<Order> GetOrdersForMember(int memberId)
@@ -112,93 +118,135 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             if (!cart.LineItems.Any()) throw new InvalidOperationException("cart is empty");
 
             var member = GetMemberByToken(token) ?? throw new ArgumentOutOfRangeException(nameof(token));
-
-            var transaction = new CheckoutTransactionRecord
+            var result = BuildCheckoutService().Create(new CheckoutCreateCommand
             {
                 CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
-            };
+                RequestMember = member
+            });
 
-            Database.CheckoutTransactions.Insert(transaction);
-            return transaction.TransactionId;
+            if (result.Status != CheckoutCreateStatus.Succeeded)
+            {
+                throw new InvalidOperationException(result.ErrorMessage ?? "create checkout failed");
+            }
+
+            return result.TransactionId;
         }
 
         private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int paymentId, int satisfaction = 0, string? comments = null)
         {
-            var ticket = new WaitingRoomTicket();
-            await ticket.WaitUntilCanRunAsync();
-
-            var transaction = Database.CheckoutTransactions.FindById(transactionId) ?? throw new ArgumentOutOfRangeException(nameof(transactionId));
-            Database.CheckoutTransactions.Delete(transactionId);
-
-            var cart = Database.Carts.FindById(transaction.CartId) ?? throw new InvalidOperationException($"cart {transaction.CartId} not found");
-            var consumer = Database.Members.FindById(transaction.MemberId) ?? throw new InvalidOperationException($"member {transaction.MemberId} not found");
-
-            var order = new Order(transactionId)
+            var member = RequireCurrentMember();
+            var result = await BuildCheckoutService().CompleteAsync(new CheckoutCompleteCommand
             {
-                Buyer = consumer
-            };
+                TransactionId = transactionId,
+                PaymentId = paymentId,
+                Satisfaction = satisfaction,
+                ShopComments = comments,
+                RequestMember = member
+            });
 
-            decimal total = 0m;
-
-            foreach (var lineitem in cart.LineItems)
+            if (result.Status != CheckoutCompleteStatus.Succeeded || result.OrderDetail == null)
             {
-                var product = Database.Products.FindById(lineitem.ProductId) ?? throw new InvalidOperationException($"product {lineitem.ProductId} not found");
-                total += product.Price * lineitem.Qty;
-
-                order.LineItems.Add(new Order.OrderLineItem
-                {
-                    Title = $"商品: {product.Name}, 單價: {product.Price} x {lineitem.Qty} 件 = {product.Price * lineitem.Qty:C}",
-                    Price = product.Price * lineitem.Qty
-                });
+                throw new InvalidOperationException(result.ErrorMessage ?? "complete checkout failed");
             }
 
-            var discountContext = DiscountEvaluationContextFactory.Create(ShopRuntime.ShopId, cart, consumer, Database);
-            foreach (var discount in DiscountEngineService.Evaluate(discountContext))
-            {
-                order.LineItems.Add(new Order.OrderLineItem
-                {
-                    Title = $"優惠: {discount.Name}, 折扣 {-1 * discount.Amount:C}",
-                    Price = discount.Amount
-                });
+            return result.OrderDetail;
+        }
 
+        private static bool UpdateCartItemQuantity(int productId, int quantityDelta)
+        {
+            var cart = GetCurrentCart();
+            if (cart == null || quantityDelta == 0)
+            {
+                return false;
+            }
+
+            string productKey = productId.ToString();
+            cart.ProdQtyMap ??= new Dictionary<string, int>();
+
+            if (!cart.ProdQtyMap.TryGetValue(productKey, out int currentQty))
+            {
+                if (quantityDelta < 0)
+                {
+                    return false;
+                }
+
+                currentQty = 0;
+            }
+
+            int nextQty = currentQty + quantityDelta;
+            if (nextQty <= 0)
+            {
+                cart.ProdQtyMap.Remove(productKey);
+            }
+            else
+            {
+                cart.ProdQtyMap[productKey] = nextQty;
+            }
+
+            Database.Carts.Upsert(cart);
+            return true;
+        }
+
+        private static IReadOnlyList<DiscountRecord> EstimateDiscounts(Cart cart)
+        {
+            try
+            {
+                var context = CartContextFactory.Create(ShopManifest, cart, GetCurrentMemberOrNull(), ProductService);
+                return DiscountEngineService.Evaluate(context);
+            }
+            catch
+            {
+                return Array.Empty<DiscountRecord>();
+            }
+        }
+
+        private static decimal EstimatePrice(Cart cart)
+        {
+            decimal total = 0m;
+            foreach (var item in cart.LineItems)
+            {
+                var product = GetProductById(item.ProductId);
+                if (product == null)
+                {
+                    continue;
+                }
+
+                total += product.Price * item.Quantity;
+            }
+
+            foreach (var discount in EstimateDiscounts(cart))
+            {
                 total += discount.Amount;
             }
 
-            order.TotalPrice = total;
-            order.ShopNotes = new Order.OrderShopNotes
-            {
-                BuyerSatisfaction = satisfaction,
-                Comments = comments
-            };
-
-            Database.Orders.Upsert(order);
-            return order;
+            return total;
         }
 
         private static void InitShop()
         {
             Database.Products.Upsert(new Product()
             {
-                Id = 1,
+                Id = "1",
                 Name = "18天台灣生啤酒 355ml",
                 Description = "18天台灣生啤酒未經過巴氏德高溫殺菌，採用歐洲優質原料，全程0-7°C冷藏保鮮，猶如鮮奶與生魚片般珍貴，保留最多啤酒營養及麥香風味；這樣高品質、超新鮮、賞味期只有18天的台灣生啤酒，值得您搶鮮到手! (未成年請勿飲酒)",
-                Price = 65m
+                Price = 65m,
+                IsPublished = true
             });
             Database.Products.Upsert(new Product()
             {
-                Id = 2,
+                Id = "2",
                 Name = "可口可樂® 350ml",
                 Description = "1886年，美國喬治亞州的亞特蘭大市，有位名叫約翰•潘伯頓（Dr. John S. Pemberton）的藥劑師，他挑選了幾種特別的成分，發明出一款美味的糖漿，沒想到清涼、暢快的「可口可樂」就奇蹟般的出現了！潘伯頓相信這產品可能具有商業價值，因此把它送到傑柯藥局（Jacobs' Pharmacy）販售，開始了「可口可樂」這個美國飲料的傳奇。而潘伯頓的事業合夥人兼會計師：法蘭克•羅賓森（Frank M. Robinson），認為兩個大寫C字母在廣告上可以有不錯的表現，所以創造了\"Coca‑Cola\"這個名字。但是讓「可口可樂」得以大展鋒頭的，卻是從艾薩•坎德勒（Asa G. Candler）這個具有行銷頭腦的企業家開始。",
-                Price = 18m
+                Price = 18m,
+                IsPublished = true
             });
             Database.Products.Upsert(new Product()
             {
-                Id = 3,
+                Id = "3",
                 Name = "御茶園 特撰冰釀綠茶 550ml",
                 Description = "新升級!台灣在地茶葉入，冰釀回甘。台灣在地茶葉，原葉沖泡。如同現泡般的清新綠茶香。",
-                Price = 25m
+                Price = 25m,
+                IsPublished = true
             });
         }
 

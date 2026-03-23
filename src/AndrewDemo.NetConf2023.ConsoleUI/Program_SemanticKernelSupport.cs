@@ -1,4 +1,6 @@
 ﻿using System;
+using AndrewDemo.NetConf2023.Abstract.Carts;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -260,11 +262,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 var product = GetProductById(item.ProductId);
                 if (product == null)
                 {
-                    items += $"\n- [{item.ProductId}] (已下架) x {item.Qty} 件";
+                    items += $"\n- [{item.ProductId}] (已下架) x {item.Quantity} 件";
                 }
                 else
                 {
-                    items += $"\n- [{product.Id}] {product.Name}, 單價 {product.Price:C} x {item.Qty} 件";
+                    items += $"\n- [{product.Id}] {product.Name}, 單價 {product.Price:C} x {item.Quantity} 件";
                 }
             }
 
@@ -276,7 +278,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 """,
                 $"""
                 以下是我購物車內的清單:{items}
-                預估結帳金額: {cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId):C}
+                預估結帳金額: {EstimatePrice(cart):C}
                 """,
                 $"""
                 購買註記:
@@ -312,9 +314,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品ID")] int productId,
             [Description("指定加入購物車的商品數量")] int quanty)
         {
-                var cart = GetCurrentCart();
-            if (cart == null) return false;
-            return cart.AddProducts(productId, quanty);
+            if (GetProductById(productId) == null)
+            {
+                return false;
+            }
+
+            return UpdateCartItemQuantity(productId, quanty);
         }
 
         // Cart_RemoveItem
@@ -323,9 +328,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定要從購物車移除的商品ID")] int productId,
             [Description("指定要從購物車移除的商品數量")] int quanty)
         {
-                var cart = GetCurrentCart();
-            if (cart == null) return false;
-            return cart.AddProducts(productId, -quanty);
+            return UpdateCartItemQuantity(productId, -quanty);
         }
 
         // Cart_EstimatePrice
@@ -333,11 +336,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static decimal ShopFunction_EstimatePrice()
         {
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            return cart.EstimatePrice(Database, DiscountEngineService, ShopRuntime.ShopId);
+            return EstimatePrice(cart);
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
-        public static Cart.CartLineItem[] ShopFunction_ShowMyCartItems()
+        public static LineItem[] ShopFunction_ShowMyCartItems()
         {
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             return cart.LineItems.ToArray();
