@@ -6,6 +6,10 @@
 - status: draft-for-review
 - 日期：2026-03-24
 
+## 後續補充
+
+- checkout correctness 修正另見 [checkout-correctness-fixes.md](/Users/andrew/code-work/andrewshop.apidemo/spec/checkout-correctness-fixes.md)
+
 ## 範圍
 
 本規格只涵蓋以下主題：

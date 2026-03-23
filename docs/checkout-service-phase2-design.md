@@ -6,6 +6,8 @@
 
 - 把目前位於 API controller 的 checkout orchestration 搬進 `.Core`
 
+後續 correctness 修正另見 [checkout-correctness-fixes.md](/Users/andrew/code-work/andrewshop.apidemo/docs/checkout-correctness-fixes.md)。
+
 本文件刻意不處理：
 
 - checkout 行為修正

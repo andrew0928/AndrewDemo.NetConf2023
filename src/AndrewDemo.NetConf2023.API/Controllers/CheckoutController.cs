@@ -1,9 +1,5 @@
-﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
-using AndrewDemo.NetConf2023.Abstract.Products;
-using AndrewDemo.NetConf2023.Abstract.Shops;
-using AndrewDemo.NetConf2023.Core;
-using AndrewDemo.NetConf2023.Core.Discounts;
-using AndrewDemo.NetConf2023.Core.Products;
+﻿using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Checkouts;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,23 +13,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class CheckoutController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
-        private readonly DiscountEngine _discountEngine;
-        private readonly IProductService _productService;
-        private readonly ShopManifest _shopManifest;
+        private readonly CheckoutService _checkoutService;
 
         /// <summary>
         /// 建構函式
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
-        /// <param name="discountEngine">折扣計算引擎。</param>
-        /// <param name="productService">商品服務。</param>
-        /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
-        public CheckoutController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest)
+        /// <param name="checkoutService">結帳流程服務。</param>
+        public CheckoutController(IShopDatabaseContext database, CheckoutService checkoutService)
         {
             _database = database;
-            _discountEngine = discountEngine;
-            _productService = productService;
-            _shopManifest = shopManifest;
+            _checkoutService = checkoutService;
         }
 
         /// <summary>
@@ -53,45 +43,29 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             //[FromHeader(Name = "Authorization")] string token,
             [FromBody] CheckoutCreateRequest request)
         {
-            var accessToken = this.HttpContext.Items["access-token"] as string;
-            if (accessToken == null)
-            {
-                return Unauthorized();
-            }
-
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
-            {
-                return Unauthorized();
-            }
-
-            var member = _database.Members.FindById(tokenRecord.MemberId);
+            var member = GetAuthenticatedMember();
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            var cart = _database.Carts.FindById(request.CartId);
-            if (cart == null)
+            var result = _checkoutService.Create(new CheckoutCreateCommand
             {
-                return BadRequest("Cart not found");
+                CartId = request.CartId,
+                RequestMember = member
+            });
+
+            if (result.Status != CheckoutCreateStatus.Succeeded)
+            {
+                return BadRequest(result.ErrorMessage);
             }
 
-            var transaction = new CheckoutTransactionRecord
+            return new CheckoutCreateResponse
             {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _database.CheckoutTransactions.Insert(transaction);
-
-            return new CheckoutCreateResponse()
-            {
-                TransactionId = transaction.TransactionId,
-                TransactionStartAt = DateTime.UtcNow,
-                ConsumerId = member.Id,
-                ConsumerName = member.Name
+                TransactionId = result.TransactionId,
+                TransactionStartAt = result.TransactionStartAt,
+                ConsumerId = result.ConsumerId,
+                ConsumerName = result.ConsumerName
             };
         }
 
@@ -107,130 +81,62 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <returns></returns>
         [HttpPost("complete", Name = "CompleteCheckout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
         public async Task<ActionResult<CheckoutCompleteResponse>> CompleteAsync(
             //[FromHeader(Name = "Authorization")] string token,
             [FromBody] CheckoutCompleteRequest request)
         {
-            var accessToken = this.HttpContext.Items["access-token"] as string;
-            if (accessToken == null)
-            {
-                return Unauthorized();
-            }
-
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
-            {
-                return Unauthorized();
-            }
-
-            var member = _database.Members.FindById(tokenRecord.MemberId);
+            var member = GetAuthenticatedMember();
             if (member == null)
             {
                 return Unauthorized();
             }
 
-            // Process checkout transaction
-            var ticket = new WaitingRoomTicket();
-            await ticket.WaitUntilCanRunAsync();
-
-            var transaction = _database.CheckoutTransactions.FindById(request.TransactionId);
-            if (transaction == null)
-            {
-                return BadRequest("Transaction not found");
-            }
-
-            _database.CheckoutTransactions.Delete(request.TransactionId);
-
-            var cart = _database.Carts.FindById(transaction.CartId);
-            if (cart == null)
-            {
-                return BadRequest("Cart not found");
-            }
-
-            var consumer = _database.Members.FindById(transaction.MemberId);
-            if (consumer == null)
-            {
-                return BadRequest("Consumer not found");
-            }
-
-            var order = new Order(request.TransactionId)
-            {
-                Buyer = consumer,
-                FulfillmentStatus = OrderFulfillmentStatus.Pending
-            };
-
-            decimal total = 0m;
-            var completedAt = DateTime.UtcNow;
-
-            foreach (var lineitem in cart.LineItems)
-            {
-                var product = _productService.GetProductById(lineitem.ProductId);
-                if (product == null)
-                {
-                    return BadRequest($"Product {lineitem.ProductId} not found");
-                }
-
-                total += product.Price * lineitem.Quantity;
-
-                order.ProductLines.Add(new Order.OrderProductLine
-                {
-                    ProductId = product.Id,
-                    ProductName = product.Name,
-                    UnitPrice = product.Price,
-                    Quantity = lineitem.Quantity,
-                    LineAmount = product.Price * lineitem.Quantity
-                });
-            }
-
-            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
-            foreach (var discount in _discountEngine.Evaluate(discountContext))
-            {
-                order.DiscountLines.Add(new Order.OrderDiscountLine
-                {
-                    RuleId = discount.RuleId,
-                    Name = discount.Name,
-                    Description = discount.Description,
-                    Amount = discount.Amount
-                });
-
-                total += discount.Amount;
-            }
-
-            order.TotalPrice = total;
-            order.ShopNotes = new Order.OrderShopNotes
-            {
-                BuyerSatisfaction = request.Satisfaction,
-                Comments = request.ShopComments
-            };
-
-            _database.Orders.Upsert(order);
-
-            try
-            {
-                var productEvent = ProductOrderEventFactory.CreateCompletedEvent(_shopManifest, order, completedAt);
-                _productService.HandleOrderCompleted(productEvent);
-                order.FulfillmentStatus = OrderFulfillmentStatus.Succeeded;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[checkout] product fulfillment failed for order {order.Id}: {ex}");
-                order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
-            }
-
-            _database.Orders.Upsert(order);
-
-            return new CheckoutCompleteResponse()
+            var result = await _checkoutService.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = request.TransactionId,
                 PaymentId = request.PaymentId,
+                Satisfaction = request.Satisfaction,
+                ShopComments = request.ShopComments,
+                RequestMember = member
+            });
 
-                TransactionCompleteAt = completedAt,
-                ConsumerId = member.Id,
-                ConsumerName = member.Name,
+            if (result.Status != CheckoutCompleteStatus.Succeeded)
+            {
+                if (result.Status == CheckoutCompleteStatus.BuyerMismatch)
+                {
+                    return Forbid();
+                }
 
-                OrderDetail = order
+                return BadRequest(result.ErrorMessage);
+            }
+
+            return new CheckoutCompleteResponse
+            {
+                TransactionId = result.TransactionId,
+                PaymentId = result.PaymentId,
+                TransactionCompleteAt = result.TransactionCompleteAt,
+                ConsumerId = result.ConsumerId,
+                ConsumerName = result.ConsumerName,
+                OrderDetail = result.OrderDetail!
             };
+        }
 
+        private Member? GetAuthenticatedMember()
+        {
+            var accessToken = HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return null;
+            }
+
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return null;
+            }
+
+            return _database.Members.FindById(tokenRecord.MemberId);
         }
 
 

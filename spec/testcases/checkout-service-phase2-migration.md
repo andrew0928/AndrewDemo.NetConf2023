@@ -6,6 +6,10 @@
 - status: draft-for-review
 - 日期：2026-03-24
 
+## 後續補充
+
+- checkout correctness 修正案例另見 [checkout-correctness-fixes.md](/Users/andrew/code-work/andrewshop.apidemo/spec/testcases/checkout-correctness-fixes.md)
+
 ## Core Service
 
 ### TC-CK-001 CheckoutCreate 流程移入 CheckoutService

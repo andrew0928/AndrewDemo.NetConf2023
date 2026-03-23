@@ -6,6 +6,7 @@ using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
 using AndrewDemo.NetConf2023.Core.Products;
 using DotNetEnv;
@@ -78,6 +79,7 @@ namespace AndrewDemo.NetConf2023.API
 
                 return new DiscountEngine(rules);
             });
+            builder.Services.AddSingleton<CheckoutService>();
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

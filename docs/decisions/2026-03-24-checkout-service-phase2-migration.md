@@ -5,6 +5,10 @@
 - accepted
 - 日期：2026-03-24
 
+## 後續補充
+
+- checkout correctness 修正另見 [2026-03-24-checkout-consistency-and-buyer-validation.md](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-03-24-checkout-consistency-and-buyer-validation.md)
+
 ## 背景
 
 目前 checkout 流程的主要商業邏輯仍然集中在 API controller：

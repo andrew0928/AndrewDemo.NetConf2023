@@ -1,0 +1,180 @@
+using System;
+using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Checkouts;
+using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Products;
+using Xunit;
+
+namespace AndrewDemo.NetConf2023.Core.Tests
+{
+    public class CheckoutServiceTests : ShopDatabaseTestBase
+    {
+        [Fact]
+        public void Create_WithExistingCart_CreatesCheckoutTransaction()
+        {
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("1");
+            Context.Carts.Insert(cart);
+
+            var service = CreateCheckoutService();
+
+            var result = service.Create(new CheckoutCreateCommand
+            {
+                CartId = cart.Id,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCreateStatus.Succeeded, result.Status);
+            Assert.NotEqual(0, result.TransactionId);
+            Assert.Equal(member.Id, result.ConsumerId);
+
+            var transaction = Context.CheckoutTransactions.FindById(result.TransactionId);
+            Assert.NotNull(transaction);
+            Assert.Equal(cart.Id, transaction!.CartId);
+            Assert.Equal(member.Id, transaction.MemberId);
+        }
+
+        [Fact]
+        public async Task CompleteAsync_WithExistingTransaction_CreatesOrderAndDeletesTransaction()
+        {
+            Context.Products.Upsert(new Product
+            {
+                Id = "1",
+                Name = "Test Beer",
+                Price = 50m,
+                IsPublished = true
+            });
+
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("1", 2);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                Satisfaction = 9,
+                ShopComments = "checkout ok",
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
+            Assert.Equal(transaction.TransactionId, result.TransactionId);
+            Assert.Equal(9527, result.PaymentId);
+            Assert.NotNull(result.OrderDetail);
+            Assert.Equal(OrderFulfillmentStatus.Succeeded, result.OrderDetail!.FulfillmentStatus);
+            Assert.Equal(80m, result.OrderDetail.TotalPrice);
+            Assert.Single(result.OrderDetail.ProductLines);
+            Assert.Single(result.OrderDetail.DiscountLines);
+            Assert.Null(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+
+            var storedOrder = Context.Orders.FindById(transaction.TransactionId);
+            Assert.NotNull(storedOrder);
+            Assert.Equal(OrderFulfillmentStatus.Succeeded, storedOrder!.FulfillmentStatus);
+        }
+
+        [Fact]
+        public async Task CompleteAsync_WhenProductMissing_KeepsTransactionForRetry()
+        {
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("missing-product");
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.ProductNotFound, result.Status);
+            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+        }
+
+        [Fact]
+        public async Task CompleteAsync_WhenBuyerDoesNotMatch_ReturnsBuyerMismatchAndKeepsTransaction()
+        {
+            Context.Products.Upsert(new Product
+            {
+                Id = "1",
+                Name = "Test Beer",
+                Price = 50m,
+                IsPublished = true
+            });
+
+            var (buyer, _) = TestDataFactory.RegisterMember(Context);
+            var (otherMember, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("1", 1);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = buyer.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                RequestMember = otherMember
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.BuyerMismatch, result.Status);
+            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+        }
+
+        private CheckoutService CreateCheckoutService()
+        {
+            var manifest = new ShopManifest
+            {
+                ShopId = "default",
+                DatabaseFilePath = "shop-database.db",
+                ProductServiceId = DefaultProductService.ServiceId,
+                EnabledDiscountRuleIds =
+                {
+                    Product1SecondItemDiscountRule.BuiltInRuleId
+                }
+            };
+
+            return new CheckoutService(
+                Context,
+                new DiscountEngine(new[] { new Product1SecondItemDiscountRule() }),
+                new DefaultProductService(Context),
+                manifest);
+        }
+    }
+}
