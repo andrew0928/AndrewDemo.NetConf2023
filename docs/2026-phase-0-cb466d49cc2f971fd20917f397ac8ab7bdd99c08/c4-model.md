@@ -14,10 +14,10 @@
 flowchart LR
     Consumer["消費者 / GPT Action 使用者"]
     Operator["命令列使用者"]
-    Payment["外部付款系統\n提供 paymentId"]
-    AOAI["Azure OpenAI\nChat Completion"]
+    Payment["外部付款系統<br/>提供 paymentId"]
+    AOAI["Azure OpenAI<br/>Chat Completion"]
     Runtime["Docker Compose / Azure Container Apps"]
-    System["AndrewDemo.NetConf2023\n商店示範系統"]
+    System["AndrewDemo.NetConf2023<br/>商店示範系統"]
 
     Consumer -->|"OAuth2-like 登入、商品/購物車/會員/結帳 API"| System
     Operator -->|"ConsoleUI 命令操作"| System

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spec-First Phase Workflow"
+  short_description: "Spec-first phase-gated software delivery"
+  default_prompt: "Use $spec-first-phase-workflow to run a spec-first, phase-gated software delivery workflow in this repo."
