@@ -39,3 +39,14 @@
 - 若 canonical 路徑、欄位名、術語改變，應同步更新 source code、docs、demo、spec
 - 若決策明確不追求相容，文件內要直接寫清楚，不保留長期雙軌命名
 - 若新需求與主線架構關聯較弱，先在文件中說明為何值得插隊
+
+## 決策索引
+
+| 日期 | 決策 |
+|---|---|
+| [2026-03-23](2026-03-23-discount-domain-boundary.md) | **Discount Domain 與 Cart Domain 邊界劃分**。原本折扣 contract 同時包含購物車輸入格式、消費者投影與 shop runtime 感知，職責過重。決策後 discount domain 只保留 `IDiscountRule` 與 `DiscountRecord`，購物車與消費者相關模型改歸 cart domain，discount engine 不再直接依賴 runtime 與 database。 |
+| [2026-03-23](2026-03-23-product-service-boundary-and-order-events.md) | **ProductService 邊界與訂單事件設計**。原本商品流程是靜態資料表導向，controller 直接讀取 Products collection，OrderLineItem 也無法識別實際商品。決策後每個 shop 啟用單一 `IProductService`，product contract 採固定欄位且 `ProductId` 改為 string，結帳完成後透過 `OrderEventNotification` 通知 ProductService 觸發 fulfillment。 |
+| [2026-03-23](2026-03-23-shop-runtime-and-plugin-architecture.md) | **商店啟動組態與插件化架構**（proposed）。原本系統只有單一商店、寫死的折扣邏輯與固定商品模型。決策採用「單一部署單一商店」模式，啟動時依 `SHOP_ID` 載入 `ShopManifest` 與對應模組；折扣引擎改為 instance-based 注入式服務，商品擴充拆為「商品定義」與「購買項目」兩層模型。 |
+| [2026-03-24](2026-03-24-checkout-consistency-and-buyer-validation.md) | **Checkout 交易一致性與 Buyer 驗證修正**。原本 checkout transaction 在建立 order 前就被刪除，且未驗證 access token 對應的 member 是否為 transaction buyer。決策後 transaction 必須在 order 建立成功後才刪除，buyer 不符時回傳 403，fulfillment 失敗不推翻已成立的 order。 |
+| [2026-03-24](2026-03-24-checkout-service-phase2-migration.md) | **CheckoutService Phase 2 搬移策略**。原本 checkout 的交易編排邏輯全部寫在 API controller，`.Core` 只有零散 helper。決策將 checkout orchestration 搬進 `.Core` 的 `CheckoutService`，controller 只保留 request/response mapping 與 HTTP status 對應，本階段只做搬移不修正既有缺失。 |
+| [2026-03-25](2026-03-25-spec-first-phase-workflow-skill.md) | **Spec-First Phase Workflow skill 化**。原本合作流程的規則分散在 decisions、AGENTS.md 與各 phase 文件中，每次需口述重建。決策將這套 spec-first、phase-gated 開發流程整理為可重複使用的 skill，明確區分 Phase 1（規格確認）、Phase 2（依 frozen spec 重構）、version analysis 三種工作模式。 |
