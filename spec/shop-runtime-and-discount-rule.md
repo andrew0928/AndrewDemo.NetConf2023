@@ -3,7 +3,7 @@
 ## 狀態
 
 - phase: 1
-- status: draft-for-freeze
+- status: draft-for-review
 - 日期：2026-03-23
 
 ## 範圍
@@ -35,6 +35,7 @@
 補充：
 
 - tenant isolation mode 的正式定義，請以 [shop-runtime-data-isolation-mode.md](/Users/andrew/code-work/andrewshop.apidemo/spec/shop-runtime-data-isolation-mode.md) 為準。
+- cart aggregate 與 line identity 的正式定義，請以 [core-cart-line-based-aggregate.md](/Users/andrew/code-work/andrewshop.apidemo/spec/core-cart-line-based-aggregate.md) 為準。
 
 ## Canonical 術語
 
@@ -104,10 +105,14 @@
 - `ShopId`
 - `ConsumerId`
 - `ConsumerName`
+- `EvaluatedAt`
 - `LineItems`
 
 #### LineItem
 
+- `LineId`
+- `ParentLineId`
+- `AddedAt`
 - `ProductId`
 - `Quantity`
 - `ProductName`
@@ -115,8 +120,10 @@
 
 補充：
 
-- raw `Cart.LineItems` 至少保證 `ProductId`、`Quantity`
+- raw `Cart.LineItems` 至少保證 `LineId`、`ProductId`、`Quantity`、`AddedAt`
+- `ParentLineId` 可為空，用來表示 generic line relation
 - `CartContext.LineItems` 會由 `CartContextFactory` 補齊 `ProductName`、`UnitPrice`
+- `CartContextFactory` 不得丟失 `LineId`、`ParentLineId`、`AddedAt`
 
 #### CartContextFactory
 

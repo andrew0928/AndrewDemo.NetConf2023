@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Core.Products;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +12,8 @@ namespace AndrewDemo.NetConf2023.Core
         ILiteDatabase Database { get; }
         ILiteCollection<Cart> Carts { get; }
         ILiteCollection<Product> Products { get; }
+        ILiteCollection<SkuRecord> Skus { get; }
+        ILiteCollection<InventoryRecord> InventoryRecords { get; }
         ILiteCollection<Member> Members { get; }
         ILiteCollection<Order> Orders { get; }
         ILiteCollection<MemberAccessTokenRecord> MemberTokens { get; }
@@ -22,6 +25,8 @@ namespace AndrewDemo.NetConf2023.Core
         private readonly LiteDatabase _database;
         private readonly ILiteCollection<Cart> _carts;
         private readonly ILiteCollection<Product> _products;
+        private readonly ILiteCollection<SkuRecord> _skus;
+        private readonly ILiteCollection<InventoryRecord> _inventoryRecords;
         private readonly ILiteCollection<Member> _members;
         private readonly ILiteCollection<Order> _orders;
         private readonly ILiteCollection<MemberAccessTokenRecord> _memberTokens;
@@ -36,6 +41,8 @@ namespace AndrewDemo.NetConf2023.Core
 
             _carts = _database.GetCollection<Cart>("carts");
             _products = _database.GetCollection<Product>("products");
+            _skus = _database.GetCollection<SkuRecord>("skus");
+            _inventoryRecords = _database.GetCollection<InventoryRecord>("inventory_records");
             _members = _database.GetCollection<Member>("members");
             _orders = _database.GetCollection<Order>("orders");
             _memberTokens = _database.GetCollection<MemberAccessTokenRecord>("member_tokens");
@@ -67,6 +74,24 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 ThrowIfDisposed();
                 return _products;
+            }
+        }
+
+        public ILiteCollection<SkuRecord> Skus
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _skus;
+            }
+        }
+
+        public ILiteCollection<InventoryRecord> InventoryRecords
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _inventoryRecords;
             }
         }
 
@@ -147,6 +172,8 @@ namespace AndrewDemo.NetConf2023.Core
         {
             database.GetCollection<Member>("members").EnsureIndex(x => x.Name, unique: true);
             database.GetCollection<Product>("products").EnsureIndex(x => x.Id);
+            database.GetCollection<SkuRecord>("skus").EnsureIndex(x => x.SkuId, unique: true);
+            database.GetCollection<InventoryRecord>("inventory_records").EnsureIndex(x => x.SkuId, unique: true);
             database.GetCollection<Order>("orders").EnsureIndex(x => x.Buyer.Id);
             database.GetCollection<MemberAccessTokenRecord>("member_tokens").EnsureIndex(x => x.MemberId);
             database.GetCollection<CheckoutTransactionRecord>("checkout_transactions").EnsureIndex(x => x.MemberId);
@@ -212,6 +239,8 @@ namespace AndrewDemo.NetConf2023.Core
         {
             if (typeof(T) == typeof(Cart)) return (ILiteCollection<T>)context.Carts;
             if (typeof(T) == typeof(Product)) return (ILiteCollection<T>)context.Products;
+            if (typeof(T) == typeof(SkuRecord)) return (ILiteCollection<T>)context.Skus;
+            if (typeof(T) == typeof(InventoryRecord)) return (ILiteCollection<T>)context.InventoryRecords;
             if (typeof(T) == typeof(Member)) return (ILiteCollection<T>)context.Members;
             if (typeof(T) == typeof(Order)) return (ILiteCollection<T>)context.Orders;
             if (typeof(T) == typeof(MemberAccessTokenRecord)) return (ILiteCollection<T>)context.MemberTokens;

@@ -74,6 +74,41 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Empty(discounts);
         }
 
+        [Fact]
+        public void EnabledRule_IsAppliedAcrossDistinctLinesWithSameProduct()
+        {
+            Context.Products.Upsert(new Product
+            {
+                Id = "1",
+                Name = "Test Beer",
+                Price = 50m,
+                IsPublished = true
+            });
+
+            var cart = new Cart();
+            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1);
+
+            var manifest = new ShopManifest
+            {
+                ShopId = "default",
+                DatabaseFilePath = "shop-database.db",
+                ProductServiceId = DefaultProductService.ServiceId,
+                EnabledDiscountRuleIds =
+                {
+                    Product1SecondItemDiscountRule.BuiltInRuleId
+                }
+            };
+
+            var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+
+            var discounts = engine.Evaluate(cartContext);
+
+            Assert.Single(discounts);
+            Assert.Equal(-20m, discounts[0].Amount);
+        }
+
         private static DiscountEngine CreateEngine(ShopManifest manifest, params IDiscountRule[] rules)
         {
             var enabledRules = rules.Where(rule =>

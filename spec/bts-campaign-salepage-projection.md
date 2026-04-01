@@ -34,7 +34,7 @@
 - `Member`: 對外公開的買家身分
 - `Product`: 對外公開的可販售頁面投影
 - `SalePage`: 內部販售投影模型，決定入口、價格與活動規則
-- `SKU`: 內部商品主檔，代表型號、規格與庫存
+- `SKU`: `.Core` 的內部商品主檔，代表型號、規格與庫存
 - `BTS Entry`: BTS 活動入口
 - `BTS Main Product`: 可享 BTS 優惠的主商品
 - `BTS Gift Group`: 某個主商品可搭配的贈品群
@@ -76,12 +76,14 @@ canonical 結論：
 - 型號
 - 規格
 - 庫存
+- `.Core` 標準商品能力
 - 實際商品主檔識別
 
 規則：
 
 - `SkuId` 不應直接成為 `.Abstract.Product.Id`
 - 庫存資訊不需要透過 `.Abstract` 對外公開
+- 若 `Product` 內部保存 `SkuId`，也不應作為產品查詢 API 的預設公開欄位
 
 ### 3. `Member` 對外仍維持買家身分語意
 

@@ -52,7 +52,8 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
         BuyerMismatch = 2,
         CartNotFound = 3,
         ConsumerNotFound = 4,
-        ProductNotFound = 5
+        ProductNotFound = 5,
+        InventoryInsufficient = 6
     }
 
     public sealed class CheckoutCompleteCommand
@@ -112,6 +113,11 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
         public static CheckoutCompleteResult CreateProductNotFound(string errorMessage)
         {
             return CreateFailure(CheckoutCompleteStatus.ProductNotFound, errorMessage);
+        }
+
+        public static CheckoutCompleteResult CreateInventoryInsufficient(string errorMessage)
+        {
+            return CreateFailure(CheckoutCompleteStatus.InventoryInsufficient, errorMessage);
         }
 
         private static CheckoutCompleteResult CreateFailure(CheckoutCompleteStatus status, string errorMessage)

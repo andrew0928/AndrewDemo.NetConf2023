@@ -15,22 +15,29 @@ namespace AndrewDemo.NetConf2023.Core.Discounts
 
         public IReadOnlyList<DiscountRecord> Evaluate(CartContext context)
         {
-            var lineItem = context.LineItems
-                .Where(x => x.ProductId == "1" && x.Quantity >= 2)
-                .FirstOrDefault();
+            var matchedLines = context.LineItems
+                .Where(x => x.ProductId == "1")
+                .ToList();
 
-            if (lineItem == null)
+            var totalQuantity = matchedLines.Sum(x => x.Quantity);
+            if (totalQuantity < 2)
+            {
+                return new List<DiscountRecord>();
+            }
+
+            var sampleLine = matchedLines.FirstOrDefault();
+            if (sampleLine == null)
             {
                 return new List<DiscountRecord>();
             }
 
             var records = new List<DiscountRecord>();
-            var unitPrice = lineItem.UnitPrice
-                ?? throw new InvalidOperationException($"unit price is required for product {lineItem.ProductId}");
-            var productName = lineItem.ProductName
-                ?? throw new InvalidOperationException($"product name is required for product {lineItem.ProductId}");
+            var unitPrice = sampleLine.UnitPrice
+                ?? throw new InvalidOperationException($"unit price is required for product {sampleLine.ProductId}");
+            var productName = sampleLine.ProductName
+                ?? throw new InvalidOperationException($"product name is required for product {sampleLine.ProductId}");
 
-            for (int index = 1; index <= lineItem.Quantity; index++)
+            for (int index = 1; index <= totalQuantity; index++)
             {
                 if (index % 2 != 0)
                 {

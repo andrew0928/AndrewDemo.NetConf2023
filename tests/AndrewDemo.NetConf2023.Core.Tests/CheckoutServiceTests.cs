@@ -157,6 +157,71 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Null(Context.Orders.FindById(transaction.TransactionId));
         }
 
+        [Fact]
+        public async Task CompleteAsync_WithStockTrackedProduct_DeductsInventoryWithinCheckout()
+        {
+            var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 120m, availableQuantity: 5);
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts(productId, 2);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
+            Assert.NotNull(result.OrderDetail);
+            Assert.Equal(skuId, result.OrderDetail!.ProductLines[0].SkuId);
+            Assert.Equal(3, Context.InventoryRecords.FindById(skuId)!.AvailableQuantity);
+            Assert.Null(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+        }
+
+        [Fact]
+        public async Task CompleteAsync_WhenStockIsInsufficient_KeepsTransactionAndDoesNotCreateOrder()
+        {
+            var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 120m, availableQuantity: 1);
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts(productId, 2);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.InventoryInsufficient, result.Status);
+            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+            Assert.Equal(1, Context.InventoryRecords.FindById(skuId)!.AvailableQuantity);
+        }
+
         private CheckoutService CreateCheckoutService()
         {
             var manifest = new ShopManifest

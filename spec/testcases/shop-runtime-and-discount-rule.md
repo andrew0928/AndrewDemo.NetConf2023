@@ -3,7 +3,7 @@
 ## 狀態
 
 - phase: 1
-- status: draft-for-freeze
+- status: draft-for-review
 - 日期：2026-03-23
 
 ## Shop Runtime
@@ -42,7 +42,8 @@
 - When: 執行 `CartContextFactory.Create(...)`
 - Then: 回傳 `CartContext`
 - And: `ShopId` 來自 `ShopManifest`
-- And: `LineItems` 內含 `ProductId`、`ProductName`、`UnitPrice`、`Quantity`
+- And: `CartContext` 內含 `EvaluatedAt`
+- And: `LineItems` 內含 `LineId`、`ParentLineId`、`AddedAt`、`ProductId`、`ProductName`、`UnitPrice`、`Quantity`
 
 ### TC-CT-002 Cart 與 CartContext 共用唯讀 LineItem 型別
 
@@ -50,6 +51,7 @@
 - When: 檢查其型別
 - Then: 兩者共用同一個 `LineItem`
 - And: raw `Cart.LineItems` 可不帶 `ProductName` / `UnitPrice`
+- And: raw `Cart.LineItems` 至少保留 `LineId` / `ParentLineId` / `AddedAt`
 - And: `CartContext.LineItems` 必須帶完整價格快照
 
 ## Discount Engine

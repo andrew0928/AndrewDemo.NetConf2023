@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
@@ -89,6 +91,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
 
             decimal total = 0m;
             var completedAt = DateTime.UtcNow;
+            var inventoryRequirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var lineitem in cart.LineItems)
             {
@@ -98,16 +101,27 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
                     return CheckoutCompleteResult.CreateProductNotFound($"Product {lineitem.ProductId} not found");
                 }
 
+                var skuId = NormalizeSkuId(product.SkuId);
+
                 total += product.Price * lineitem.Quantity;
 
                 order.ProductLines.Add(new Order.OrderProductLine
                 {
                     ProductId = product.Id,
+                    SkuId = skuId,
                     ProductName = product.Name,
                     UnitPrice = product.Price,
                     Quantity = lineitem.Quantity,
                     LineAmount = product.Price * lineitem.Quantity
                 });
+
+                if (skuId == null)
+                {
+                    continue;
+                }
+
+                inventoryRequirements.TryGetValue(skuId, out var currentQuantity);
+                inventoryRequirements[skuId] = currentQuantity + lineitem.Quantity;
             }
 
             var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
@@ -131,8 +145,37 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
                 Comments = command.ShopComments
             };
 
-            _database.Orders.Upsert(order);
-            _database.CheckoutTransactions.Delete(command.TransactionId);
+            var ownsTransaction = _database.Database.BeginTrans();
+            try
+            {
+                var inventoryResult = ValidateAndDeductInventory(inventoryRequirements, completedAt);
+                if (inventoryResult != null)
+                {
+                    if (ownsTransaction)
+                    {
+                        _database.Database.Rollback();
+                    }
+
+                    return inventoryResult;
+                }
+
+                _database.Orders.Upsert(order);
+                _database.CheckoutTransactions.Delete(command.TransactionId);
+
+                if (ownsTransaction)
+                {
+                    _database.Database.Commit();
+                }
+            }
+            catch
+            {
+                if (ownsTransaction)
+                {
+                    _database.Database.Rollback();
+                }
+
+                throw;
+            }
 
             try
             {
@@ -155,6 +198,55 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
                 command.RequestMember.Id,
                 command.RequestMember.Name,
                 order);
+        }
+
+        private CheckoutCompleteResult? ValidateAndDeductInventory(
+            IReadOnlyDictionary<string, int> inventoryRequirements,
+            DateTime updatedAt)
+        {
+            if (inventoryRequirements.Count == 0)
+            {
+                return null;
+            }
+
+            var inventoryRecords = new Dictionary<string, InventoryRecord>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var requirement in inventoryRequirements)
+            {
+                var inventoryRecord = _database.InventoryRecords
+                    .Query()
+                    .Where(x => x.SkuId == requirement.Key)
+                    .ForUpdate()
+                    .FirstOrDefault();
+
+                if (inventoryRecord == null)
+                {
+                    return CheckoutCompleteResult.CreateInventoryInsufficient($"Inventory record not found for sku {requirement.Key}");
+                }
+
+                if (inventoryRecord.AvailableQuantity < requirement.Value)
+                {
+                    return CheckoutCompleteResult.CreateInventoryInsufficient(
+                        $"Inventory is insufficient for sku {requirement.Key}. required={requirement.Value}, available={inventoryRecord.AvailableQuantity}");
+                }
+
+                inventoryRecords[requirement.Key] = inventoryRecord;
+            }
+
+            foreach (var requirement in inventoryRequirements)
+            {
+                var inventoryRecord = inventoryRecords[requirement.Key];
+                inventoryRecord.AvailableQuantity -= requirement.Value;
+                inventoryRecord.UpdatedAt = updatedAt;
+                _database.InventoryRecords.Update(inventoryRecord);
+            }
+
+            return null;
+        }
+
+        private static string? NormalizeSkuId(string? skuId)
+        {
+            return string.IsNullOrWhiteSpace(skuId) ? null : skuId;
         }
     }
 }

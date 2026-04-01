@@ -39,6 +39,9 @@ namespace AndrewDemo.NetConf2023.Core
 
                 lineItems.Add(new LineItem
                 {
+                    LineId = lineItem.LineId,
+                    ParentLineId = lineItem.ParentLineId,
+                    AddedAt = lineItem.AddedAt,
                     ProductId = product.Id,
                     ProductName = product.Name,
                     UnitPrice = product.Price,
@@ -51,6 +54,7 @@ namespace AndrewDemo.NetConf2023.Core
                 ShopId = manifest.ShopId,
                 ConsumerId = consumer?.Id,
                 ConsumerName = consumer?.Name,
+                EvaluatedAt = DateTime.UtcNow,
                 LineItems = lineItems
             };
         }

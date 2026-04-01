@@ -41,6 +41,7 @@ namespace AndrewDemo.NetConf2023.Core
         public class OrderProductLine
         {
             public string ProductId { get; set; } = string.Empty;
+            public string? SkuId { get; set; }
             public string ProductName { get; set; } = string.Empty;
             public decimal UnitPrice { get; set; }
             public int Quantity { get; set; }
