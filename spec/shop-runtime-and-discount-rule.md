@@ -21,14 +21,20 @@
 - 預約服務商品
 - runtime hot reload
 - 同 instance 多商店同時服務
+- tenant share mode / shared physical database
 
 ## 目標
 
 - 同一套 code base 可交付多個商店
 - 單一部署只服務單一商店
 - 啟動時可依 `SHOP_ID` 或 `--shop-id` 載入對應商店設定
+- 目前 runtime data topology 維持 tenant isolation mode
 - discount rules 改為插件邊界，不再把規則寫死在 `.Core`
 - discount domain 只保留必要 contract
+
+補充：
+
+- tenant isolation mode 的正式定義，請以 [shop-runtime-data-isolation-mode.md](/Users/andrew/code-work/andrewshop.apidemo/spec/shop-runtime-data-isolation-mode.md) 為準。
 
 ## Canonical 術語
 
