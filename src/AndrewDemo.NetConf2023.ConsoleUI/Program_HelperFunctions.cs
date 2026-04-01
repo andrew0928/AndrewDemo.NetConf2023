@@ -199,6 +199,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             foreach (var discount in EstimateDiscounts(cart))
             {
+                if (discount.Kind != AndrewDemo.NetConf2023.Abstract.Discounts.DiscountRecordKind.Discount)
+                {
+                    continue;
+                }
+
                 total += discount.Amount;
             }
 

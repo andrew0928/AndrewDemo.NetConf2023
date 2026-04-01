@@ -94,12 +94,21 @@
 - Then: 可回傳 `DiscountRecord`
 - And: 該記錄 `Kind = Hint`
 - And: `Amount = 0`
+- And: 若要提示成立後的優惠內容，應寫在 `Name` 或 `Description`
 
 ### TC-DC-006 hint record 不影響總價
 
 - Given: `DiscountEngine` 回傳一筆 `Kind = Hint` 的 `DiscountRecord`
 - When: API 試算購物車總價
 - Then: 不得把該記錄的 `Amount` 加入總價
+
+### TC-DC-006A hint record 若帶非零 amount 應視為 rule 實作錯誤
+
+- Given: 某條 discount rule 回傳一筆 `Kind = Hint` 的 `DiscountRecord`
+- And: 該記錄 `Amount != 0`
+- When: 執行 `DiscountEngine`
+- Then: 應直接丟出錯誤
+- And: 不得把該記錄視為有效輸出
 
 ### TC-DC-007 discount record 可標記關聯 line ids
 

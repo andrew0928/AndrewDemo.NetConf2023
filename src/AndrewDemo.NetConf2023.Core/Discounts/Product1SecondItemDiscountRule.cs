@@ -36,6 +36,10 @@ namespace AndrewDemo.NetConf2023.Core.Discounts
                 ?? throw new InvalidOperationException($"unit price is required for product {sampleLine.ProductId}");
             var productName = sampleLine.ProductName
                 ?? throw new InvalidOperationException($"product name is required for product {sampleLine.ProductId}");
+            var relatedLineIds = matchedLines
+                .Select(x => x.LineId)
+                .Distinct()
+                .ToList();
 
             for (int index = 1; index <= totalQuantity; index++)
             {
@@ -47,9 +51,11 @@ namespace AndrewDemo.NetConf2023.Core.Discounts
                 records.Add(new DiscountRecord
                 {
                     RuleId = RuleId,
+                    Kind = DiscountRecordKind.Discount,
                     Name = "第二件六折",
                     Description = $"符合商品: {productName} x 2",
-                    Amount = unitPrice * -0.4m
+                    Amount = unitPrice * -0.4m,
+                    RelatedLineIds = relatedLineIds
                 });
             }
 

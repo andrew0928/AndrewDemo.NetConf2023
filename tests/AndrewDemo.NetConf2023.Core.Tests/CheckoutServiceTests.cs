@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Abstract.Carts;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
@@ -222,24 +226,87 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Equal(1, Context.InventoryRecords.FindById(skuId)!.AvailableQuantity);
         }
 
-        private CheckoutService CreateCheckoutService()
+        [Fact]
+        public async Task CompleteAsync_WhenRuleReturnsHint_DoesNotAffectTotalOrPersistDiscountLines()
         {
+            Context.Products.Upsert(new Product
+            {
+                Id = "1",
+                Name = "Test Beer",
+                Price = 50m,
+                IsPublished = true
+            });
+
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("1", 1);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService(new HintOnlyDiscountRule());
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
+            Assert.NotNull(result.OrderDetail);
+            Assert.Equal(50m, result.OrderDetail!.TotalPrice);
+            Assert.Empty(result.OrderDetail.DiscountLines);
+        }
+
+        private CheckoutService CreateCheckoutService(params IDiscountRule[] rules)
+        {
+            var enabledRules = rules.Length == 0
+                ? new IDiscountRule[] { new Product1SecondItemDiscountRule() }
+                : rules;
+
             var manifest = new ShopManifest
             {
                 ShopId = "default",
                 DatabaseFilePath = "shop-database.db",
                 ProductServiceId = DefaultProductService.ServiceId,
-                EnabledDiscountRuleIds =
-                {
-                    Product1SecondItemDiscountRule.BuiltInRuleId
-                }
+                EnabledDiscountRuleIds = enabledRules.Select(x => x.RuleId).ToList()
             };
 
             return new CheckoutService(
                 Context,
-                new DiscountEngine(new[] { new Product1SecondItemDiscountRule() }),
+                new DiscountEngine(enabledRules),
                 new DefaultProductService(Context),
                 manifest);
+        }
+
+        private sealed class HintOnlyDiscountRule : IDiscountRule
+        {
+            public string RuleId => "test-hint-rule";
+
+            public int Priority => 10;
+
+            public IReadOnlyList<DiscountRecord> Evaluate(CartContext context)
+            {
+                return new List<DiscountRecord>
+                {
+                    new DiscountRecord
+                    {
+                        RuleId = RuleId,
+                        Kind = DiscountRecordKind.Hint,
+                        Name = "BTS 提示",
+                        Description = "目前不符合折扣條件",
+                        Amount = 0m,
+                        RelatedLineIds = context.LineItems.Select(x => x.LineId).ToList()
+                    }
+                };
+            }
         }
     }
 }

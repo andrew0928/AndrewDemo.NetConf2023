@@ -165,6 +165,8 @@
 - `Kind = Hint` 時：
   - `Amount` 必須為 `0`
   - 不得影響應付總額
+  - 不得用 `Amount` 承載「若成立可折多少」的資訊
+  - 若要提示滿足條件後的優惠內容，應寫在 `Name` 或 `Description`
 
 `Kind` 規則：
 
@@ -185,6 +187,7 @@
 - `.Core` 必須提供 `CartContextFactory`
 - `.Core` 消費 `DiscountRecord` 時，只有 `Kind = Discount` 的記錄可影響總價
 - `.Core` 寫入 `Order.DiscountLines` 時，只能持久化 `Kind = Discount` 的記錄
+- `.Core` 應驗證 `Kind = Hint` 的記錄其 `Amount` 必須為 `0`；若 rule 回傳非法值，應直接視為實作錯誤
 - `.Core` 不再保留 `DiscountEvaluationContext` / `DiscountConsumerSnapshot` / `IShopRuntimeContext`
 - 既有「商品 ID = 1，第二件六折」需被改寫為第一個 built-in rule
 

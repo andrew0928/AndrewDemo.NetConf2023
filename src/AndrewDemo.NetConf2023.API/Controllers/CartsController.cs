@@ -127,13 +127,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 {
                     TotalPrice = cartContext.LineItems.Sum(x =>
                         (x.UnitPrice ?? throw new InvalidOperationException($"unit price is required for product {x.ProductId}")) * x.Quantity)
-                        + discountRecords.Sum(x => x.Amount),
+                        + discountRecords
+                            .Where(x => x.Kind == DiscountRecordKind.Discount)
+                            .Sum(x => x.Amount),
                     Discounts = discountRecords
-                        .Select(x => new CartDiscountHint
+                        .Select(x => new CartDiscountRecord
                         {
+                            Kind = x.Kind,
                             Name = x.Name,
                             Description = x.Description,
-                            DiscountAmount = x.Amount
+                            Amount = x.Amount,
+                            RelatedLineIds = x.RelatedLineIds.ToList()
                         })
                         .ToList()
                 };
@@ -176,14 +180,19 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 
             /// </summary>
-            public List<CartDiscountHint> Discounts { get; set; }
+            public List<CartDiscountRecord> Discounts { get; set; } = new List<CartDiscountRecord>();
         }
 
         /// <summary>
         /// 
         /// </summary>
-        public class CartDiscountHint
+        public class CartDiscountRecord
         {
+            /// <summary>
+            /// 
+            /// </summary>
+            public DiscountRecordKind Kind { get; set; }
+
             /// <summary>
             /// 
             /// </summary>
@@ -197,7 +206,12 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 
             /// </summary>
-            public decimal DiscountAmount { get; set; }
+            public decimal Amount { get; set; }
+
+            /// <summary>
+            /// 
+            /// </summary>
+            public List<string> RelatedLineIds { get; set; } = new List<string>();
         }
     }
 }

@@ -33,10 +33,24 @@ namespace AndrewDemo.NetConf2023.Core.Discounts
                 .OrderBy(x => x.Priority)
                 .ThenBy(x => x.RuleId, StringComparer.OrdinalIgnoreCase))
             {
-                records.AddRange(rule.Evaluate(context));
+                var ruleRecords = rule.Evaluate(context);
+                ValidateRuleOutputs(rule, ruleRecords);
+                records.AddRange(ruleRecords);
             }
 
             return records;
+        }
+
+        private static void ValidateRuleOutputs(IDiscountRule rule, IReadOnlyList<DiscountRecord> records)
+        {
+            foreach (var record in records)
+            {
+                if (record.Kind == DiscountRecordKind.Hint && record.Amount != 0m)
+                {
+                    throw new InvalidOperationException(
+                        $"discount rule '{rule.RuleId}' returned a hint record with non-zero amount.");
+                }
+            }
         }
     }
 }

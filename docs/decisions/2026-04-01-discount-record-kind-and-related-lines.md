@@ -36,6 +36,8 @@
 - `Kind = Hint` 時：
   - `Amount = 0`
   - 不影響總價
+  - 不得用 `Amount` 表達潛在折扣金額
+  - 若需提示成立後的優惠內容，只能寫在 `Name` 或 `Description`
   - 可用來提示條件不足、活動失效等資訊
 - `RelatedLineIds` 代表該記錄關聯的 `CartContext.LineItems[*].LineId`
 
@@ -43,6 +45,7 @@
 
 - `.Abstract.Discounts` 需要重開 Phase 1 調整 contract
 - `.Core` 與 `.API` 消費 `DiscountRecord` 時，必須只把 `Kind = Discount` 視為有效金額
+- `.Core` 應在 engine 層驗證 `Hint.Amount == 0`，避免錯誤 rule 把潛在折扣值帶入通用 contract
 - cart estimate 可直接利用同一型別回傳 discount 與 hint
 - BTS 可用 `Hint` 表達「已無 BTS 優惠」而不必先引入 checkout validation hook
 

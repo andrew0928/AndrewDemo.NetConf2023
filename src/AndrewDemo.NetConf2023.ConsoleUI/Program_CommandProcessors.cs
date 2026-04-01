@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Core;
 using System.Data;
 using System.Runtime.CompilerServices;
@@ -202,7 +203,8 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             foreach (var discount in EstimateDiscounts(cart))
             {
-                Console.WriteLine($"- 折扣: [{discount.Name}], {discount.Description}\t{discount.Amount:C}");
+                var prefix = discount.Kind == DiscountRecordKind.Hint ? "提示" : "折扣";
+                Console.WriteLine($"- {prefix}: [{discount.Name}], {discount.Description}\t{discount.Amount:C}");
             }
         }
 

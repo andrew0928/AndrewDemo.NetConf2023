@@ -127,6 +127,11 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
             var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
             foreach (var discount in _discountEngine.Evaluate(discountContext))
             {
+                if (discount.Kind != Abstract.Discounts.DiscountRecordKind.Discount)
+                {
+                    continue;
+                }
+
                 order.DiscountLines.Add(new Order.OrderDiscountLine
                 {
                     RuleId = discount.RuleId,
