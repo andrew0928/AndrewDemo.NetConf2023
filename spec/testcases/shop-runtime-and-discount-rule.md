@@ -62,6 +62,7 @@
 - And: 購物車內商品 1 數量為 2
 - When: 執行 `DiscountEngine`
 - Then: 回傳 1 筆折扣
+- And: 該記錄 `Kind = Discount`
 - And: 折扣金額為 `單價 * -0.4`
 
 ### TC-DC-002 未組裝進 engine 的規則不執行
@@ -85,6 +86,28 @@
 - Then: 不丟例外
 - And: 只忽略該規則
 
+### TC-DC-005 discount rule 可回傳 hint record
+
+- Given: 某條 discount rule 需要滿足額外門檻才成立
+- And: 購物車尚未達成折扣條件
+- When: 執行 `DiscountEngine`
+- Then: 可回傳 `DiscountRecord`
+- And: 該記錄 `Kind = Hint`
+- And: `Amount = 0`
+
+### TC-DC-006 hint record 不影響總價
+
+- Given: `DiscountEngine` 回傳一筆 `Kind = Hint` 的 `DiscountRecord`
+- When: API 試算購物車總價
+- Then: 不得把該記錄的 `Amount` 加入總價
+
+### TC-DC-007 discount record 可標記關聯 line ids
+
+- Given: 某條折扣規則同時關聯主商品 line 與贈品 line
+- When: 規則回傳 `DiscountRecord`
+- Then: `RelatedLineIds` 可同時包含多個 `LineId`
+- And: 這些 `LineId` 必須存在於 `CartContext.LineItems`
+
 ## API 整合
 
 ### TC-API-001 購物車試算改走 CartContextFactory 與新引擎
@@ -93,6 +116,9 @@
 - When: 呼叫 `/api/carts/{id}/estimate`
 - Then: 先建立 `CartContext`
 - And: 回傳的折扣來自 plugin engine
+- And: response 可區分 `Discount` 與 `Hint`
+- And: response 可帶出 `RelatedLineIds`
+- And: `TotalPrice` 只加總 `Kind = Discount` 的記錄
 
 ### TC-API-002 checkout 改走 CartContextFactory 與新引擎
 
@@ -100,3 +126,4 @@
 - When: 完成結帳
 - Then: 先建立 `CartContext`
 - And: 訂單內優惠列來自 plugin engine
+- And: 只有 `Kind = Discount` 的記錄可進入訂單折扣列

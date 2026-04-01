@@ -14,6 +14,7 @@
 2. 公開 `Product` 與內部 `SalePage` / `SKU` 的對應關係
 3. BTS 資格、價格、主商品與贈品群的商業規則
 4. 購物車與結帳對 BTS 入口、時間窗與驗證狀態的判定
+5. BTS 價差與提示如何透過 discount rule 表達
 
 本規格暫不涵蓋：
 
@@ -39,8 +40,9 @@
 - `BTS Main Product`: 可享 BTS 優惠的主商品
 - `BTS Gift Group`: 某個主商品可搭配的贈品群
 - `BTS Gift Product`: 贈品群內可被選擇的一個商品
-- `BTS Price`: 主商品在 BTS campaign 下的明確售價
+- `BTS Price`: sidecar 中定義的 BTS 明確售價，不直接覆蓋 `Product.Price`
 - `BTS Discount`: 收據上顯示的 BTS 優惠折扣項目
+- `BTS Hint`: 折扣規則回傳、但不影響金額的活動提示
 
 ## 商業邊界
 
@@ -54,8 +56,9 @@ canonical 結論：
 
 因此：
 
-- 同一個商品可同時存在一般入口與 BTS 入口
-- 兩者共用同一個內部商品主檔與庫存
+- 同一個公開 `SalePage` 可同時被一般入口與 BTS 入口引用
+- 是否具備 BTS 資格，不由 `Product.Id` 區分，而由入口語意與 cart-side sidecar 判定
+- 一般入口與 BTS 入口共用同一個內部商品主檔與庫存
 
 ## 公開名詞與內部模型的對應
 
@@ -67,7 +70,7 @@ canonical 結論：
 
 - `Product.Id = SalePageId`
 - `Product` 對外代表可被瀏覽、加入購物車、結帳的販售頁面
-- `Product.Price` 對外代表該 `SalePage` 在當下入口下的售價投影
+- `Product.Price` 對外代表該 `SalePage` 的一般售價
 
 ### 2. `SKU` 不對外公開
 
@@ -105,8 +108,9 @@ BTS 相關驗證則是 member-side 狀態：
 ### 2. BTS 價格
 
 - `BTS Price` 只存在主商品
+- `BTS Price` 屬於 sidecar campaign 資料，不直接覆蓋 `Product.Price`
 - 贈品商品本身沒有獨立的 `bts-price`
-- 收據仍以「原價 - BTS 優惠折扣」方式條列
+- 收據仍以「原價商品行 + BTS 優惠折扣行」方式條列
 
 例如：
 
@@ -114,9 +118,14 @@ BTS 相關驗證則是 member-side 狀態：
 - 主商品 `BTS Price = 31400`
 - 若搭配 `AirPods 4 = 5990`
 - 收據可表達為：
-  - 主商品 `31400`
-  - `BTS 優惠 = -5990`
+  - 主商品 `35900`
   - 贈品 `5990`
+  - `BTS 優惠 = -10490`
+
+補充：
+
+- `BTS 優惠` 可由一筆或多筆 `DiscountRecord` 表達
+- 若 rule 回傳單筆 `DiscountRecord`，可用 `RelatedLineIds` 同時關聯主商品 line 與贈品 line
 
 ### 3. 主商品與贈品群
 
@@ -131,6 +140,8 @@ BTS 相關驗證則是 member-side 狀態：
 - 只有從 `BTS Entry` 加入購物車的商品，才享有 BTS 資格
 - 一般入口不需要提醒或要求進行 `.edu` 驗證
 - BTS 入口在加入購物車前就必須先完成驗證
+- 活動期間內，可在商品描述或活動入口顯示 BTS 優惠文案
+- 顯示文案不直接改變 `Product.Price`
 
 ### 5. 購物車中的 BTS 資格保留
 
@@ -141,9 +152,9 @@ BTS 相關驗證則是 member-side 狀態：
 
 - 活動必須有 `start/end` 時間窗
 - 加入 BTS 商品到購物車時，必須仍在活動期間內
-- 結帳當下也必須仍在活動期間內
-- 若結帳時活動已過期，系統必須禁止結帳
-- 消費者需更新購物車後重新結帳
+- 結帳當下若活動已過期，BTS 折扣不再成立
+- 結帳仍可繼續，但必須以原價結帳
+- 系統可透過 `BTS Hint` 提示優惠已失效
 
 ### 7. 主商品移除後的贈品行為
 
@@ -161,7 +172,7 @@ BTS 相關驗證則是 member-side 狀態：
 
 - `.Abstract.Product` = `SalePage projection`
 - `Product.Id = SalePageId`
-- `Product.Price` = 當前販售頁面投影價格
+- `Product.Price` = 一般販售價格
 
 ### Member
 
@@ -173,6 +184,7 @@ BTS 相關驗證則是 member-side 狀態：
 - `Cart` 與 `Order` 對外只需要看到 `Product`
 - 不需要直接看到 `SKU`
 - 收據與訂單行可用 `Product` 與 `BTS 優惠` 來表達交易結果
+- BTS 入口語意需由 cart-side metadata 保留，不能只靠 `ProductId` 推斷
 
 ## 非目標
 

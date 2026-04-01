@@ -21,6 +21,13 @@
 - When: 對外回傳 `Product`
 - Then: 回應中不需要公開 `SkuId` 與庫存欄位
 
+### TC-BTS-003 同一公開 sale page 可被一般入口與 BTS 入口共用
+
+- Given: 一個公開 `SalePage`
+- When: 使用者從一般入口或 BTS 入口瀏覽該商品
+- Then: 對外看到的 `Product.Id` 應相同
+- And: 是否具備 BTS 資格不得只靠 `ProductId` 判定
+
 ## Member Verification
 
 ### TC-BTS-101 只有有效 `.edu` 驗證資料才符合資格
@@ -89,13 +96,26 @@
 - Then: 可明確取得 `bts-price`
 - And: 不需要靠動態回推最終成交價
 
-### TC-BTS-402 收據以原價與 `BTS 優惠` 顯示
+### TC-BTS-402 對外 product price 維持原價
+
+- Given: 一個可參與 BTS 的主商品
+- When: 對外回傳 `Product`
+- Then: `Product.Price` 應維持一般售價
+- And: 不直接回傳 `bts-price`
+
+### TC-BTS-403 收據以原價與 `BTS 優惠` 顯示
 
 - Given: 主商品有原價、`bts-price` 與選取贈品
 - When: 建立收據
 - Then: 可條列原價商品行
 - And: 可條列 `BTS 優惠` 折扣行
 - And: 可條列贈品商品行
+
+### TC-BTS-404 `BTS 優惠` discount record 可關聯主商品與贈品 line
+
+- Given: 一筆 BTS 優惠同時來自主商品價差與贈品折扣
+- When: 規則回傳 `DiscountRecord`
+- Then: `RelatedLineIds` 可同時包含主商品 line 與贈品 line
 
 ## Time Window
 
@@ -105,13 +125,14 @@
 - When: 使用者從 BTS 入口加入商品
 - Then: 系統必須拒絕
 
-### TC-BTS-502 結帳時活動過期則禁止結帳
+### TC-BTS-502 結帳時活動過期則失去 BTS 折扣並回傳提示
 
 - Given: 商品已從 BTS 入口加入購物車
 - And: 結帳時活動已過期
 - When: 使用者送出 checkout
-- Then: 系統必須禁止結帳
-- And: 要求更新購物車後重新結帳
+- Then: 系統不得套用 BTS 折扣
+- And: 系統可回傳 `Hint` 提示優惠已失效
+- And: 結帳仍可依原價繼續
 
 ## Cart Mutation
 

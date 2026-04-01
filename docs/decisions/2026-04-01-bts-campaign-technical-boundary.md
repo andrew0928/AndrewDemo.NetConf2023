@@ -2,8 +2,11 @@
 
 ## 狀態
 
-- proposed
+- superseded
 - 日期：2026-04-01
+- superseded-by:
+  - [2026-04-01-bts-single-salepage-and-price-delta-discount.md](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-bts-single-salepage-and-price-delta-discount.md)
+  - [2026-04-01-discount-record-kind-and-related-lines.md](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-discount-record-kind-and-related-lines.md)
 
 ## 背景
 

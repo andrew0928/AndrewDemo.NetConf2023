@@ -59,14 +59,17 @@ BTS 相關資格則是 member-side 狀態：
 - 有效期限
 - qualification 判定
 
-### 5. `Product.Price` 對外代表 `SalePage` 當下販售價格投影
+### 5. `Product.Price` 對外代表 `SalePage` 的公開售價
 
 這讓系統可在不公開內部 `SKU` 的前提下，仍正確表達：
 
-- 一般入口價格
-- BTS 主商品價格
+- 一般售價
 
-收據則可另外用折扣行表達 `BTS 優惠`。
+目前 Apple BTS 的正式方向為：
+
+- `Product.Price` 維持公開 sale page 的一般售價
+- `bts-price` 放在 sidecar campaign 資料
+- 收據再透過折扣行表達 `BTS 優惠`
 
 ## 影響
 
