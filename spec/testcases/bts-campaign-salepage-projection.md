@@ -3,8 +3,9 @@
 ## 狀態
 
 - phase: 1
-- status: draft-for-review
+- status: confirmed-for-phase2
 - 日期：2026-04-01
+- confirmed-at: 2026-04-02
 
 ## Public Model Mapping
 
@@ -34,37 +35,38 @@
 
 - Given: member 存在 `.edu` 驗證資料
 - And: 該資料仍在有效期限內
-- When: 進入 BTS 入口準備加入購物車
+- When: 執行 BTS 折扣試算
 - Then: 視為符合 BTS 資格
 
 ### TC-BTS-102 查無驗證資料時不符合資格
 
 - Given: member 沒有 `.edu` 驗證資料
-- When: 從 BTS 入口加入商品到購物車
-- Then: 系統必須拒絕
+- When: 執行 BTS 折扣試算
+- Then: 系統不得套用 BTS 折扣
+- And: 系統可回傳 `Hint`
 
 ### TC-BTS-103 驗證過期時不符合資格
 
 - Given: member 有 `.edu` 驗證資料
 - And: 但已過有效期限
-- When: 從 BTS 入口加入商品到購物車
-- Then: 系統必須拒絕
+- When: 執行 BTS 折扣試算
+- Then: 系統不得套用 BTS 折扣
+- And: 系統可回傳 `Hint`
 
-## BTS Entry
+## BTS 專屬頁面
 
-### TC-BTS-201 一般入口不享有 BTS 優惠
+### TC-BTS-201 一般入口不顯示 BTS 贈品設定
 
-- Given: member 已通過 `.edu` 驗證
-- And: 使用者從一般入口加入商品
-- When: 建立購物車與試算
-- Then: 不享有 BTS 折扣
+- Given: 一個可參與 BTS 的主商品
+- When: 使用者從一般入口瀏覽商品
+- Then: 不需要顯示贈品設定 UI
 
-### TC-BTS-202 BTS 入口加入後離開頁面仍保留資格
+### TC-BTS-202 BTS 專屬頁面可帶入 gift parent relation
 
-- Given: member 已通過 `.edu` 驗證
-- And: 商品從 BTS 入口加入購物車
-- When: 使用者改從一般購物車頁面結帳
-- Then: 仍保留 BTS 資格
+- Given: 使用者在 BTS 專屬頁面選取主商品與贈品
+- When: gift line 被加入購物車
+- Then: gift line 應帶有 `ParentLineId`
+- And: `ParentLineId` 指向主商品 line
 
 ## Main Product / Gift Group
 
@@ -80,7 +82,14 @@
 - When: 消費者選擇贈品
 - Then: 系統只允許搭配其中一個贈品
 
-### TC-BTS-303 有些主商品只有優惠沒有贈品
+### TC-BTS-303 gift subsidy 需依 parent relation 判定
+
+- Given: 購物車內有一條贈品 line
+- And: 該 line 沒有 `ParentLineId`
+- When: 執行 BTS 折扣試算
+- Then: 該 line 不得套用 gift subsidy
+
+### TC-BTS-304 有些主商品只有優惠沒有贈品
 
 - Given: 一個 BTS 主商品沒有可搭配贈品
 - When: 進入 BTS 流程
@@ -113,21 +122,37 @@
 
 ### TC-BTS-404 `BTS 優惠` discount record 可關聯主商品與贈品 line
 
-- Given: 一筆 BTS 優惠同時來自主商品價差與贈品折扣
+- Given: 一筆 BTS 優惠同時來自主商品價差與贈品補貼
 - When: 規則回傳 `DiscountRecord`
 - Then: `RelatedLineIds` 可同時包含主商品 line 與贈品 line
 
+### TC-BTS-405 贈品補貼上限不得移轉到主商品
+
+- Given: 主商品 `MaxGiftSubsidyAmount = 5990`
+- And: 使用者選擇一個原價 `4500` 的贈品
+- When: 執行 BTS 折扣試算
+- Then: 贈品補貼金額應為 `4500`
+- And: 不得再把剩餘 `1490` 套用到主商品
+
+### TC-BTS-406 不選贈品時主商品只保留 BTS 價
+
+- Given: 主商品有 `bts-price`
+- And: 該主商品可選贈品，但使用者未選
+- When: 執行 BTS 折扣試算
+- Then: 主商品成交價應為 `bts-price`
+- And: 不得因未使用的 gift subsidy 再額外折抵主商品
+
 ## Time Window
 
-### TC-BTS-501 活動期間外不可加入 BTS 商品
+### TC-BTS-501 活動期間外不成立 BTS 折扣
 
 - Given: BTS campaign 已過期
-- When: 使用者從 BTS 入口加入商品
-- Then: 系統必須拒絕
+- When: 執行 BTS 折扣試算
+- Then: 系統不得套用 BTS 折扣
 
 ### TC-BTS-502 結帳時活動過期則失去 BTS 折扣並回傳提示
 
-- Given: 商品已從 BTS 入口加入購物車
+- Given: 購物車內已有 BTS 主商品與 gift parent relation
 - And: 結帳時活動已過期
 - When: 使用者送出 checkout
 - Then: 系統不得套用 BTS 折扣
@@ -141,7 +166,7 @@
 - Given: 購物車內已有 BTS 主商品與贈品
 - When: 使用者移除主商品
 - Then: 贈品可保留在購物車
-- And: 但失去 BTS 折扣
+- And: 但失去 BTS 補貼
 
 ## Multiple Groups
 

@@ -68,12 +68,12 @@ classDiagram
         string MainProductId
         decimal BtsPrice
         string GiftGroupId
+        decimal MaxGiftSubsidyAmount
     }
 
     class BtsGiftOptionRecord {
         string GiftGroupId
         string GiftProductId
-        decimal DiscountAmount
     }
 
     class MemberEducationVerificationRecord {
@@ -127,7 +127,7 @@ classDiagram
 - `bts_main_offers`
   - 每個主商品對應 `bts-price`、gift group、活動期間
 - `bts_gift_options`
-  - 某個 gift group 底下可選的 gift products 與折扣額
+  - 某個 gift group 底下可選的 gift products
 - `carts`
   - 不再只存 `ProdQtyMap`
   - 改存 line-based cart model

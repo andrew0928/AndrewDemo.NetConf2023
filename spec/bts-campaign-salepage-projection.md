@@ -3,8 +3,9 @@
 ## 狀態
 
 - phase: 1
-- status: draft-for-review
+- status: confirmed-for-phase2
 - 日期：2026-04-01
+- confirmed-at: 2026-04-02
 
 ## 範圍
 
@@ -13,7 +14,7 @@
 1. Apple BTS 活動在商業上是同一個 shop 內的限期 campaign
 2. 公開 `Product` 與內部 `SalePage` / `SKU` 的對應關係
 3. BTS 資格、價格、主商品與贈品群的商業規則
-4. 購物車與結帳對 BTS 入口、時間窗與驗證狀態的判定
+4. 購物車與結帳對時間窗、驗證狀態與 gift parent relation 的判定
 5. BTS 價差與提示如何透過 discount rule 表達
 
 本規格暫不涵蓋：
@@ -36,7 +37,6 @@
 - `Product`: 對外公開的可販售頁面投影
 - `SalePage`: 內部販售投影模型，決定入口、價格與活動規則
 - `SKU`: `.Core` 的內部商品主檔，代表型號、規格與庫存
-- `BTS Entry`: BTS 活動入口
 - `BTS Main Product`: 可享 BTS 優惠的主商品
 - `BTS Gift Group`: 某個主商品可搭配的贈品群
 - `BTS Gift Product`: 贈品群內可被選擇的一個商品
@@ -56,9 +56,9 @@ canonical 結論：
 
 因此：
 
-- 同一個公開 `SalePage` 可同時被一般入口與 BTS 入口引用
-- 是否具備 BTS 資格，不由 `Product.Id` 區分，而由入口語意與 cart-side sidecar 判定
-- 一般入口與 BTS 入口共用同一個內部商品主檔與庫存
+- 同一個公開 `SalePage` 可同時被一般入口與 BTS 專屬頁面引用
+- 是否具備 BTS 資格，不由 `Product.Id` 區分，而由 member 驗證、campaign sidecar、活動時間窗與 gift relation 判定
+- 一般入口與 BTS 專屬頁面共用同一個內部商品主檔與庫存
 
 ## 公開名詞與內部模型的對應
 
@@ -110,6 +110,8 @@ BTS 相關驗證則是 member-side 狀態：
 - `BTS Price` 只存在主商品
 - `BTS Price` 屬於 sidecar campaign 資料，不直接覆蓋 `Product.Price`
 - 贈品商品本身沒有獨立的 `bts-price`
+- 主商品可定義 gift subsidy 上限，用來把贈品售價補貼到最低 `0`
+- gift subsidy 剩餘額度不得轉移到主商品
 - 收據仍以「原價商品行 + BTS 優惠折扣行」方式條列
 
 例如：
@@ -134,34 +136,29 @@ BTS 相關驗證則是 member-side 狀態：
 - 消費者必須自行選擇贈品
 - 一個主商品最多只能搭配一個贈品
 - 有些主商品可只有 BTS 優惠，沒有贈品
+- gift subsidy 上限跟著主商品定義，不跟在 gift option 本身
 
-### 4. BTS 入口
+### 4. BTS 專屬頁面與贈品選擇
 
-- 只有從 `BTS Entry` 加入購物車的商品，才享有 BTS 資格
-- 一般入口不需要提醒或要求進行 `.edu` 驗證
-- BTS 入口在加入購物車前就必須先完成驗證
-- 活動期間內，可在商品描述或活動入口顯示 BTS 優惠文案
+- BTS 專屬頁面可顯示活動文案、`bts-price` 與可選贈品設定
+- 一般入口不需要顯示贈品設定
 - 顯示文案不直接改變 `Product.Price`
+- gift 是否屬於 BTS 組合，以該 gift line 是否帶有 `ParentLineId` 判定
 
-### 5. 購物車中的 BTS 資格保留
-
-- 若商品是從 BTS 入口加入購物車，之後離開 BTS 頁面到一般購物車流程結帳，BTS 資格仍保留
-- 若商品不是從 BTS 入口加入，即使 member 已通過驗證，也不享有 BTS 折扣
-
-### 6. 活動時間窗
+### 5. 活動時間窗
 
 - 活動必須有 `start/end` 時間窗
-- 加入 BTS 商品到購物車時，必須仍在活動期間內
+- 活動期間外，BTS 折扣不成立
 - 結帳當下若活動已過期，BTS 折扣不再成立
 - 結帳仍可繼續，但必須以原價結帳
 - 系統可透過 `BTS Hint` 提示優惠已失效
 
-### 7. 主商品移除後的贈品行為
+### 6. 主商品移除後的贈品行為
 
 - 若主商品被移除，原先選取的贈品可以保留在購物車
-- 但該贈品必須失去 BTS 折扣
+- 但該贈品必須失去 BTS 補貼
 
-### 8. 多組 BTS 組合
+### 7. 多組 BTS 組合
 
 - 一張訂單允許同時存在多組 BTS 主商品 + 贈品組合
 - 每一組主商品 / 贈品組合各自獨立判定資格與折扣
@@ -184,7 +181,7 @@ BTS 相關驗證則是 member-side 狀態：
 - `Cart` 與 `Order` 對外只需要看到 `Product`
 - 不需要直接看到 `SKU`
 - 收據與訂單行可用 `Product` 與 `BTS 優惠` 來表達交易結果
-- BTS 入口語意需由 cart-side metadata 保留，不能只靠 `ProductId` 推斷
+- gift relation 可由 `ParentLineId` 表達，不必額外建立 BTS cart provenance sidecar
 
 ## 非目標
 

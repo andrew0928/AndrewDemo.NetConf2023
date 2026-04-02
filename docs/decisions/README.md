@@ -57,3 +57,5 @@
 | [2026-04-01](2026-04-01-bts-campaign-technical-boundary.md) | **Apple BTS Campaign 技術邊界與 Cart/Projection 重構方向**（superseded）。原提案已被後續的單一 SalePage 與 `DiscountRecord` 擴充決策取代。 |
 | [2026-04-01](2026-04-01-discount-record-kind-and-related-lines.md) | **DiscountRecord 擴充為 discount/hint 單一型別**。保留 `IDiscountRule` 與 `DiscountEngine` 的回傳型別，改由 `DiscountRecord.Kind` 與 `RelatedLineIds` 同時表達有效折扣、提示訊息與其對應的 cart lines。 |
 | [2026-04-01](2026-04-01-bts-single-salepage-and-price-delta-discount.md) | **Apple BTS 採單一 SalePage 與價差型折扣**。`Product.Price` 維持一般售價，`bts-price` 由 sidecar 定義，折扣與活動失效提示改由 `BtsDiscountRule` 輸出，不先引入 checkout blocking hook。 |
+| [2026-04-02](2026-04-02-apple-bts-extension-project-boundary.md) | **AppleBTS Extension 採最小骨架與 sidecar-only 設計**。保留 `BtsDiscountRule`、catalog query、admin façade 與 qualification service；不再追蹤 BTS cart provenance，也不建立專屬 product service。 |
+| [2026-04-02](2026-04-02-apple-bts-subsidy-semantics-and-decision-table.md) | **Apple BTS gift subsidy 語意與完整情境決策表**。`MaxGiftSubsidyAmount` 是 gift 補貼上限，只作用在 gift line，未使用額度不得轉移到主商品；並正式凍結 M/G/P/C 四類情境表。 |
