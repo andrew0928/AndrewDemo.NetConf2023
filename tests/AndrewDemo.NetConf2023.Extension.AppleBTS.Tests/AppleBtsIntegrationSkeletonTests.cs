@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Shops;
@@ -120,7 +121,21 @@ namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Tests
             var engine = new DiscountEngine(enabledRules);
             var cartContext = CartContextFactory.Create(manifest, cart, member, new DefaultProductService(Context));
 
-            Assert.Throws<NotImplementedException>(() => engine.Evaluate(cartContext));
+            var discounts = engine.Evaluate(cartContext);
+
+            Assert.Single(discounts);
+
+            var discount = discounts[0];
+            Assert.Equal(DiscountRecordKind.Discount, discount.Kind);
+            Assert.Equal(AppleBtsConstants.DiscountRuleId, discount.RuleId);
+            Assert.Equal(AppleBtsConstants.DiscountName, discount.Name);
+            Assert.Equal(-10490m, discount.Amount);
+            Assert.Equal(2, discount.RelatedLineIds.Count);
+            Assert.Contains(mainLineId, discount.RelatedLineIds);
+            Assert.Contains(giftLineId, discount.RelatedLineIds);
+
+            var total = cartContext.LineItems.Sum(x => (x.UnitPrice ?? 0m) * x.Quantity) + discounts.Sum(x => x.Amount);
+            Assert.Equal(31400m, total);
         }
     }
 }
