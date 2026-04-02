@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using AndrewDemo.NetConf2023.Extension.AppleBTS.Models;
 using AndrewDemo.NetConf2023.Extension.AppleBTS.Repositories;
 
@@ -15,12 +16,15 @@ namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Services
 
         public IReadOnlyList<BtsOfferAggregate> GetPublishedMainOffers(DateTime at)
         {
-            throw new NotImplementedException();
+            return _offerRepository
+                .GetPublishedMainOffers(at)
+                .Select(x => _offerRepository.GetOffer(x.MainProductId, at))
+                .ToList();
         }
 
         public BtsOfferAggregate GetOfferDetail(string mainProductId, DateTime at)
         {
-            throw new NotImplementedException();
+            return _offerRepository.GetOffer(mainProductId, at);
         }
     }
 }

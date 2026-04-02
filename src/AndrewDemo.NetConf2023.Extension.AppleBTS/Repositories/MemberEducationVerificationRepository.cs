@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Extension.AppleBTS.Records;
+using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Repositories
 {
@@ -14,19 +16,32 @@ namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Repositories
             _database = database;
         }
 
+        private ILiteCollection<MemberEducationVerificationRecord> Collection =>
+            _database.Database.GetCollection<MemberEducationVerificationRecord>(
+                AppleBtsConstants.MemberEducationVerificationsCollectionName);
+
         public IReadOnlyList<MemberEducationVerificationRecord> GetVerificationHistory(int memberId)
         {
-            throw new NotImplementedException();
+            return Collection
+                .Query()
+                .Where(x => x.MemberId == memberId)
+                .OrderByDescending(x => x.VerifiedAt)
+                .ToList();
         }
 
         public MemberEducationVerificationRecord? GetLatestVerification(int memberId)
         {
-            throw new NotImplementedException();
+            return Collection
+                .Query()
+                .Where(x => x.MemberId == memberId)
+                .OrderByDescending(x => x.VerifiedAt)
+                .FirstOrDefault();
         }
 
         public void Upsert(MemberEducationVerificationRecord record)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(record);
+            Collection.Upsert(record);
         }
     }
 }

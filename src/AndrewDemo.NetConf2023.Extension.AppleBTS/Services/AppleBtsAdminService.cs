@@ -18,27 +18,27 @@ namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Services
 
         public void UpsertCampaign(BtsCampaignRecord record)
         {
-            throw new NotImplementedException();
+            _offerRepository.UpsertCampaign(record);
         }
 
         public void UpsertMainOffer(BtsMainOfferRecord record)
         {
-            throw new NotImplementedException();
+            _offerRepository.UpsertMainOffer(record);
         }
 
         public void UpsertGiftOption(BtsGiftOptionRecord record)
         {
-            throw new NotImplementedException();
+            _offerRepository.UpsertGiftOption(record);
         }
 
         public void DeleteGiftOption(string optionId)
         {
-            throw new NotImplementedException();
+            _offerRepository.DeleteGiftOption(optionId);
         }
 
         public void UpsertMemberEducationVerification(MemberEducationVerificationRecord record)
         {
-            throw new NotImplementedException();
+            _verificationRepository.Upsert(record);
         }
     }
 }

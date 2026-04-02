@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Extension.AppleBTS.Models;
 using AndrewDemo.NetConf2023.Extension.AppleBTS.Records;
+using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Repositories
 {
@@ -15,44 +17,114 @@ namespace AndrewDemo.NetConf2023.Extension.AppleBTS.Repositories
             _database = database;
         }
 
+        private ILiteCollection<BtsCampaignRecord> Campaigns =>
+            _database.Database.GetCollection<BtsCampaignRecord>(AppleBtsConstants.CampaignsCollectionName);
+
+        private ILiteCollection<BtsMainOfferRecord> MainOffers =>
+            _database.Database.GetCollection<BtsMainOfferRecord>(AppleBtsConstants.MainOffersCollectionName);
+
+        private ILiteCollection<BtsGiftOptionRecord> GiftOptions =>
+            _database.Database.GetCollection<BtsGiftOptionRecord>(AppleBtsConstants.GiftOptionsCollectionName);
+
         public BtsCampaignRecord? GetActiveCampaign(DateTime at)
         {
-            throw new NotImplementedException();
+            return Campaigns
+                .Query()
+                .Where(x => x.IsEnabled && x.StartAt <= at && x.EndAt >= at)
+                .OrderByDescending(x => x.StartAt)
+                .FirstOrDefault();
         }
 
         public IReadOnlyList<BtsMainOfferRecord> GetPublishedMainOffers(DateTime at)
         {
-            throw new NotImplementedException();
+            var campaign = GetActiveCampaign(at);
+            if (campaign == null)
+            {
+                return Array.Empty<BtsMainOfferRecord>();
+            }
+
+            return MainOffers
+                .Query()
+                .Where(x => x.CampaignId == campaign.CampaignId)
+                .OrderBy(x => x.MainProductId)
+                .ToList();
         }
 
         public BtsOfferAggregate GetOffer(string mainProductId, DateTime at)
         {
-            throw new NotImplementedException();
+            ArgumentException.ThrowIfNullOrWhiteSpace(mainProductId);
+
+            var campaign = GetActiveCampaign(at);
+            if (campaign == null)
+            {
+                return new BtsOfferAggregate();
+            }
+
+            var mainOffer = MainOffers
+                .Query()
+                .Where(x => x.CampaignId == campaign.CampaignId && x.MainProductId == mainProductId)
+                .FirstOrDefault();
+
+            var giftOptions = mainOffer?.GiftGroupId == null
+                ? Array.Empty<BtsGiftOptionRecord>()
+                : GetGiftOptions(campaign.CampaignId, mainOffer.GiftGroupId);
+
+            return new BtsOfferAggregate
+            {
+                Campaign = campaign,
+                MainOffer = mainOffer,
+                GiftOptions = giftOptions
+            };
         }
 
         public IReadOnlyList<BtsGiftOptionRecord> GetGiftOptions(string campaignId, string giftGroupId)
         {
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(campaignId) || string.IsNullOrWhiteSpace(giftGroupId))
+            {
+                return Array.Empty<BtsGiftOptionRecord>();
+            }
+
+            return GiftOptions
+                .Query()
+                .Where(x => x.CampaignId == campaignId && x.GiftGroupId == giftGroupId)
+                .OrderBy(x => x.GiftProductId)
+                .ToList();
+        }
+
+        public bool HasConfiguredMainOffer(string mainProductId)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(mainProductId);
+
+            return MainOffers
+                .Query()
+                .Where(x => x.MainProductId == mainProductId)
+                .Limit(1)
+                .ToList()
+                .Count > 0;
         }
 
         public void UpsertCampaign(BtsCampaignRecord record)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(record);
+            Campaigns.Upsert(record);
         }
 
         public void UpsertMainOffer(BtsMainOfferRecord record)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(record);
+            MainOffers.Upsert(record);
         }
 
         public void UpsertGiftOption(BtsGiftOptionRecord record)
         {
-            throw new NotImplementedException();
+            ArgumentNullException.ThrowIfNull(record);
+            GiftOptions.Upsert(record);
         }
 
         public void DeleteGiftOption(string optionId)
         {
-            throw new NotImplementedException();
+            ArgumentException.ThrowIfNullOrWhiteSpace(optionId);
+            GiftOptions.Delete(optionId);
         }
     }
 }
