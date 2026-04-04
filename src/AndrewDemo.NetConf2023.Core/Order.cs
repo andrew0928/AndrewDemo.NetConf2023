@@ -58,7 +58,7 @@ namespace AndrewDemo.NetConf2023.Core
 
         public class OrderShopNotes
         {
-            public int BuyerSatisfaction { get; set; }
+            public int? BuyerSatisfaction { get; set; }
             public string? Comments { get; set; }
         }
     }

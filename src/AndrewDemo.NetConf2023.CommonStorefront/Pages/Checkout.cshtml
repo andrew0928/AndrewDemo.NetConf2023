@@ -1,0 +1,50 @@
+@page "/checkout"
+@model AndrewDemo.NetConf2023.CommonStorefront.Pages.CheckoutModel
+@{
+    ViewData["Title"] = "結帳";
+}
+<section>
+    <h1 class="page-heading">結帳</h1>
+    <p class="hint-text">第一版以單頁確認為主，付款編號由 storefront demo 自動產生。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (!Model.Lines.Any())
+{
+    <section class="panel">
+        <p>目前沒有可結帳的商品。</p>
+        <p><a class="button button--secondary" href="/products">返回商品列表</a></p>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>訂單摘要</h2>
+        <ul class="cart-lines">
+            @foreach (var line in Model.Lines)
+            {
+                <li>
+                    <strong>@line.ProductName</strong>
+                    <p>數量：@line.Quantity</p>
+                    <p>小計：NT$ @line.LineAmount</p>
+                </li>
+            }
+        </ul>
+        <partial name="_PriceSummary" model="Model.PriceSummary" />
+    </section>
+
+    <section class="panel">
+        <h2>確認送單</h2>
+        <p>送出後會建立訂單，第一版 storefront 不提供消費者填寫滿意度與備註。</p>
+        <form method="post">
+            <div class="page-actions">
+                <button class="button button--primary" type="submit">送出訂單</button>
+                <a class="button button--secondary" href="/cart">返回購物車</a>
+            </div>
+        </form>
+    </section>
+}

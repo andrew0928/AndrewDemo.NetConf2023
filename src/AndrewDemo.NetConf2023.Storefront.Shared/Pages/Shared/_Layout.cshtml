@@ -1,0 +1,36 @@
+@using AndrewDemo.NetConf2023.Storefront.Shared.ViewModels
+@inject AndrewDemo.NetConf2023.Storefront.Shared.Authentication.StorefrontSessionAccessor SessionAccessor
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Andrew Shop</title>
+    <link rel="stylesheet" href="~/_content/AndrewDemo.NetConf2023.Storefront.Shared/css/storefront.css" />
+</head>
+<body>
+    <partial name="_SkipLink" />
+    <partial name="_Header" />
+    <main id="main-content" class="app-main">
+        @{
+            var notificationMessage = TempData["NotificationMessage"] as string;
+            var notificationTitle = TempData["NotificationTitle"] as string ?? "通知";
+            var notificationTone = TempData["NotificationTone"] as string ?? "info";
+        }
+        @if (!string.IsNullOrWhiteSpace(notificationMessage))
+        {
+            var banner = new NotificationBannerViewModel
+            {
+                Title = notificationTitle,
+                Message = notificationMessage,
+                Tone = notificationTone
+            };
+            <partial name="_NotificationBanner" model="banner" />
+        }
+
+        @RenderBody()
+    </main>
+    <partial name="_Footer" />
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

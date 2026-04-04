@@ -40,6 +40,19 @@
 - 若決策明確不追求相容，文件內要直接寫清楚，不保留長期雙軌命名
 - 若新需求與主線架構關聯較弱，先在文件中說明為何值得插隊
 
+## 重大決策標記規則
+
+- 若決策會影響 `.Core` 的通用設計，必須在文件內明確寫出：
+  - `重大決策`
+  - `影響 .Core`
+- 若決策代表需要回頭修正 Phase 1、frozen spec、或 `.Abstract` contract，必須在文件內明確寫出：
+  - `回頭修正 Phase 1`
+  - `影響 .Abstract / spec`
+- 若決策同時符合上述兩者，兩種標記都要出現
+- AppleBTS 過程中發現的這類通用修正，除了 decision 本文外，還必須同步登錄到：
+  - [AppleBTS 過程中的 Phase 1 / `.Core` 回頭修正追蹤](/Users/andrew/code-work/andrewshop.apidemo/docs/apple-bts-phase1-backtracking-tracker.md)
+- AppleBTS 擴充結案時，應以追蹤文件中的累計數量與清單，摘要回報「過程中回頭修正了哪些通用設計」
+
 ## 決策索引
 
 | 日期 | 決策 |
@@ -63,4 +76,6 @@
 | [2026-04-02](2026-04-02-timeprovider-based-time-shift-and-mock.md) | **TimeProvider 化的時間平移與 Time Mock 遷移方向**。後續時間抽象採 `TimeProvider`，runtime 以自訂 `ShiftedTimeProvider` 承接 `appsettings` 設定的期待啟動時間與固定 offset；此案已明確標記為 AppleBTS 過程中回頭修正的 Phase 1 / `.Core` 基礎決策。 |
 | [2026-04-04](2026-04-04-storefront-family-and-bff-architecture.md) | **Storefront Family 與 BFF 架構**。Common、AppleBTS、PetShop 三套 storefront 採獨立網站 + ASP.NET Core server-side BFF；第一版沿用 `/api/login` 作為 OAuth authority，browser 不直接持有 token 呼叫 backend API。 |
 | [2026-04-04](2026-04-04-storefront-ui-guidelines-govuk-style.md) | **Storefront UI 指南採 GOV.UK 類型風格**。storefront UI 以任務導向極簡風格為準，目標是簡潔、可讀、無障礙與 mobile-first；第一版不採品牌敘事型設計，也不引入 SPA framework 作為必要基礎。 |
-| [2026-04-04](2026-04-04-common-storefront-phase1-boundary.md) | **CommonStorefront Phase 1 邊界**（proposed）。以 `CommonStorefront` 作為 storefront family 的 baseline implementation，先固定 page routes、auth/session、`CoreApiClient` 與 `Storefront.Shared` 的最小邊界。 |
+| [2026-04-04](2026-04-04-common-storefront-phase1-boundary.md) | **CommonStorefront Phase 1 邊界**。以 `CommonStorefront` 作為 storefront family 的 baseline implementation，固定 page routes、auth/session、`CoreApiClient` 與 `Storefront.Shared` 的最小邊界，並作為後續 storefront vertical 的骨架基準。 |
+| [2026-04-04](2026-04-04-common-storefront-anonymous-products-and-nginx-validation-topology.md) | **CommonStorefront 匿名商品 API 與 nginx 驗證拓樸**。為了符合 storefront spec，`.API` 必須允許匿名 `GET/HEAD /api/products*`；本機驗證則採 nginx 同源 reverse proxy，整合 `/*` 與 `/api/*`，並保留原始 `Host:port` 以支援 OAuth callback。 |
+| [2026-04-05](2026-04-05-buyer-satisfaction-nullable-semantics.md) | **BuyerSatisfaction 改為 Nullable 語意**。`null` 代表沒有判讀或沒有提供，`0` 僅代表明確的最低分；此案屬於 `.Core` 的通用語意修正，而不是 storefront 專屬行為。 |

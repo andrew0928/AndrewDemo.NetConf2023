@@ -135,7 +135,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             return result.TransactionId;
         }
 
-        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int paymentId, int satisfaction = 0, string? comments = null)
+        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int paymentId, int? satisfaction = null, string? comments = null)
         {
             var member = RequireCurrentMember();
             var result = await BuildCheckoutService().CompleteAsync(new CheckoutCompleteCommand

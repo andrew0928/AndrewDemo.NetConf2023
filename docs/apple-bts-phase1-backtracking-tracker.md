@@ -4,9 +4,20 @@
 
 後續 AppleBTS 擴充正式收尾時，應以這份清單回報總數。
 
+## 標記規則
+
+- 若某決策會影響 `.Core` 的通用設計，decision 本文必須明確標示：
+  - `重大決策`
+  - `影響 .Core`
+- 若某決策代表需要回頭修正 Phase 1、`/spec`、或 `.Abstract` contract，decision 本文必須明確標示：
+  - `回頭修正 Phase 1`
+  - `影響 .Abstract / spec`
+- 凡是被標記為上述類型，且起因可追溯到 AppleBTS 擴充過程，就要納入這份追蹤清單
+- AppleBTS 結案摘要時，以這份文件作為唯一統計來源
+
 ## 目前累計
 
-- 累計數量：4
+- 累計數量：5
 
 ## 清單
 
@@ -16,6 +27,7 @@
 | 2 | 2026-04-01 | `.Core` + `.Abstract` | [SKU 與 Inventory 屬於 `.Core` 的標準能力](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-sku-and-inventory-are-core-standard-capabilities.md) | AppleBTS 討論商品與贈品時，才確認 SKU / inventory 不能當 extension 專屬能力，而必須升格回 `.Core`。 |
 | 3 | 2026-04-01 | Phase 1 contract | [DiscountRecord 擴充為 discount/hint 單一型別](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-discount-record-kind-and-related-lines.md) | AppleBTS 需要表達活動失效與資格不足提示，才回頭修正 `.Abstract.Discounts`。 |
 | 4 | 2026-04-02 | `.Core` + host cross-cutting | [TimeProvider 化的時間平移與 Time Mock 遷移方向](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-02-timeprovider-based-time-shift-and-mock.md) | AppleBTS decision table 需要驗證活動時間窗，才暴露目前系統沒有統一可控的時間來源，需回頭補基礎時間抽象。 |
+| 5 | 2026-04-05 | `.Core` 語意修正 | [BuyerSatisfaction 改為 Nullable 語意](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-05-buyer-satisfaction-nullable-semantics.md) | 在 storefront 實作過程中進一步暴露：`0` 不能同時代表「未判讀」與「最低分」，因此回頭修正 `.Core` 的訂單語意。 |
 
 ## 統計原則
 

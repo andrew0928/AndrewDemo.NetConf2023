@@ -60,7 +60,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
     {
         public int TransactionId { get; set; }
         public int PaymentId { get; set; }
-        public int Satisfaction { get; set; }
+        public int? Satisfaction { get; set; }
         public string? ShopComments { get; set; }
         public Member RequestMember { get; set; } = null!;
     }

@@ -1,0 +1,21 @@
+@page "/products"
+@model AndrewDemo.NetConf2023.CommonStorefront.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "商品列表";
+}
+<section>
+    <h1 class="page-heading">商品列表</h1>
+    <p class="hint-text">第一版 storefront 以簡潔、可讀、行動裝置友善的列表為主。</p>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+<section class="product-grid" aria-label="商品列表">
+    @foreach (var product in Model.Products)
+    {
+        <partial name="_ProductSummaryCard" model="product" />
+    }
+</section>

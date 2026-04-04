@@ -75,6 +75,7 @@
 - When: 進入 `/checkout` 並完成送單
 - Then: storefront 會透過 server side 呼叫 checkout APIs
 - And: 完成後可看到結果頁或導回訂單列表
+- And: 第一版 checkout 不要求消費者填寫滿意度或備註
 
 ### TC-CS-009 會員資料與訂單列表可讀取
 

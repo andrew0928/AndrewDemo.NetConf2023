@@ -1,0 +1,13 @@
+@model AndrewDemo.NetConf2023.Storefront.Shared.ViewModels.ErrorSummaryViewModel
+@if (Model.Errors.Count > 0)
+{
+    <section class="error-summary" role="alert" tabindex="-1">
+        <h2>@Model.Title</h2>
+        <ul>
+            @foreach (var error in Model.Errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    </section>
+}

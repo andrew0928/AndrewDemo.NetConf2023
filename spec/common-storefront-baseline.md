@@ -125,6 +125,7 @@
 
 - UI 風格沿用 storefront family 已確認的 GOV.UK 類型極簡風格
 - 必須符合 storefront family 的 accessibility / RWD 基準
+- `/checkout` 第一版應為「確認送單」頁，不應要求消費者填寫滿意度、備註或其他非必要欄位
 
 ### 9. 驗收方式
 

@@ -1,0 +1,24 @@
+@model AndrewDemo.NetConf2023.Storefront.Shared.ViewModels.PriceSummaryViewModel
+<section class="price-summary" aria-label="金額摘要">
+    <dl class="summary-list">
+        <div class="summary-list__row">
+            <dt>商品小計</dt>
+            <dd>NT$ @Model.Subtotal</dd>
+        </div>
+        @foreach (var adjustment in Model.Adjustments)
+        {
+            <div class="summary-list__row">
+                <dt>@adjustment.Name</dt>
+                <dd class="@(adjustment.Kind == AndrewDemo.NetConf2023.Abstract.Discounts.DiscountRecordKind.Hint ? "hint-amount" : "discount-amount")">
+                    @(adjustment.Kind == AndrewDemo.NetConf2023.Abstract.Discounts.DiscountRecordKind.Discount
+                        ? $"NT$ {adjustment.Amount}"
+                        : adjustment.Description)
+                </dd>
+            </div>
+        }
+        <div class="summary-list__row summary-list__row--total">
+            <dt>總計</dt>
+            <dd>NT$ @Model.Total</dd>
+        </div>
+    </dl>
+</section>

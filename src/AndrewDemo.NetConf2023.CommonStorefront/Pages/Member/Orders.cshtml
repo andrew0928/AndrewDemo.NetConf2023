@@ -1,0 +1,49 @@
+@page "/member/orders"
+@model AndrewDemo.NetConf2023.CommonStorefront.Pages.Member.OrdersModel
+@{
+    ViewData["Title"] = "訂單列表";
+}
+<section>
+    <h1 class="page-heading">訂單列表</h1>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+else if (!Model.Orders.Any())
+{
+    <section class="panel">
+        <p>目前沒有訂單。</p>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <dl class="summary-list">
+            <div class="summary-list__row">
+                <dt>總訂單數</dt>
+                <dd>@Model.TotalOrders</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>總金額</dt>
+                <dd>NT$ @Model.TotalAmount</dd>
+            </div>
+        </dl>
+    </section>
+
+    @foreach (var order in Model.Orders)
+    {
+        <section class="panel">
+            <h2>訂單 #@order.Id</h2>
+            <p>總額：NT$ @order.TotalPrice</p>
+            <p>履約狀態：@order.FulfillmentStatus</p>
+            <ul>
+                @foreach (var line in order.ProductLines)
+                {
+                    <li>@line.ProductName x @line.Quantity - NT$ @line.LineAmount</li>
+                }
+            </ul>
+        </section>
+    }
+}

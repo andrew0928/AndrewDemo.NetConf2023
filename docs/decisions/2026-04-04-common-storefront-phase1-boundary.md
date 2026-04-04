@@ -2,7 +2,7 @@
 
 ## 狀態
 
-- proposed
+- accepted
 - 日期：2026-04-04
 
 ## 背景
@@ -57,6 +57,6 @@ storefront family 已確認：
 
 ## 後續工作
 
-- review `CommonStorefront` spec 與 testcases
-- freeze `CommonStorefront` page / auth / BFF 邊界
-- 之後再 scaffold `Storefront.Shared` 與 `CommonStorefront`
+- scaffold `Storefront.Shared` 與 `CommonStorefront`
+- 對齊 local validation topology
+- 依 testcases 持續補齊 `CommonStorefront` 行為驗證

@@ -134,8 +134,9 @@ namespace AndrewDemo.NetConf2023.API
 
 
 
-                
-                if (context.Request.Path.StartsWithSegments("/api") && !context.Request.Path.StartsWithSegments("/api/login"))
+                if (context.Request.Path.StartsWithSegments("/api")
+                    && !context.Request.Path.StartsWithSegments("/api/login")
+                    && !IsAnonymousApiRequest(context))
                 {
                     if (!context.Request.Headers.TryGetValue("Authorization", out var token))
                     {
@@ -168,6 +169,12 @@ namespace AndrewDemo.NetConf2023.API
             app.MapControllers();
 
             app.Run();
+        }
+
+        private static bool IsAnonymousApiRequest(HttpContext context)
+        {
+            return (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
+                && context.Request.Path.StartsWithSegments("/api/products");
         }
     }
 }

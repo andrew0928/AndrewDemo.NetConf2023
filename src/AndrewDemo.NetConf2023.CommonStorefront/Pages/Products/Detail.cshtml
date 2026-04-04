@@ -1,0 +1,44 @@
+@page "/products/{id}"
+@model AndrewDemo.NetConf2023.CommonStorefront.Pages.Products.DetailModel
+@{
+    ViewData["Title"] = Model.Product?.Name ?? "商品詳細頁";
+}
+
+@if (Model.Product == null)
+{
+    <section class="panel">
+        <h1 class="page-heading">找不到商品</h1>
+        <p>指定的商品不存在，或目前無法載入。</p>
+        <p><a class="button button--secondary" href="/products">返回商品列表</a></p>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h1 class="page-heading">@Model.Product.Name</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Product.Description))
+        {
+            <p>@Model.Product.Description</p>
+        }
+        <p class="price-figure">NT$ @Model.Product.Price</p>
+    </section>
+
+    @if (Model.ErrorSummary.Errors.Count > 0)
+    {
+        <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+    }
+
+    <section class="panel">
+        <h2>加入購物車</h2>
+        <form method="post">
+            <div class="field">
+                <label asp-for="Quantity">數量</label>
+                <input asp-for="Quantity" min="1" />
+            </div>
+            <div class="page-actions">
+                <button class="button button--primary" type="submit">加入購物車</button>
+                <a class="button button--secondary" href="/cart">查看購物車</a>
+            </div>
+        </form>
+    </section>
+}

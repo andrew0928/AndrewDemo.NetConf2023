@@ -1,0 +1,14 @@
+@model AndrewDemo.NetConf2023.Storefront.Shared.ViewModels.ProductSummaryViewModel
+<article class="product-card">
+    <h2 class="product-card__title">
+        <a href="/products/@Model.Id">@Model.Name</a>
+    </h2>
+    @if (!string.IsNullOrWhiteSpace(Model.Description))
+    {
+        <p class="product-card__description">@Model.Description</p>
+    }
+    <p class="product-card__price">NT$ @Model.Price</p>
+    <p>
+        <a class="button button--secondary" href="/products/@Model.Id">查看商品</a>
+    </p>
+</article>

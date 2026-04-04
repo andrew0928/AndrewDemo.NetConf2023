@@ -199,9 +199,9 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             public int PaymentId { get; set; }
 
             /// <summary>
-            /// 消費者對這次購物的滿意度評分, 1 ~ 10 分
+            /// 消費者對這次購物的滿意度評分。`null` 代表沒有提供或沒有判讀結果。
             /// </summary>
-            public int Satisfaction { get; set; } = 0;
+            public int? Satisfaction { get; set; }
 
             /// <summary>
             /// 消費者對這次交易的註記，包含對商店的評價、建議等。

@@ -1,0 +1,54 @@
+services:
+  common-seed:
+    build:
+      context: ../src/seed
+      dockerfile: Dockerfile
+    image: andrewdemo-netconf2023-common-seed:local
+    volumes:
+      - common-data:/data
+    restart: "no"
+
+  common-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
+    image: andrewdemo-netconf2023-common-api:local
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - common-data:/data
+    depends_on:
+      common-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  common-storefront:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.CommonStorefront/Dockerfile
+    image: andrewdemo-netconf2023-common-storefront:local
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://common-api:8080
+      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-common-storefront
+    depends_on:
+      - common-api
+    restart: unless-stopped
+
+  common-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "5128:80"
+    volumes:
+      - ./nginx/commonstorefront.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - common-storefront
+      - common-api
+    restart: unless-stopped
+
+volumes:
+  common-data:
+    driver: local

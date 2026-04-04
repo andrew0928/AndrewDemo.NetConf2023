@@ -93,6 +93,54 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         }
 
         [Fact]
+        public async Task CompleteAsync_WhenSatisfactionIsNotProvided_PersistsNullShopSatisfaction()
+        {
+            Context.Products.Upsert(new Product
+            {
+                Id = "1",
+                Name = "Test Beer",
+                Price = 50m,
+                IsPublished = true
+            });
+
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts("1", 1, FixedUtcNow);
+            Context.Carts.Insert(cart);
+
+            var transaction = new CheckoutTransactionRecord
+            {
+                CartId = cart.Id,
+                MemberId = member.Id,
+                CreatedAt = DateTime.UtcNow
+            };
+            Context.CheckoutTransactions.Insert(transaction);
+
+            var service = CreateCheckoutService();
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = transaction.TransactionId,
+                PaymentId = 9527,
+                Satisfaction = null,
+                ShopComments = null,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
+            Assert.NotNull(result.OrderDetail);
+            Assert.NotNull(result.OrderDetail!.ShopNotes);
+            Assert.Null(result.OrderDetail.ShopNotes!.BuyerSatisfaction);
+            Assert.Null(result.OrderDetail.ShopNotes.Comments);
+
+            var storedOrder = Context.Orders.FindById(transaction.TransactionId);
+            Assert.NotNull(storedOrder);
+            Assert.NotNull(storedOrder!.ShopNotes);
+            Assert.Null(storedOrder.ShopNotes!.BuyerSatisfaction);
+            Assert.Null(storedOrder.ShopNotes.Comments);
+        }
+
+        [Fact]
         public async Task CompleteAsync_WhenProductMissing_KeepsTransactionForRetry()
         {
             var (member, _) = TestDataFactory.RegisterMember(Context);

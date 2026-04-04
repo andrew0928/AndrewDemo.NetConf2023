@@ -17,4 +17,6 @@
   <Project Path="AndrewDemo.NetConf2023.Core/AndrewDemo.NetConf2023.Core.csproj" />
   <Project Path="AndrewDemo.NetConf2023.DatabaseInit/AndrewDemo.NetConf2023.DatabaseInit.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.Extension/AndrewDemo.NetConf2023.AppleBTS.Extension.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.Storefront.Shared/AndrewDemo.NetConf2023.Storefront.Shared.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.CommonStorefront/AndrewDemo.NetConf2023.CommonStorefront.csproj" />
 </Solution>
