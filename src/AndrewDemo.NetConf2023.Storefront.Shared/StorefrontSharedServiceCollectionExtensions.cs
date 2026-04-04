@@ -12,12 +12,16 @@ public static class StorefrontSharedServiceCollectionExtensions
 {
     public static IServiceCollection AddStorefrontShared(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<StorefrontSessionOptions>(configuration.GetSection(StorefrontSessionOptions.SectionName));
         services.Configure<CoreApiOptions>(configuration.GetSection(CoreApiOptions.SectionName));
         services.AddHttpContextAccessor();
         services.AddDistributedMemoryCache();
         services.AddSession(options =>
         {
-            options.Cookie.Name = ".AndrewDemo.CommonStorefront.Session";
+            var sessionOptions = configuration.GetSection(StorefrontSessionOptions.SectionName).Get<StorefrontSessionOptions>()
+                ?? new StorefrontSessionOptions();
+
+            options.Cookie.Name = sessionOptions.CookieName;
             options.Cookie.HttpOnly = true;
             options.Cookie.IsEssential = true;
             options.Cookie.SameSite = SameSiteMode.Lax;

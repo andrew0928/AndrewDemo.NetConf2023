@@ -1,11 +1,20 @@
 @inject AndrewDemo.NetConf2023.Storefront.Shared.Authentication.StorefrontSessionAccessor SessionAccessor
+@{
+    var siteBrand = ViewData["SiteBrand"] as string ?? "Andrew Shop";
+    var extraNavText = ViewData["ExtraNavText"] as string;
+    var extraNavHref = ViewData["ExtraNavHref"] as string;
+}
 <header class="site-header">
     <div class="site-header__container">
-        <a class="site-header__brand" href="/">Andrew Shop</a>
+        <a class="site-header__brand" href="/">@siteBrand</a>
         <nav aria-label="主要導覽">
             <ul class="site-nav">
                 <li><a href="/">首頁</a></li>
                 <li><a href="/products">商品列表</a></li>
+                @if (!string.IsNullOrWhiteSpace(extraNavText) && !string.IsNullOrWhiteSpace(extraNavHref))
+                {
+                    <li><a href="@extraNavHref">@extraNavText</a></li>
+                }
                 <li><a href="/cart">購物車</a></li>
                 @if (SessionAccessor.HasAccessToken())
                 {

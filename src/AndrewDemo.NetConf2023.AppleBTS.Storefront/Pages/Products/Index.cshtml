@@ -1,0 +1,21 @@
+@page "/products"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "商品列表";
+}
+<section>
+    <h1 class="page-heading">商品列表</h1>
+    <p class="hint-text">這裡顯示一般商品型錄；若要查看 Apple BTS 活動商品與贈品，請前往 <a href="/bts">BTS 專區</a>。</p>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(Model.ErrorMessage))
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+<section class="product-grid" aria-label="商品列表">
+    @foreach (var product in Model.Products)
+    {
+        <partial name="_ProductSummaryCard" model="product" />
+    }
+</section>

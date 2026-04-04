@@ -111,6 +111,32 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         }
 
         /// <summary>
+        /// 刪除指定 cart line。若刪除主商品 line，會一併刪除其附屬子 line。
+        /// </summary>
+        /// <param name="id">指定的購物車ID</param>
+        /// <param name="lineId">指定的 line id</param>
+        /// <returns></returns>
+        [HttpDelete("{id}/lines/{lineId}", Name = "RemoveCartLine")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public ActionResult<Cart> Delete(int id, string lineId)
+        {
+            var cart = _database.Carts.FindById(id);
+            if (cart == null)
+            {
+                return NotFound();
+            }
+
+            if (!cart.RemoveLine(lineId))
+            {
+                return NotFound();
+            }
+
+            _database.Carts.Update(cart);
+            return Ok(cart);
+        }
+
+        /// <summary>
         /// 試算購物車內商品結帳時應支付的總金額 (包含折扣)。
         /// </summary>
         /// <param name="id"></param>

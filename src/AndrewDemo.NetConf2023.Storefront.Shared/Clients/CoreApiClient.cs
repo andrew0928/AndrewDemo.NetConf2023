@@ -97,6 +97,16 @@ public sealed class CoreApiClient
             ?? throw new InvalidOperationException("Add cart item response is empty.");
     }
 
+    public async Task<Cart> RemoveCartLineAsync(string accessToken, int cartId, string lineId, CancellationToken cancellationToken)
+    {
+        using var request = CreateAuthorizedRequest(HttpMethod.Delete, $"/api/carts/{cartId}/lines/{Uri.EscapeDataString(lineId)}", accessToken);
+        using var response = await _httpClient.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await response.Content.ReadFromJsonAsync<Cart>(JsonOptions, cancellationToken)
+            ?? throw new InvalidOperationException("Remove cart line response is empty.");
+    }
+
     public async Task<CartEstimateResponseDto> EstimateCartAsync(string accessToken, int cartId, CancellationToken cancellationToken)
     {
         using var request = CreateAuthorizedRequest(HttpMethod.Post, $"/api/carts/{cartId}/estimate", accessToken);

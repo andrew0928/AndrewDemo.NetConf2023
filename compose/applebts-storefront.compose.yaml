@@ -1,0 +1,83 @@
+services:
+  applebts-seed:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/Dockerfile
+    image: andrewdemo-netconf2023-applebts-seed:local
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - applebts-storefront-data:/data
+    restart: "no"
+
+  applebts-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.applebts
+    image: andrewdemo-netconf2023-applebts-api:local
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - applebts-storefront-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  applebts-btsapi:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.API/Dockerfile
+    image: andrewdemo-netconf2023-applebts-btsapi:local
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - applebts-storefront-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  applebts-storefront:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.Storefront/Dockerfile
+    image: andrewdemo-netconf2023-applebts-storefront:local
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://applebts-api:8080
+      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-applebts-storefront
+      - Storefront__AppleBtsApi__BaseUrl=http://applebts-btsapi:8080
+    depends_on:
+      - applebts-api
+      - applebts-btsapi
+    restart: unless-stopped
+
+  applebts-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "5138:80"
+    volumes:
+      - ./nginx/applebts-storefront.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - applebts-storefront
+      - applebts-api
+      - applebts-btsapi
+    restart: unless-stopped
+
+volumes:
+  applebts-storefront-data:
+    driver: local

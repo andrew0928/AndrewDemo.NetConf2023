@@ -3,7 +3,7 @@ using AndrewDemo.NetConf2023.Storefront.Shared.Clients;
 using AndrewDemo.NetConf2023.Storefront.Shared.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 
-namespace AndrewDemo.NetConf2023.CommonStorefront.Pages;
+namespace AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages;
 
 public sealed class CartModel : AuthenticatedPageModel
 {

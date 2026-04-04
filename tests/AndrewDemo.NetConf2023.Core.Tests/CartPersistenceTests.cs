@@ -91,5 +91,44 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var giftLine = lineItems.Single(x => x.ProductId == giftProductId);
             Assert.Equal(mainLineId, giftLine.ParentLineId);
         }
+
+        [Fact]
+        public void RemoveLine_RemovingMainLine_CascadesChildGiftLines()
+        {
+            string mainProductId = TestDataFactory.CreateProduct(Context, 100m);
+            string giftProductId = TestDataFactory.CreateProduct(Context, 50m);
+
+            var cart = new Cart();
+            Context.Carts.Insert(cart);
+            cart.AddProducts(mainProductId, 1, FixedUtcNow);
+            var mainLineId = cart.LineItems.Single().LineId;
+            cart.AddProducts(giftProductId, 1, FixedUtcNow.AddMinutes(1), mainLineId);
+
+            var result = cart.RemoveLine(mainLineId);
+
+            Assert.True(result);
+            Assert.Empty(cart.LineItems);
+        }
+
+        [Fact]
+        public void RemoveLine_RemovingGiftLine_KeepsMainLine()
+        {
+            string mainProductId = TestDataFactory.CreateProduct(Context, 100m);
+            string giftProductId = TestDataFactory.CreateProduct(Context, 50m);
+
+            var cart = new Cart();
+            Context.Carts.Insert(cart);
+            cart.AddProducts(mainProductId, 1, FixedUtcNow);
+            var mainLineId = cart.LineItems.Single().LineId;
+            cart.AddProducts(giftProductId, 1, FixedUtcNow.AddMinutes(1), mainLineId);
+            var giftLineId = cart.LineItems.Single(x => x.ProductId == giftProductId).LineId;
+
+            var result = cart.RemoveLine(giftLineId);
+
+            Assert.True(result);
+            Assert.Single(cart.LineItems);
+            Assert.Equal(mainProductId, cart.LineItems[0].ProductId);
+            Assert.Null(cart.LineItems[0].ParentLineId);
+        }
     }
 }

@@ -1,0 +1,28 @@
+@page "/"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.IndexModel
+@{
+    ViewData["Title"] = "首頁";
+}
+<section class="panel">
+    <h1 class="page-heading">Andrew Shop Apple BTS Storefront</h1>
+    <p>這個 storefront 以通用官網流程為基礎，額外提供 BTS 專區、教育資格查詢與贈品組合選購。</p>
+    <div class="page-actions">
+        <a class="button button--primary" href="/bts">前往 BTS 專區</a>
+        <a class="button button--secondary" href="/products">瀏覽一般商品</a>
+        <a class="button button--secondary" href="/bts/qualification">查看教育資格</a>
+        <a class="button button--secondary" href="/cart">查看購物車</a>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>你可以在這裡做什麼</h2>
+    <ul class="task-list">
+        <li>瀏覽一般商品與標準購物流程</li>
+        <li>進入 BTS 專區查看活動價與可選贈品</li>
+        <li>登入後完成教育資格驗證</li>
+        <li>確認是否要將主商品與贈品一併加入購物車</li>
+    </ul>
+    <div class="page-actions">
+        <a class="button button--secondary" href="/cart">查看購物車</a>
+    </div>
+</section>

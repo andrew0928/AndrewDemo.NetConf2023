@@ -17,7 +17,7 @@
 
 ## 目前累計
 
-- 累計數量：5
+- 累計數量：6
 
 ## 清單
 
@@ -28,6 +28,7 @@
 | 3 | 2026-04-01 | Phase 1 contract | [DiscountRecord 擴充為 discount/hint 單一型別](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-discount-record-kind-and-related-lines.md) | AppleBTS 需要表達活動失效與資格不足提示，才回頭修正 `.Abstract.Discounts`。 |
 | 4 | 2026-04-02 | `.Core` + host cross-cutting | [TimeProvider 化的時間平移與 Time Mock 遷移方向](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-02-timeprovider-based-time-shift-and-mock.md) | AppleBTS decision table 需要驗證活動時間窗，才暴露目前系統沒有統一可控的時間來源，需回頭補基礎時間抽象。 |
 | 5 | 2026-04-05 | `.Core` 語意修正 | [BuyerSatisfaction 改為 Nullable 語意](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-05-buyer-satisfaction-nullable-semantics.md) | 在 storefront 實作過程中進一步暴露：`0` 不能同時代表「未判讀」與「最低分」，因此回頭修正 `.Core` 的訂單語意。 |
+| 6 | 2026-04-05 | `.Core` + Phase 1 cart baseline | [Cart Line 刪除與子項目 Cascade](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-05-cart-line-removal-and-child-cascade.md) | 在 AppleBTS bundle 與 Common storefront 購物車 UI 實作時，才明確暴露 line-based cart 仍缺少刪除與 child cascade 的通用能力，因此回頭補上 `.Core` 與 baseline spec。 |
 
 ## 統計原則
 

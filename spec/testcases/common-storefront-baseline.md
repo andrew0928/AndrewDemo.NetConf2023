@@ -69,6 +69,14 @@
 - Then: 頁面可看到 line items、折扣、hint 與總價
 - And: hint 以可見文字顯示
 
+### TC-CS-007A 購物車頁可刪除指定 line
+
+- Given: 購物車內已有至少一筆商品
+- When: 使用者在 `/cart` 刪除指定 line
+- Then: storefront 在 server side 呼叫標準 `.API`
+- And: 刪除後購物車內容會重新載入
+- And: 若被刪除的是主商品 line，其子 line 也一併移除
+
 ### TC-CS-008 結帳頁可完成主要任務
 
 - Given: 使用者已登入且購物車內有商品
@@ -82,6 +90,7 @@
 - Given: 使用者已登入
 - When: 開啟 `/member` 與 `/member/orders`
 - Then: 頁面可顯示 member profile 與 orders
+- And: 若訂單內含折扣，訂單頁會列出折扣明細
 
 ## Accessibility / RWD
 

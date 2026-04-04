@@ -1,0 +1,50 @@
+@page "/bts/qualification"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.Bts.QualificationModel
+@{
+    ViewData["Title"] = "教育資格";
+}
+<section>
+    <h1 class="page-heading">教育資格驗證</h1>
+    <p class="hint-text">請使用符合規則的 `.edu.xxx` 信箱完成驗證。驗證結果會套用到 BTS 折扣試算。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+<section class="panel">
+    <h2>目前資格狀態</h2>
+    @if (Model.Qualification == null)
+    {
+        <p>目前沒有可用的資格資料。</p>
+    }
+    else if (Model.Qualification.IsQualified)
+    {
+        <p><strong>已通過驗證</strong></p>
+        <p>驗證信箱：@Model.Qualification.Email</p>
+        <p>有效至：@Model.Qualification.ExpireAt</p>
+    }
+    else
+    {
+        <p><strong>目前未符合 BTS 資格</strong></p>
+        @if (!string.IsNullOrWhiteSpace(Model.Qualification.Reason))
+        {
+            <p>@Model.Qualification.Reason</p>
+        }
+    }
+</section>
+
+<section class="panel">
+    <h2>更新驗證信箱</h2>
+    <form method="post">
+        <div class="field">
+            <label asp-for="Email">教育信箱</label>
+            <input asp-for="Email" autocomplete="email" />
+        </div>
+        <div class="page-actions">
+            <button class="button button--primary" type="submit">送出驗證</button>
+            <a class="button button--secondary" href="/bts">返回 BTS 專區</a>
+        </div>
+    </form>
+</section>

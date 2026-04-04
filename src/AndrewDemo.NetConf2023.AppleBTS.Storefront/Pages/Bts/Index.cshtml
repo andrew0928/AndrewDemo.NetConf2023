@@ -1,0 +1,99 @@
+@page "/bts"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.Bts.IndexModel
+@{
+    ViewData["Title"] = "BTS 專區";
+}
+<section>
+    <h1 class="page-heading">Apple BTS 專區</h1>
+    <p class="hint-text">這個專區會額外顯示 BTS 活動價、贈品清單與補貼上限。加入購物車後，實際折扣仍會依資格與活動時間判定。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (Model.Qualification != null)
+{
+    <section class="panel">
+        <h2>目前教育資格</h2>
+        @if (Model.Qualification.IsQualified)
+        {
+            <p><strong>已通過驗證</strong></p>
+            <p>驗證信箱：@Model.Qualification.Email</p>
+            <p>有效至：@Model.Qualification.ExpireAt</p>
+        }
+        else
+        {
+            <p><strong>尚未符合 BTS 資格</strong></p>
+            @if (!string.IsNullOrWhiteSpace(Model.Qualification.Reason))
+            {
+                <p>@Model.Qualification.Reason</p>
+            }
+            <p><a class="button button--secondary" href="/bts/qualification">前往資格驗證</a></p>
+        }
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>登入後可查看教育資格</h2>
+        <p>若要確認是否符合 BTS 優惠資格，請先登入並前往資格頁。</p>
+        <div class="page-actions">
+            <a class="button button--secondary" href="/auth/login?returnUrl=/bts">登入</a>
+            <a class="button button--secondary" href="/bts/qualification">資格頁</a>
+        </div>
+    </section>
+}
+
+@if (!Model.Offers.Any())
+{
+    <section class="panel">
+        <p>目前沒有可公開的 BTS 活動商品。</p>
+    </section>
+}
+else
+{
+    <section class="product-grid" aria-label="BTS 商品型錄">
+        @foreach (var offer in Model.Offers)
+        {
+            <article class="product-card">
+                <h2 class="product-card__title"><a href="/bts/products/@offer.MainProductId">@offer.MainProductName</a></h2>
+                @if (!string.IsNullOrWhiteSpace(offer.MainProductDescription))
+                {
+                    <p>@offer.MainProductDescription</p>
+                }
+                <p><strong>一般售價：</strong>NT$ @offer.RetailPrice</p>
+                <p><strong>BTS 活動價：</strong>NT$ @offer.BtsPrice</p>
+                @if (offer.MaxGiftSubsidyAmount != null)
+                {
+                    <p><strong>贈品補貼上限：</strong>NT$ @offer.MaxGiftSubsidyAmount</p>
+                }
+                else
+                {
+                    <p class="hint-text">此商品本檔期僅提供特價，不含贈品補貼。</p>
+                }
+
+                @if (offer.GiftOptions.Any())
+                {
+                    <div>
+                        <h3>可選贈品</h3>
+                        <ul class="task-list">
+                            @foreach (var gift in offer.GiftOptions)
+                            {
+                                var maxDiscount = offer.MaxGiftSubsidyAmount == null
+                                    ? 0m
+                                    : Math.Min(offer.MaxGiftSubsidyAmount.Value, gift.Price);
+                                <li>@gift.ProductName（原價 NT$ @gift.Price，最高可折 NT$ @maxDiscount）</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="page-actions">
+                    <a class="button button--primary" href="/bts/products/@offer.MainProductId">查看活動商品</a>
+                </div>
+            </article>
+        }
+    </section>
+}

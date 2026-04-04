@@ -90,5 +90,46 @@ namespace AndrewDemo.NetConf2023.Core
 
             return true;
         }
+
+        public bool RemoveLine(string lineId)
+        {
+            if (string.IsNullOrWhiteSpace(lineId))
+            {
+                return false;
+            }
+
+            LineItems ??= new List<LineItem>();
+
+            var target = LineItems.FirstOrDefault(x => x.LineId == lineId);
+            if (target == null)
+            {
+                return false;
+            }
+
+            var removingLineIds = new HashSet<string>(StringComparer.Ordinal)
+            {
+                lineId
+            };
+
+            bool added;
+            do
+            {
+                added = false;
+                foreach (var childLineId in LineItems
+                    .Where(x => !string.IsNullOrWhiteSpace(x.ParentLineId) && removingLineIds.Contains(x.ParentLineId!))
+                    .Select(x => x.LineId)
+                    .ToList())
+                {
+                    if (removingLineIds.Add(childLineId))
+                    {
+                        added = true;
+                    }
+                }
+            }
+            while (added);
+
+            LineItems.RemoveAll(x => removingLineIds.Contains(x.LineId));
+            return true;
+        }
     }
 }

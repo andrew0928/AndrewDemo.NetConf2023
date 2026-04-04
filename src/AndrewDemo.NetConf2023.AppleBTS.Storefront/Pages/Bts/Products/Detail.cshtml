@@ -1,0 +1,121 @@
+@page "/bts/products/{id}"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.Bts.Products.DetailModel
+@{
+    ViewData["Title"] = Model.Offer?.MainProductName ?? "BTS 商品詳細頁";
+}
+
+@if (Model.Offer == null)
+{
+    <section class="panel">
+        <h1 class="page-heading">找不到 BTS 商品</h1>
+        <p>指定的活動商品不存在，或目前不在公開期間內。</p>
+        <p><a class="button button--secondary" href="/bts">返回 BTS 專區</a></p>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h1 class="page-heading">@Model.Offer.MainProductName</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Offer.MainProductDescription))
+        {
+            <p>@Model.Offer.MainProductDescription</p>
+        }
+        <p><strong>一般售價：</strong>NT$ @Model.Offer.RetailPrice</p>
+        <p class="price-figure"><strong>BTS 活動價：</strong>NT$ @Model.Offer.BtsPrice</p>
+        @if (Model.Offer.MaxGiftSubsidyAmount != null)
+        {
+            <p><strong>贈品補貼上限：</strong>NT$ @Model.Offer.MaxGiftSubsidyAmount</p>
+        }
+        else
+        {
+            <p class="hint-text">此商品本檔期僅提供 BTS 特價，不含贈品補貼。</p>
+        }
+    </section>
+
+    @if (Model.Qualification != null)
+    {
+        <section class="panel">
+            <h2>目前教育資格</h2>
+            @if (Model.Qualification.IsQualified)
+            {
+                <p><strong>已通過驗證</strong></p>
+                <p>驗證信箱：@Model.Qualification.Email</p>
+                <p>有效至：@Model.Qualification.ExpireAt</p>
+            }
+            else
+            {
+                <p><strong>目前未符合 BTS 資格</strong></p>
+                @if (!string.IsNullOrWhiteSpace(Model.Qualification.Reason))
+                {
+                    <p>@Model.Qualification.Reason</p>
+                }
+                <p><a class="button button--secondary" href="/bts/qualification">前往資格驗證</a></p>
+            }
+        </section>
+    }
+    else
+    {
+        <section class="panel">
+            <h2>登入後可確認資格</h2>
+            <p>若尚未登入，可以先登入再驗證教育資格。未完成資格驗證時，購物車試算會以 hint 呈現未生效原因。</p>
+            <div class="page-actions">
+                <a class="button button--secondary" href="/auth/login?returnUrl=/bts/products/@Model.Offer.MainProductId">登入</a>
+                <a class="button button--secondary" href="/bts/qualification">資格頁</a>
+            </div>
+        </section>
+    }
+
+    @if (Model.ErrorSummary.Errors.Count > 0)
+    {
+        <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+    }
+
+    <section class="panel">
+        <h2>加入主商品</h2>
+        <p>若你只想先加入主商品，也可以不選擇贈品。</p>
+        <form method="post" asp-page-handler="AddMain">
+            <div class="page-actions">
+                <button class="button button--primary" type="submit">只加入主商品</button>
+                <a class="button button--secondary" href="/cart">查看購物車</a>
+            </div>
+        </form>
+    </section>
+
+    @if (Model.Offer.GiftOptions.Any())
+    {
+        <section class="panel">
+            <h2>可選贈品</h2>
+            <p class="hint-text">選擇贈品時，會先提示是否將主商品與該贈品一併加入購物車；拒絕後不會改動目前購物車。</p>
+            <ul class="task-list">
+                @foreach (var gift in Model.Offer.GiftOptions)
+                {
+                    var maxDiscount = Model.Offer.MaxGiftSubsidyAmount == null
+                        ? 0m
+                        : Math.Min(Model.Offer.MaxGiftSubsidyAmount.Value, gift.Price);
+                    <li>
+                        <strong>@gift.ProductName</strong>（原價 NT$ @gift.Price，最高可折 NT$ @maxDiscount）
+                        <div class="page-actions">
+                            <a class="button button--primary" href="/bts/products/@Model.Offer.MainProductId?confirmGiftProductId=@gift.ProductId">選擇這項贈品</a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+
+    @if (Model.PendingGift != null)
+    {
+        <section class="panel">
+            <h2>確認加入 BTS 組合</h2>
+            <p>是否將 <strong>@Model.Offer.MainProductName</strong> 與贈品 <strong>@Model.PendingGift.ProductName</strong> 一併加入購物車？</p>
+            <p>若你取消，購物車將維持原狀。</p>
+            <form method="post" asp-page-handler="AddBundle">
+                <input type="hidden" name="giftProductId" value="@Model.PendingGift.ProductId" />
+                <div class="page-actions">
+                    <button class="button button--primary" type="submit">同意，加入主商品與贈品</button>
+                    <a class="button button--secondary" href="/bts/products/@Model.Offer.MainProductId">取消，維持原狀</a>
+                </div>
+            </form>
+        </section>
+    }
+}

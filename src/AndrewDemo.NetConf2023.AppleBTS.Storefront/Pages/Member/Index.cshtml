@@ -1,0 +1,58 @@
+@page "/member"
+@model AndrewDemo.NetConf2023.AppleBTS.Storefront.Pages.Member.IndexModel
+@{
+    ViewData["Title"] = "會員資料";
+}
+<section>
+    <h1 class="page-heading">會員資料</h1>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+else if (Model.Member != null)
+{
+    <section class="panel">
+        <dl class="summary-list">
+            <div class="summary-list__row">
+                <dt>會員編號</dt>
+                <dd>@Model.Member.Id</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>名稱</dt>
+                <dd>@Model.Member.Name</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>商店註記</dt>
+                <dd>@(string.IsNullOrWhiteSpace(Model.Member.ShopNotes) ? "無" : Model.Member.ShopNotes)</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="panel">
+        <h2>Apple BTS 教育資格</h2>
+        @if (Model.Qualification == null)
+        {
+            <p>目前沒有可讀取的教育資格資料。</p>
+        }
+        else if (Model.Qualification.IsQualified)
+        {
+            <p><strong>已通過驗證</strong></p>
+            <p>驗證信箱：@Model.Qualification.Email</p>
+            <p>有效至：@Model.Qualification.ExpireAt</p>
+        }
+        else
+        {
+            <p><strong>目前未符合 BTS 資格</strong></p>
+            @if (!string.IsNullOrWhiteSpace(Model.Qualification.Reason))
+            {
+                <p>@Model.Qualification.Reason</p>
+            }
+        }
+
+        <div class="page-actions">
+            <a class="button button--secondary" href="/bts/qualification">前往資格驗證</a>
+        </div>
+    </section>
+}

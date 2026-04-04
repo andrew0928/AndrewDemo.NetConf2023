@@ -118,7 +118,7 @@
 - 產品詳細頁
 - member profile
 - member orders
-- cart create / get / add item / estimate
+- cart create / get / add item / remove line / estimate
 - checkout create / complete
 
 ### 8. UI 基準
@@ -126,6 +126,9 @@
 - UI 風格沿用 storefront family 已確認的 GOV.UK 類型極簡風格
 - 必須符合 storefront family 的 accessibility / RWD 基準
 - `/checkout` 第一版應為「確認送單」頁，不應要求消費者填寫滿意度、備註或其他非必要欄位
+- `/cart` 第一版必須允許刪除指定 cart line
+- 若刪除的是主商品 line，且存在 `ParentLineId` 指向它的子 line，則子 line 應一併移除
+- `/member/orders` 若訂單包含 discount lines，必須明確列出折扣名稱、說明與金額
 
 ### 9. 驗收方式
 
