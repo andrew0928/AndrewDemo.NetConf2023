@@ -1,0 +1,58 @@
+@apiHost = http://localhost:5108
+@btsApiHost = http://localhost:5118
+@accessToken = paste-token-here
+@cartId = 1
+@mainLineId = paste-main-line-id-here
+
+### OAuth authorize (從 Location header 取出 code)
+POST {{apiHost}}/api/login/authorize
+Content-Type: application/x-www-form-urlencoded
+
+name=local-user&password=ignored&client_id=local-http&redirect_uri=https://localhost/callback&state=applebts
+
+### OAuth token exchange
+POST {{apiHost}}/api/login/token
+Content-Type: application/x-www-form-urlencoded
+
+code=paste-oauth-code-here
+
+### 讀取 BTS 商品目錄
+GET {{btsApiHost}}/bts-api/catalog
+
+### 送出教育資格驗證
+POST {{btsApiHost}}/bts-api/qualification/verify
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "student@campus.edu.tw"
+}
+
+### 建立購物車
+POST {{apiHost}}/api/carts/create
+Authorization: Bearer {{accessToken}}
+
+### 加入主商品
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "macbook-air",
+  "qty": 1
+}
+
+### 加入綁定主商品的贈品
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "airpods-4",
+  "qty": 1,
+  "parentLineId": "{{mainLineId}}"
+}
+
+### 試算 BTS 折扣
+POST {{apiHost}}/api/carts/{{cartId}}/estimate
+Authorization: Bearer {{accessToken}}

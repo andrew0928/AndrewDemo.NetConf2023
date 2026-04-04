@@ -4,6 +4,7 @@ using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.AppleBTS.Extension;
 using AndrewDemo.NetConf2023.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
@@ -37,7 +38,8 @@ namespace AndrewDemo.NetConf2023.API
             builder.Services.AddShopDatabase(sp =>
             {
                 var manifest = sp.GetRequiredService<ShopManifest>();
-                var dbFilePath = manifest.DatabaseFilePath;
+                var dbFilePath = Environment.GetEnvironmentVariable("SHOP_DATABASE_FILEPATH")
+                    ?? manifest.DatabaseFilePath;
                 if (string.IsNullOrWhiteSpace(dbFilePath))
                 {
                     throw new InvalidOperationException($"database file path is required for shop {manifest.ShopId}");
@@ -50,7 +52,7 @@ namespace AndrewDemo.NetConf2023.API
 
                 return new ShopDatabaseOptions
                 {
-                    ConnectionString = $"Filename={dbFilePath};Connection=Direct"
+                    ConnectionString = $"Filename={dbFilePath};Connection=Shared"
                 };
             });
 
@@ -67,6 +69,15 @@ namespace AndrewDemo.NetConf2023.API
             });
 
             builder.Services.AddSingleton<IDiscountRule, Product1SecondItemDiscountRule>();
+            var enabledModules = builder.Configuration
+                .GetSection("RuntimeModules:Enabled")
+                .Get<string[]>() ?? Array.Empty<string>();
+
+            if (enabledModules.Contains("apple-bts", StringComparer.OrdinalIgnoreCase))
+            {
+                builder.Services.AddAppleBtsExtension();
+            }
+
             builder.Services.AddSingleton<DiscountEngine>(sp =>
             {
                 var manifest = sp.GetRequiredService<ShopManifest>();

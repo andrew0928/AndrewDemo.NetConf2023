@@ -388,7 +388,7 @@ sequenceDiagram
    - `DefaultProductService`
    - `CartContextFactory`
    - `DiscountEngine`
-2. `.Extension.AppleBTS`
+2. `.AppleBTS`
    - `BtsOfferRepository`
    - `MemberEducationQualificationService`
    - `BtsDiscountRule`

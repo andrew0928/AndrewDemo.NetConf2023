@@ -19,7 +19,11 @@ Apple BTS 已確認不是獨立 `ShopId`，而是同一個 shop 內的限期 cam
 
 ## 決策
 
-- 擴充專案名稱定為 `AndrewDemo.NetConf2023.Extension.AppleBTS`
+- 擴充專案名稱定為 `AndrewDemo.NetConf2023.AppleBTS.Extension`
+- AppleBTS host 家族名稱定為：
+  - `AndrewDemo.NetConf2023.AppleBTS.Extension`
+  - `AndrewDemo.NetConf2023.AppleBTS.API`
+  - `AndrewDemo.NetConf2023.AppleBTS.DatabaseInit`
 - 第一版只建立可編譯的 skeleton，不直接實作業務邏輯
 - 第一版 skeleton 採 concrete-first，不為 extension 內部 repository / service 額外建立 interface 配對
 - `AppleBTS Extension` 只擁有以下責任：
@@ -48,10 +52,11 @@ Apple BTS 已確認不是獨立 `ShopId`，而是同一個 shop 內的限期 cam
 
 - 可先用 skeleton code 與 unit test 檢視 extension boundary，不必一次做完 BTS 業務實作
 - 後續 host 若要啟用 AppleBTS，主要接點會是：
-  - DI 註冊 `AndrewDemo.NetConf2023.Extension.AppleBTS`
+  - `.API` 以設定啟用 DI 註冊 `AndrewDemo.NetConf2023.AppleBTS.Extension`
   - 啟用 `BtsDiscountRule`
+  - `AndrewDemo.NetConf2023.AppleBTS.API` 提供 `/bts-api/*`
   - BTS 專屬頁面以 `AppleBtsCatalogService` 讀取 campaign / offer / gift option
-  - BTS 設定介面以 `AppleBtsAdminService` 寫入 sidecar
+  - BTS 設定與 seed 以 `AppleBtsAdminService` 寫入 sidecar
 - 一般 cart 與 checkout 流程完全沿用 `.Core`
 - 若 gift line 需要被視為 BTS 組合，host 應在加入 gift 時補上 `ParentLineId`
 
@@ -71,6 +76,6 @@ Apple BTS 已確認不是獨立 `ShopId`，而是同一個 shop 內的限期 cam
 
 ## 後續工作
 
-- 補 `AndrewDemo.NetConf2023.Extension.AppleBTS` 的正式 spec 與 testcases
+- 補 `AndrewDemo.NetConf2023.AppleBTS.Extension` 的正式 spec 與 testcases
 - 補最小骨架各 repository / service / rule 的實作
-- 最後再決定 host / API 是否需要新入口
+- 以 `AndrewDemo.NetConf2023.AppleBTS.API` 與 `AndrewDemo.NetConf2023.AppleBTS.DatabaseInit` 建立可執行的本機測試環境

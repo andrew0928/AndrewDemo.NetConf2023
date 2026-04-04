@@ -20,7 +20,7 @@ namespace AndrewDemo.NetConf2023.Core
 
 
         // line-based cart CRUD
-        public bool AddProducts(string productId, int qty = 1)
+        public bool AddProducts(string productId, int qty = 1, string? parentLineId = null)
         {
             if (string.IsNullOrWhiteSpace(productId) || qty == 0)
             {
@@ -37,6 +37,7 @@ namespace AndrewDemo.NetConf2023.Core
             LineItems.Add(new LineItem
             {
                 LineId = Guid.NewGuid().ToString("N"),
+                ParentLineId = string.IsNullOrWhiteSpace(parentLineId) ? null : parentLineId,
                 ProductId = productId,
                 Quantity = qty,
                 AddedAt = DateTime.UtcNow

@@ -1,0 +1,72 @@
+@btsApiHost = http://localhost:5118
+@apiHost = http://localhost:5108
+@accessToken = paste-token-here
+@cartId = 1
+@mainLineId = paste-main-line-id-here
+@transactionId = 1
+
+### 取得 BTS 商品目錄
+GET {{btsApiHost}}/bts-api/catalog
+
+### 查詢目前會員教育資格
+GET {{btsApiHost}}/bts-api/qualification/me
+Authorization: Bearer {{accessToken}}
+
+### 送出教育資格驗證
+POST {{btsApiHost}}/bts-api/qualification/verify
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "email": "student@campus.edu.tw"
+}
+
+### 建立購物車
+POST {{apiHost}}/api/carts/create
+Authorization: Bearer {{accessToken}}
+
+### 加入主商品
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "macbook-air",
+  "qty": 1
+}
+
+### 加入贈品
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "airpods-4",
+  "qty": 1,
+  "parentLineId": "{{mainLineId}}"
+}
+
+### 試算購物車
+POST {{apiHost}}/api/carts/{{cartId}}/estimate
+Authorization: Bearer {{accessToken}}
+
+### 建立結帳交易
+POST {{apiHost}}/api/checkout/create
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "cartId": {{cartId}}
+}
+
+### 完成結帳
+POST {{apiHost}}/api/checkout/complete
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "transactionId": {{transactionId}},
+  "paymentId": 10001,
+  "satisfaction": 10,
+  "shopComments": "Apple BTS local smoke"
+}

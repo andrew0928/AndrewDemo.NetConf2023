@@ -68,5 +68,28 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.All(lineItems, item => Assert.Equal(productId, item.ProductId));
             Assert.NotEqual(lineItems[0].LineId, lineItems[1].LineId);
         }
+
+        [Fact]
+        public void CartAddProducts_WithParentLineId_PersistsGiftRelation()
+        {
+            string mainProductId = TestDataFactory.CreateProduct(Context, 100m);
+            string giftProductId = TestDataFactory.CreateProduct(Context, 50m);
+
+            var cart = new Cart();
+            Context.Carts.Insert(cart);
+            cart.AddProducts(mainProductId, 1);
+            var mainLineId = cart.LineItems.Single().LineId;
+            cart.AddProducts(giftProductId, 1, mainLineId);
+            Context.Carts.Update(cart);
+
+            var reloaded = Context.Carts.FindById(cart.Id);
+            Assert.NotNull(reloaded);
+
+            var lineItems = reloaded!.LineItems.ToList();
+            Assert.Equal(2, lineItems.Count);
+
+            var giftLine = lineItems.Single(x => x.ProductId == giftProductId);
+            Assert.Equal(mainLineId, giftLine.ParentLineId);
+        }
     }
 }

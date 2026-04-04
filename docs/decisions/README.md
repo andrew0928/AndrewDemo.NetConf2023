@@ -59,3 +59,5 @@
 | [2026-04-01](2026-04-01-bts-single-salepage-and-price-delta-discount.md) | **Apple BTS 採單一 SalePage 與價差型折扣**。`Product.Price` 維持一般售價，`bts-price` 由 sidecar 定義，折扣與活動失效提示改由 `BtsDiscountRule` 輸出，不先引入 checkout blocking hook。 |
 | [2026-04-02](2026-04-02-apple-bts-extension-project-boundary.md) | **AppleBTS Extension 採最小骨架與 sidecar-only 設計**。保留 `BtsDiscountRule`、catalog query、admin façade 與 qualification service；不再追蹤 BTS cart provenance，也不建立專屬 product service。 |
 | [2026-04-02](2026-04-02-apple-bts-subsidy-semantics-and-decision-table.md) | **Apple BTS gift subsidy 語意與完整情境決策表**。`MaxGiftSubsidyAmount` 是 gift 補貼上限，只作用在 gift line，未使用額度不得轉移到主商品；並正式凍結 M/G/P/C 四類情境表。 |
+| [2026-04-02](2026-04-02-apple-bts-local-environment-and-host-topology.md) | **AppleBTS 本機測試環境與 Host 拓樸**。以獨立 compose 啟動 `applebts-seed`、`applebts-api`、`applebts-btsapi` 三個容器，共用單一 AppleBTS 專屬資料庫；標準 cart / checkout 走既有 `.API`，BTS 專屬入口走 `/bts-api/*`。 |
+| [2026-04-02](2026-04-02-timeprovider-based-time-shift-and-mock.md) | **TimeProvider 化的時間平移與 Time Mock 遷移方向**（proposed）。後續時間抽象採 `TimeProvider`，runtime 以自訂 `ShiftedTimeProvider` 承接 `appsettings` 設定的期待啟動時間與固定 offset；本輪只先盤點直接時間存取點位，暫不實作重構。 |

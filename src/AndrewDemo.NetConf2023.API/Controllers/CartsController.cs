@@ -96,7 +96,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                     return BadRequest($"Product {request.ProductId} not found");
                 }
 
-                cart.AddProducts(request.ProductId, request.Qty);
+                cart.AddProducts(request.ProductId, request.Qty, request.ParentLineId);
                 _database.Carts.Update(cart);
                 return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
             }
@@ -120,7 +120,8 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             if (cart != null)
             {
-                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer: null, _productService);
+                var consumer = GetAuthenticatedMember();
+                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
                 var discountRecords = _discountEngine.Evaluate(cartContext);
 
                 return new CartEstimateResponse()
@@ -166,6 +167,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// 
             /// </summary>
             public int Qty { get; set; }
+
+            /// <summary>
+            /// gift line 對應的主商品 line id。
+            /// </summary>
+            public string? ParentLineId { get; set; }
         }
 
         /// <summary>
@@ -212,6 +218,23 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// 
             /// </summary>
             public List<string> RelatedLineIds { get; set; } = new List<string>();
+        }
+
+        private Member? GetAuthenticatedMember()
+        {
+            var accessToken = HttpContext.Items["access-token"] as string;
+            if (accessToken == null)
+            {
+                return null;
+            }
+
+            var tokenRecord = _database.MemberTokens.FindById(accessToken);
+            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            {
+                return null;
+            }
+
+            return _database.Members.FindById(tokenRecord.MemberId);
         }
     }
 }

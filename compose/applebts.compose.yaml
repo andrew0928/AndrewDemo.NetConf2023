@@ -1,0 +1,53 @@
+services:
+  applebts-seed:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/Dockerfile
+    image: andrewdemo-netconf2023-applebts-seed:local
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - applebts-data:/data
+    restart: "no"
+
+  applebts-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.applebts
+    image: andrewdemo-netconf2023-applebts-api:local
+    ports:
+      - "5108:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+    volumes:
+      - applebts-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  applebts-btsapi:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.API/Dockerfile
+    image: andrewdemo-netconf2023-applebts-btsapi:local
+    ports:
+      - "5118:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+    volumes:
+      - applebts-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  applebts-data:
+    driver: local

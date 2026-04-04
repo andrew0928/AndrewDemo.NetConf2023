@@ -9,10 +9,12 @@
     <File Path="README.md" />
   </Folder>
   <Project Path="../tests/AndrewDemo.NetConf2023.Core.Tests/AndrewDemo.NetConf2023.Core.Tests.csproj" />
-  <Project Path="../tests/AndrewDemo.NetConf2023.Extension.AppleBTS.Tests/AndrewDemo.NetConf2023.Extension.AppleBTS.Tests.csproj" />
+  <Project Path="../tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests.csproj" />
   <Project Path="AndrewDemo.NetConf2023.Abstract/AndrewDemo.NetConf2023.Abstract.csproj" />
   <Project Path="AndrewDemo.NetConf2023.API/AndrewDemo.NetConf2023.API.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.AppleBTS.API/AndrewDemo.NetConf2023.AppleBTS.API.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit.csproj" />
   <Project Path="AndrewDemo.NetConf2023.Core/AndrewDemo.NetConf2023.Core.csproj" />
   <Project Path="AndrewDemo.NetConf2023.DatabaseInit/AndrewDemo.NetConf2023.DatabaseInit.csproj" />
-  <Project Path="AndrewDemo.NetConf2023.Extension.AppleBTS/AndrewDemo.NetConf2023.Extension.AppleBTS.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.AppleBTS.Extension/AndrewDemo.NetConf2023.AppleBTS.Extension.csproj" />
 </Solution>
