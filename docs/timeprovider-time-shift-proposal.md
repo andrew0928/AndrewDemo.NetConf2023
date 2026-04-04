@@ -31,6 +31,7 @@
 
 - `TimeProvider` 可以取代文章想解決的核心問題
 - 但無法自動接管既有的 `DateTime.Now`
+- 也不會在未註冊 DI 的情況下自動「冒出一個 provider」
 - 因此仍必須做一次 codebase migration
 
 ## 建議架構
@@ -42,6 +43,16 @@
 - `ShiftedTimeProvider`
   - 封裝固定 offset
   - 作為系統 runtime 的實際 provider
+
+### Fallback 規則
+
+- 若 host 已註冊 `TimeProvider`，但設定不是 `Shifted`
+  - 使用 `TimeProvider.System`
+- 若 `Time` section 不存在
+  - 使用 `TimeProvider.System`
+- 若該程式碼完全沒有經過 DI 或 factory
+  - 不會自動得到 provider
+  - caller 必須自行注入 `TimeProvider`，或顯式呼叫 `TimeProviderFactory.Create(...)`
 
 ### Test
 

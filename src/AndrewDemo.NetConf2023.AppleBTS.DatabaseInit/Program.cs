@@ -3,6 +3,7 @@ using AndrewDemo.NetConf2023.AppleBTS.Extension.Records;
 using AndrewDemo.NetConf2023.AppleBTS.Extension.Services;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.AppleBTS.DatabaseInit
 {
@@ -33,12 +34,13 @@ namespace AndrewDemo.NetConf2023.AppleBTS.DatabaseInit
             {
                 ConnectionString = $"Filename={dbFilePath};Connection=Direct"
             });
+            var timeProvider = TimeProviderFactory.Create(new TimeOptions());
 
             var adminService = new AppleBtsAdminService(
                 new AndrewDemo.NetConf2023.AppleBTS.Extension.Repositories.BtsOfferRepository(database),
                 new AndrewDemo.NetConf2023.AppleBTS.Extension.Repositories.MemberEducationVerificationRepository(database));
 
-            SeedProducts(database);
+            SeedProducts(database, timeProvider);
             SeedCampaign(adminService);
             SeedMembers(database, adminService);
 
@@ -63,7 +65,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.DatabaseInit
             return Path.Combine(AppContext.BaseDirectory, "shop-database.db");
         }
 
-        private static void SeedProducts(IShopDatabaseContext database)
+        private static void SeedProducts(IShopDatabaseContext database, TimeProvider timeProvider)
         {
             Console.WriteLine("Initializing Apple catalog...");
 
@@ -90,7 +92,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.DatabaseInit
                 {
                     SkuId = product.SkuId,
                     AvailableQuantity = product.InventoryQuantity,
-                    UpdatedAt = DateTime.UtcNow
+                    UpdatedAt = timeProvider.GetUtcDateTime()
                 });
 
                 Console.WriteLine($"  - {product.ProductId}: {product.Name}");

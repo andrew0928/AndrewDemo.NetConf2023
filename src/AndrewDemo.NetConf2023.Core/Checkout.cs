@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.Core
 {
@@ -11,11 +12,13 @@ namespace AndrewDemo.NetConf2023.Core
         public int Id { get; private set; }
         private DateTime _created = DateTime.MinValue;
         private DateTime _released = DateTime.MinValue;
+        private readonly TimeProvider _timeProvider;
 
-        public WaitingRoomTicket()
+        public WaitingRoomTicket(TimeProvider timeProvider)
         {
+            _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
             this.Id = Interlocked.Increment(ref _sn);
-            this._created = DateTime.Now;
+            this._created = _timeProvider.GetLocalDateTime();
 
             Random random = new Random();
             this._released = this._created + TimeSpan.FromSeconds(random.Next(1, 3));
@@ -25,8 +28,9 @@ namespace AndrewDemo.NetConf2023.Core
 
         public async Task WaitUntilCanRunAsync()
         {
-            if (DateTime.Now > this._released) return;
-            await Task.Delay(this._released - DateTime.Now);
+            var now = _timeProvider.GetLocalDateTime();
+            if (now > this._released) return;
+            await Task.Delay(this._released - now);
         }
     }
 }

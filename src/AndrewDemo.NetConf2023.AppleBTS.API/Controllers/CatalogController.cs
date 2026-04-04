@@ -1,5 +1,6 @@
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.AppleBTS.Extension.Services;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
@@ -10,18 +11,20 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
     {
         private readonly AppleBtsCatalogService _catalogService;
         private readonly IProductService _productService;
+        private readonly TimeProvider _timeProvider;
 
-        public CatalogController(AppleBtsCatalogService catalogService, IProductService productService)
+        public CatalogController(AppleBtsCatalogService catalogService, IProductService productService, TimeProvider timeProvider)
         {
             _catalogService = catalogService;
             _productService = productService;
+            _timeProvider = timeProvider;
         }
 
         [HttpGet]
         [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<IReadOnlyList<CatalogItemResponse>> GetPublishedOffers()
         {
-            var at = DateTime.UtcNow;
+            var at = _timeProvider.GetUtcDateTime();
             var responses = _catalogService
                 .GetPublishedMainOffers(at)
                 .Select(x => ToResponse(x, at))
@@ -37,7 +40,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public ActionResult<CatalogItemResponse> GetOfferDetail(string mainProductId)
         {
-            var at = DateTime.UtcNow;
+            var at = _timeProvider.GetUtcDateTime();
             var aggregate = _catalogService.GetOfferDetail(mainProductId, at);
             var response = ToResponse(aggregate, at);
             if (response == null)

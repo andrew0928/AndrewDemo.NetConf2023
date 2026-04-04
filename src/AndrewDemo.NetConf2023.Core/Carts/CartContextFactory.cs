@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.Core
 {
     public static class CartContextFactory
     {
-        public static CartContext Create(ShopManifest manifest, Cart cart, Member? consumer, IProductService productService)
+        public static CartContext Create(ShopManifest manifest, Cart cart, Member? consumer, IProductService productService, TimeProvider timeProvider)
         {
             if (manifest == null)
             {
@@ -29,6 +30,8 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 throw new ArgumentNullException(nameof(productService));
             }
+
+            ArgumentNullException.ThrowIfNull(timeProvider);
 
             var lineItems = new List<LineItem>();
 
@@ -54,7 +57,7 @@ namespace AndrewDemo.NetConf2023.Core
                 ShopId = manifest.ShopId,
                 ConsumerId = consumer?.Id,
                 ConsumerName = consumer?.Name,
-                EvaluatedAt = DateTime.UtcNow,
+                EvaluatedAt = timeProvider.GetUtcDateTime(),
                 LineItems = lineItems
             };
         }

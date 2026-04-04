@@ -21,7 +21,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts("1");
+            cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var service = CreateCheckoutService();
@@ -55,7 +55,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts("1", 2);
+            cart.AddProducts("1", 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -97,7 +97,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         {
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts("missing-product");
+            cart.AddProducts("missing-product", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -136,7 +136,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var (buyer, _) = TestDataFactory.RegisterMember(Context);
             var (otherMember, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -167,7 +167,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 120m, availableQuantity: 5);
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts(productId, 2);
+            cart.AddProducts(productId, 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -200,7 +200,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 120m, availableQuantity: 1);
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts(productId, 2);
+            cart.AddProducts(productId, 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -239,7 +239,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
-            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
             var transaction = new CheckoutTransactionRecord
@@ -283,7 +283,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
                 Context,
                 new DiscountEngine(enabledRules),
                 new DefaultProductService(Context),
-                manifest);
+                manifest,
+                FixedTimeProvider);
         }
 
         private sealed class HintOnlyDiscountRule : IDiscountRule

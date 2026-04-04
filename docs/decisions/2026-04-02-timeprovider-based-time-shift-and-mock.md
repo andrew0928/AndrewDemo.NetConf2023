@@ -2,7 +2,7 @@
 
 ## 狀態
 
-- proposed
+- accepted
 - 日期：2026-04-02
 
 ## 背景
@@ -21,6 +21,8 @@
 
 使用者另提供 [從 DateTime 的 Mock 技巧談 PoC 的應用](https://columns.chicken-house.net/2022/05/29/datetime-mock/) 作為參考，希望確認 .NET 10 的 `TimeProvider` 是否足以承接該文章想解決的問題。
 
+另外，本輪已明確確認：這不是單純的 Phase 2 實作細節，而是 **回頭修正 AppleBTS 過程中暴露出的 Phase 1 / `.Core` 基礎決策缺口**。後續收尾時，應將這類回頭修正的數量一併回報。
+
 ## 決策
 
 - 後續時間抽象的 canonical 基底採用 `.NET` 內建 `TimeProvider`
@@ -32,12 +34,17 @@
   - 後續所有 `GetUtcNow()` / `GetLocalNow()` 都以 `system time + offset` 回傳
 - runtime 使用 `ShiftedTimeProvider`
 - unit test / integration test 使用 `FakeTimeProvider`
+- 若 host 已註冊 `TimeProvider`，但 `Time.Mode` 不是 `Shifted`，或 `Time` section 不存在，則 fallback 到 `TimeProvider.System`
+- 若某段程式碼沒有經過 DI 或 factory 取得 provider，則不會自動 fallback；caller 必須自行注入或明確建立 provider
 - production code 不再允許直接呼叫：
   - `DateTime.Now`
   - `DateTime.UtcNow`
   - `DateTime.Today`
   - `DateTimeOffset.Now`
 - 所有業務與 host code 應改為依賴 `TimeProvider` 或其 thin wrapper 取得現在時間
+- 本決策明確標記為：
+  - `回頭變更 Phase 1 的決策修正`
+  - `回頭修正 .Core / host 共用基礎設計`
 - 這次只先凍結設計方向與盤點待修清單，不在本輪直接重構
 
 建議設定模型如下：
@@ -62,8 +69,20 @@
 6. 建立 `ShiftedTimeProvider(offset, timezone)`
 7. 將該 provider 註冊進 DI，作為後續唯一的時間來源
 
+fallback 規則如下：
+
+1. host 走 DI 註冊 `TimeProvider`
+2. 若 `Time.Mode = Shifted`
+   - 建立 `ShiftedTimeProvider`
+3. 若 `Time.Mode` 缺省、非 `Shifted`、或未提供 `Time` section
+   - 註冊 `TimeProvider.System`
+4. 若該程式碼路徑沒有經過 DI
+   - 必須自行呼叫 factory
+   - 不存在隱含的 global auto-fallback
+
 ## 影響
 
+- 這代表 AppleBTS 專案過程中，除了業務規則外，還暴露出一個新的 cross-cutting 基礎設計缺口
 - 需要全面掃描並替換 production code 的直接時間存取
 - API、`.Core`、Console、DatabaseInit、AppleBTS.API、AppleBTS.DatabaseInit 都會受影響
 - 後續可用同一套機制支撐：
@@ -90,6 +109,7 @@
 ## 後續工作
 
 - 補一份 `/docs` 說明文件，記錄目前 repo 的直接時間存取點位
+- 在 AppleBTS 專案的「回頭修正 Phase 1 / `.Core` 決策」追蹤清單中，將此案列為新增項目
 - 後續另開獨立修正輪次，實作：
   - `ShiftedTimeProvider`
   - `TimeOptions`

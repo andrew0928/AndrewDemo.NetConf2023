@@ -9,6 +9,7 @@ using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.ConsoleUI
 {
@@ -33,11 +34,13 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 new Product1SecondItemDiscountRule()
             });
 
+        private static TimeProvider CurrentTimeProvider { get; } = TimeProviderFactory.Create(new TimeOptions());
+
         private static IProductService ProductService => new DefaultProductService(Database);
 
         private static CheckoutService BuildCheckoutService()
         {
-            return new CheckoutService(Database, DiscountEngineService, ProductService, ShopManifest);
+            return new CheckoutService(Database, DiscountEngineService, ProductService, ShopManifest, CurrentTimeProvider);
         }
 
         private static Member? GetMemberByToken(string token)
@@ -46,7 +49,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             var tokenRecord = Database.MemberTokens.FindById(token);
             if (tokenRecord == null) return null;
-            if (tokenRecord.Expire <= DateTime.Now) return null;
+            if (tokenRecord.Expire <= CurrentTimeProvider.GetLocalDateTime()) return null;
 
             return Database.Members.FindById(tokenRecord.MemberId);
         }
@@ -161,7 +164,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             }
 
             string productKey = productId.ToString();
-            if (!cart.AddProducts(productKey, quantityDelta))
+            if (!cart.AddProducts(productKey, quantityDelta, CurrentTimeProvider.GetUtcDateTime()))
             {
                 return false;
             }
@@ -174,7 +177,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         {
             try
             {
-                var context = CartContextFactory.Create(ShopManifest, cart, GetCurrentMemberOrNull(), ProductService);
+                var context = CartContextFactory.Create(ShopManifest, cart, GetCurrentMemberOrNull(), ProductService, CurrentTimeProvider);
                 return DiscountEngineService.Evaluate(context);
             }
             catch
@@ -222,7 +225,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 IsPublished = true
             });
             Database.Skus.Upsert(new SkuRecord { SkuId = "SKU-BEER-18D", ModelCode = "BEER-18D-355ML", SpecificationSummary = "18天台灣生啤酒 355ml" });
-            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-BEER-18D", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-BEER-18D", AvailableQuantity = 100, UpdatedAt = CurrentTimeProvider.GetUtcDateTime() });
             Database.Products.Upsert(new Product()
             {
                 Id = "2",
@@ -233,7 +236,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 IsPublished = true
             });
             Database.Skus.Upsert(new SkuRecord { SkuId = "SKU-COKE-350", ModelCode = "COKE-350ML", SpecificationSummary = "可口可樂 350ml" });
-            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-COKE-350", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-COKE-350", AvailableQuantity = 100, UpdatedAt = CurrentTimeProvider.GetUtcDateTime() });
             Database.Products.Upsert(new Product()
             {
                 Id = "3",
@@ -244,7 +247,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 IsPublished = true
             });
             Database.Skus.Upsert(new SkuRecord { SkuId = "SKU-GREEN-TEA-550", ModelCode = "GREEN-TEA-550ML", SpecificationSummary = "御茶園 特撰冰釀綠茶 550ml" });
-            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-GREEN-TEA-550", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            Database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-GREEN-TEA-550", AvailableQuantity = 100, UpdatedAt = CurrentTimeProvider.GetUtcDateTime() });
         }
 
         private static void AssistantOutput(string message)

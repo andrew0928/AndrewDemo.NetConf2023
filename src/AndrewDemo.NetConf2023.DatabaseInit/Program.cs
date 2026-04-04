@@ -1,6 +1,7 @@
 ﻿using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.DatabaseInit
 {
@@ -31,6 +32,7 @@ namespace AndrewDemo.NetConf2023.DatabaseInit
             {
                 ConnectionString = connectionString
             });
+            var timeProvider = TimeProviderFactory.Create(new TimeOptions());
 
             Console.WriteLine("Initializing products...");
 
@@ -45,7 +47,7 @@ namespace AndrewDemo.NetConf2023.DatabaseInit
                 IsPublished = true
             });
             database.Skus.Upsert(new SkuRecord { SkuId = "SKU-BEER-18D", ModelCode = "BEER-18D-355ML", SpecificationSummary = "18天台灣生啤酒 355ml" });
-            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-BEER-18D", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-BEER-18D", AvailableQuantity = 100, UpdatedAt = timeProvider.GetUtcDateTime() });
             Console.WriteLine("  - Product 1: 18天台灣生啤酒 355ml");
 
             database.Products.Upsert(new Product()
@@ -58,7 +60,7 @@ namespace AndrewDemo.NetConf2023.DatabaseInit
                 IsPublished = true
             });
             database.Skus.Upsert(new SkuRecord { SkuId = "SKU-COKE-350", ModelCode = "COKE-350ML", SpecificationSummary = "可口可樂 350ml" });
-            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-COKE-350", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-COKE-350", AvailableQuantity = 100, UpdatedAt = timeProvider.GetUtcDateTime() });
             Console.WriteLine("  - Product 2: 可口可樂® 350ml");
 
             database.Products.Upsert(new Product()
@@ -71,7 +73,7 @@ namespace AndrewDemo.NetConf2023.DatabaseInit
                 IsPublished = true
             });
             database.Skus.Upsert(new SkuRecord { SkuId = "SKU-GREEN-TEA-550", ModelCode = "GREEN-TEA-550ML", SpecificationSummary = "御茶園 特撰冰釀綠茶 550ml" });
-            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-GREEN-TEA-550", AvailableQuantity = 100, UpdatedAt = DateTime.UtcNow });
+            database.InventoryRecords.Upsert(new InventoryRecord { SkuId = "SKU-GREEN-TEA-550", AvailableQuantity = 100, UpdatedAt = timeProvider.GetUtcDateTime() });
             Console.WriteLine("  - Product 3: 御茶園 特撰冰釀綠茶 550ml");
 
             Console.WriteLine();

@@ -1,5 +1,6 @@
 ﻿using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,16 +15,19 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private readonly IShopDatabaseContext _database;
         private readonly CheckoutService _checkoutService;
+        private readonly TimeProvider _timeProvider;
 
         /// <summary>
         /// 建構函式
         /// </summary>
         /// <param name="database">商店資料庫內容。</param>
         /// <param name="checkoutService">結帳流程服務。</param>
-        public CheckoutController(IShopDatabaseContext database, CheckoutService checkoutService)
+        /// <param name="timeProvider">目前系統的時間提供者。</param>
+        public CheckoutController(IShopDatabaseContext database, CheckoutService checkoutService, TimeProvider timeProvider)
         {
             _database = database;
             _checkoutService = checkoutService;
+            _timeProvider = timeProvider;
         }
 
         /// <summary>
@@ -131,7 +135,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return null;
             }

@@ -3,6 +3,7 @@ using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.API.Controllers
@@ -19,6 +20,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         private readonly DiscountEngine _discountEngine;
         private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
+        private readonly TimeProvider _timeProvider;
 
         
         /// <summary>
@@ -28,12 +30,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <param name="discountEngine">折扣計算引擎。</param>
         /// <param name="productService">商品服務。</param>
         /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
-        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest)
+        /// <param name="timeProvider">目前系統的時間提供者。</param>
+        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
         {
             _database = database;
             _discountEngine = discountEngine;
             _productService = productService;
             _shopManifest = shopManifest;
+            _timeProvider = timeProvider;
         }
 
         /// <summary>
@@ -96,7 +100,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                     return BadRequest($"Product {request.ProductId} not found");
                 }
 
-                cart.AddProducts(request.ProductId, request.Qty, request.ParentLineId);
+                cart.AddProducts(request.ProductId, request.Qty, _timeProvider.GetUtcDateTime(), request.ParentLineId);
                 _database.Carts.Update(cart);
                 return CreatedAtRoute("GetCart", new { id = cart.Id }, cart);
             }
@@ -121,7 +125,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             if (cart != null)
             {
                 var consumer = GetAuthenticatedMember();
-                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
+                var cartContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService, _timeProvider);
                 var discountRecords = _discountEngine.Evaluate(cartContext);
 
                 return new CartEstimateResponse()
@@ -229,7 +233,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return null;
             }

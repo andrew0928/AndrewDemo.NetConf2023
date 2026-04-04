@@ -4,6 +4,7 @@ using AndrewDemo.NetConf2023.AppleBTS.Extension.Records;
 using AndrewDemo.NetConf2023.AppleBTS.Extension.Repositories;
 using AndrewDemo.NetConf2023.AppleBTS.Extension.Services;
 using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
@@ -20,17 +21,20 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
         private readonly AppleBtsAdminService _adminService;
         private readonly MemberEducationQualificationService _qualificationService;
         private readonly BtsOfferRepository _offerRepository;
+        private readonly TimeProvider _timeProvider;
 
         public QualificationController(
             IShopDatabaseContext database,
             AppleBtsAdminService adminService,
             MemberEducationQualificationService qualificationService,
-            BtsOfferRepository offerRepository)
+            BtsOfferRepository offerRepository,
+            TimeProvider timeProvider)
         {
             _database = database;
             _adminService = adminService;
             _qualificationService = qualificationService;
             _offerRepository = offerRepository;
+            _timeProvider = timeProvider;
         }
 
         [HttpGet("me")]
@@ -44,7 +48,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
                 return Unauthorized();
             }
 
-            return ToResponse(member, _qualificationService.Evaluate(member.Id, DateTime.UtcNow));
+            return ToResponse(member, _qualificationService.Evaluate(member.Id, _timeProvider.GetUtcDateTime()));
         }
 
         [HttpPost("verify")]
@@ -58,7 +62,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
                 return Unauthorized();
             }
 
-            var now = DateTime.UtcNow;
+            var now = _timeProvider.GetUtcDateTime();
             var activeCampaign = _offerRepository.GetActiveCampaign(now);
             var expireAt = activeCampaign?.EndAt ?? now.AddDays(30);
             var isQualified = IsEducationEmail(request.Email);
@@ -110,7 +114,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API.Controllers
             }
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return null;
             }

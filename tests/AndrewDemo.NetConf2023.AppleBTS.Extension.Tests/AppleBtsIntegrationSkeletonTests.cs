@@ -119,7 +119,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
 
             var enabledRules = new IDiscountRule[] { discountRule };
             var engine = new DiscountEngine(enabledRules);
-            var cartContext = CartContextFactory.Create(manifest, cart, member, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, member, new DefaultProductService(Context), FixedTimeProvider);
 
             var discounts = engine.Evaluate(cartContext);
 

@@ -4,7 +4,9 @@ using AndrewDemo.NetConf2023.AppleBTS.Extension;
 using AndrewDemo.NetConf2023.AppleBTS.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Time;
 using DotNetEnv;
+using Microsoft.Extensions.Options;
 
 namespace AndrewDemo.NetConf2023.AppleBTS.API
 {
@@ -20,6 +22,8 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API
 
             builder.Services.AddSingleton<IShopManifestResolver>(_ => new ConfigurationShopManifestResolver(builder.Configuration));
             builder.Services.AddSingleton(sp => sp.GetRequiredService<IShopManifestResolver>().Resolve(requestedShopId));
+            builder.Services.Configure<TimeOptions>(builder.Configuration.GetSection(TimeOptions.SectionName));
+            builder.Services.AddConfiguredTimeProvider(sp => sp.GetRequiredService<IOptions<TimeOptions>>().Value);
 
             builder.Services.AddShopDatabase(sp =>
             {

@@ -17,7 +17,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
             var cart = new Cart();
             Context.Carts.Insert(cart);
-            cart.AddProducts(productId, quantity);
+            cart.AddProducts(productId, quantity, FixedUtcNow);
             Context.Carts.Update(cart); // 明確呼叫持久化
 
             var reloaded = Context.Carts.FindById(cart.Id);
@@ -36,7 +36,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
                 DatabaseFilePath = "test.db",
                 ProductServiceId = DefaultProductService.ServiceId
             };
-            var cartContext = CartContextFactory.Create(manifest, reloaded, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, reloaded, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             Assert.Equal("test", cartContext.ShopId);
             Assert.Single(cartContext.LineItems);
@@ -56,8 +56,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
             var cart = new Cart();
             Context.Carts.Insert(cart);
-            cart.AddProducts(productId, 1);
-            cart.AddProducts(productId, 1);
+            cart.AddProducts(productId, 1, FixedUtcNow);
+            cart.AddProducts(productId, 1, FixedUtcNow.AddMinutes(1));
             Context.Carts.Update(cart);
 
             var reloaded = Context.Carts.FindById(cart.Id);
@@ -77,9 +77,9 @@ namespace AndrewDemo.NetConf2023.Core.Tests
 
             var cart = new Cart();
             Context.Carts.Insert(cart);
-            cart.AddProducts(mainProductId, 1);
+            cart.AddProducts(mainProductId, 1, FixedUtcNow);
             var mainLineId = cart.LineItems.Single().LineId;
-            cart.AddProducts(giftProductId, 1, mainLineId);
+            cart.AddProducts(giftProductId, 1, FixedUtcNow.AddMinutes(1), mainLineId);
             Context.Carts.Update(cart);
 
             var reloaded = Context.Carts.FindById(cart.Id);

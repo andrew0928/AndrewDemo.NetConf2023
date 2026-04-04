@@ -22,6 +22,9 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
       - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
       - applebts-data:/data
     depends_on:
@@ -41,6 +44,9 @@ services:
       - ASPNETCORE_HTTP_PORTS=8080
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
       - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
       - applebts-data:/data
     depends_on:

@@ -1,0 +1,29 @@
+# AppleBTS 過程中的 Phase 1 / `.Core` 回頭修正追蹤
+
+這份文件用來追蹤：在 AppleBTS 擴充過程中，哪些原本以為是 Phase 2 實作細節，最後被證明其實是需要回頭修正的 **Phase 1 contract / `.Core` 基礎決策**。
+
+後續 AppleBTS 擴充正式收尾時，應以這份清單回報總數。
+
+## 目前累計
+
+- 累計數量：4
+
+## 清單
+
+| 編號 | 日期 | 類型 | 決策 | 說明 |
+|---|---|---|---|---|
+| 1 | 2026-04-01 | `.Core` + `.Abstract` | [Line-based Cart 屬於 `.Core` 主線重構](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-line-based-cart-is-core-refactor.md) | AppleBTS 需要主商品 / 贈品關聯時，才暴露 `ProdQtyMap` 無法保留 line identity，最後回頭重開 cart contract。 |
+| 2 | 2026-04-01 | `.Core` + `.Abstract` | [SKU 與 Inventory 屬於 `.Core` 的標準能力](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-sku-and-inventory-are-core-standard-capabilities.md) | AppleBTS 討論商品與贈品時，才確認 SKU / inventory 不能當 extension 專屬能力，而必須升格回 `.Core`。 |
+| 3 | 2026-04-01 | Phase 1 contract | [DiscountRecord 擴充為 discount/hint 單一型別](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-01-discount-record-kind-and-related-lines.md) | AppleBTS 需要表達活動失效與資格不足提示，才回頭修正 `.Abstract.Discounts`。 |
+| 4 | 2026-04-02 | `.Core` + host cross-cutting | [TimeProvider 化的時間平移與 Time Mock 遷移方向](/Users/andrew/code-work/andrewshop.apidemo/docs/decisions/2026-04-02-timeprovider-based-time-shift-and-mock.md) | AppleBTS decision table 需要驗證活動時間窗，才暴露目前系統沒有統一可控的時間來源，需回頭補基礎時間抽象。 |
+
+## 統計原則
+
+- 只計入在 AppleBTS 擴充過程中被重新識別出的基礎決策缺口
+- 不計入單純的 host wiring、seed data、compose、測試腳本等實作工作
+- 若同一個主題只是後續 implementation refinement，不重複計數
+
+## 後續使用方式
+
+- 若後續又出現新的回頭修正項目，直接追加一列並更新「目前累計」
+- AppleBTS 擴充完成回報時，直接引用這份文件中的總數與清單

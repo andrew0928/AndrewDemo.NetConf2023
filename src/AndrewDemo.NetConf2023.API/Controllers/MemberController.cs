@@ -1,4 +1,5 @@
 ﻿using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,14 +13,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class MemberController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
+        private readonly TimeProvider _timeProvider;
 
         /// <summary>
         /// 建構函式
         /// </summary>
         /// <param name="database"></param>
-        public MemberController(IShopDatabaseContext database)
+        /// <param name="timeProvider">目前系統的時間提供者。</param>
+        public MemberController(IShopDatabaseContext database, TimeProvider timeProvider)
         {
             _database = database;
+            _timeProvider = timeProvider;
         }
 
         // remove useless api for register and login
@@ -86,7 +90,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return Unauthorized();
             }
@@ -125,7 +129,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return Unauthorized();
             }
@@ -158,7 +162,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
 
             var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= DateTime.Now)
+            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
             {
                 return Unauthorized();
             }

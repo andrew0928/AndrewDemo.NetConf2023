@@ -24,7 +24,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             var cart = new Cart();
-            cart.AddProducts("1", 2);
+            cart.AddProducts("1", 2, FixedUtcNow);
 
             var manifest = new ShopManifest
             {
@@ -38,7 +38,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             var discounts = engine.Evaluate(cartContext);
 
@@ -61,7 +61,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             var cart = new Cart();
-            cart.AddProducts("1", 2);
+            cart.AddProducts("1", 2, FixedUtcNow);
 
             var manifest = new ShopManifest
             {
@@ -71,7 +71,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             var discounts = engine.Evaluate(cartContext);
 
@@ -90,8 +90,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             var cart = new Cart();
-            cart.AddProducts("1", 1);
-            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1, FixedUtcNow);
+            cart.AddProducts("1", 1, FixedUtcNow.AddMinutes(1));
 
             var manifest = new ShopManifest
             {
@@ -105,7 +105,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new Product1SecondItemDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             var discounts = engine.Evaluate(cartContext);
 
@@ -129,7 +129,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             var cart = new Cart();
-            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1, FixedUtcNow);
 
             var manifest = new ShopManifest
             {
@@ -143,7 +143,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new HintOnlyDiscountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             var discounts = engine.Evaluate(cartContext);
 
@@ -166,7 +166,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             var cart = new Cart();
-            cart.AddProducts("1", 1);
+            cart.AddProducts("1", 1, FixedUtcNow);
 
             var manifest = new ShopManifest
             {
@@ -180,7 +180,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             };
 
             var engine = CreateEngine(manifest, new InvalidHintAmountRule());
-            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context));
+            var cartContext = CartContextFactory.Create(manifest, cart, consumer: null, new DefaultProductService(Context), FixedTimeProvider);
 
             var ex = Assert.Throws<InvalidOperationException>(() => engine.Evaluate(cartContext));
             Assert.Contains(InvalidHintAmountRule.TestRuleId, ex.Message);

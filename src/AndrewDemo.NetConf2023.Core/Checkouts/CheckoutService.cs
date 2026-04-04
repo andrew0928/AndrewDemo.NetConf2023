@@ -6,6 +6,7 @@ using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core.Discounts;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Time;
 
 namespace AndrewDemo.NetConf2023.Core.Checkouts
 {
@@ -15,13 +16,15 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
         private readonly DiscountEngine _discountEngine;
         private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
+        private readonly TimeProvider _timeProvider;
 
-        public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest)
+        public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
         {
             _database = database;
             _discountEngine = discountEngine;
             _productService = productService;
             _shopManifest = shopManifest;
+            _timeProvider = timeProvider;
         }
 
         public CheckoutCreateResult Create(CheckoutCreateCommand command)
@@ -35,7 +38,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
                 return CheckoutCreateResult.CreateCartNotFound("Cart not found");
             }
 
-            var transactionStartAt = DateTime.UtcNow;
+            var transactionStartAt = _timeProvider.GetUtcDateTime();
             var transaction = new CheckoutTransactionRecord
             {
                 CartId = cart.Id,
@@ -57,7 +60,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
             ArgumentNullException.ThrowIfNull(command);
             ArgumentNullException.ThrowIfNull(command.RequestMember);
 
-            var ticket = new WaitingRoomTicket();
+            var ticket = new WaitingRoomTicket(_timeProvider);
             await ticket.WaitUntilCanRunAsync();
 
             var transaction = _database.CheckoutTransactions.FindById(command.TransactionId);
@@ -90,7 +93,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
             };
 
             decimal total = 0m;
-            var completedAt = DateTime.UtcNow;
+            var completedAt = _timeProvider.GetUtcDateTime();
             var inventoryRequirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var lineitem in cart.LineItems)
@@ -124,7 +127,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
                 inventoryRequirements[skuId] = currentQuantity + lineitem.Quantity;
             }
 
-            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService);
+            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService, _timeProvider);
             foreach (var discount in _discountEngine.Evaluate(discountContext))
             {
                 if (discount.Kind != Abstract.Discounts.DiscountRecordKind.Discount)
