@@ -109,8 +109,10 @@ curl -sS --fail-with-body -b "$cookie_jar" -c "$cookie_jar" \
 
 orders_html="$(curl -sS --fail-with-body -b "$cookie_jar" "$base_url/member/orders")"
 printf "%s" "$orders_html" | grep -q "折扣明細"
-printf "%s" "$orders_html" | grep -q "BTS 優惠"
+printf "%s" "$orders_html" | grep -q "BTS 主商品優惠"
+printf "%s" "$orders_html" | grep -q "BTS 贈品優惠"
 printf "%s" "$orders_html" | grep -q "主商品套用 BTS 價格"
+printf "%s" "$orders_html" | grep -q "贈品套用 BTS 補貼"
 
 echo "[8] 重新加入組合後，刪除主商品 line，gift 應一併移除"
 curl -sS --fail-with-body -b "$cookie_jar" -c "$cookie_jar" \

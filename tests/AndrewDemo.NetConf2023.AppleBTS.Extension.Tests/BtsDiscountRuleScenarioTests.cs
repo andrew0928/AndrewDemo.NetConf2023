@@ -24,7 +24,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
 
             var discounts = Evaluate(memberId, CreateMainLine("main-001", "macbook-air", 35900m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
             Assert.Equal(31400m, ApplyToTotal(35900m, discounts));
         }
@@ -77,7 +77,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
 
             var discounts = Evaluate(memberId, CreateMainLine("main-001", "macbook-air", 35900m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
         }
 
@@ -94,8 +94,13 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "airpods-4", 5990m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001", "gift-001");
-            Assert.Equal(-10490m, discount.Amount);
+            Assert.Equal(2, discounts.Count);
+
+            var mainDiscount = AssertContainsMainDiscount(discounts, "main-001");
+            Assert.Equal(-4500m, mainDiscount.Amount);
+
+            var giftDiscount = AssertContainsGiftDiscount(discounts, "gift-001");
+            Assert.Equal(-5990m, giftDiscount.Amount);
         }
 
         [Fact]
@@ -111,7 +116,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateMainLine("gift-root-001", "airpods-4", 5990m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
         }
 
@@ -128,7 +133,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "apple-pencil", 4500m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
         }
 
@@ -144,7 +149,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "airpods-4", 5990m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
         }
 
@@ -161,6 +166,8 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "airpods-4", 5990m));
 
+            AssertContainsMainDiscount(discounts, "main-001");
+            AssertContainsGiftDiscount(discounts, "gift-001");
             Assert.Equal(31400m, ApplyToTotal(35900m + 5990m, discounts));
         }
 
@@ -177,6 +184,8 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "apple-pencil", 4500m));
 
+            AssertContainsMainDiscount(discounts, "main-001");
+            AssertContainsGiftDiscount(discounts, "gift-001");
             Assert.Equal(31400m, ApplyToTotal(35900m + 4500m, discounts));
         }
 
@@ -193,6 +202,8 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
                 CreateMainLine("main-001", "macbook-air", 35900m),
                 CreateGiftLine("gift-001", "main-001", "airpods-pro-3", 7990m));
 
+            AssertContainsMainDiscount(discounts, "main-001");
+            AssertContainsGiftDiscount(discounts, "gift-001");
             Assert.Equal(33400m, ApplyToTotal(35900m + 7990m, discounts));
         }
 
@@ -207,7 +218,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
             var discounts = Evaluate(memberId, CreateMainLine("main-001", "macbook-air", 35900m));
 
             Assert.Equal(31400m, ApplyToTotal(35900m, discounts));
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
         }
 
@@ -265,6 +276,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
             Assert.Equal(2, discounts.Count);
 
             var discount = discounts.Single(x => x.Kind == DiscountRecordKind.Discount);
+            Assert.Equal(AppleBtsConstants.MainProductDiscountName, discount.Name);
             Assert.Equal(-4500m, discount.Amount);
             Assert.Equal(new[] { "main-001" }, discount.RelatedLineIds);
 
@@ -282,7 +294,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
 
             var discounts = Evaluate(memberId, CreateMainLine("main-001", "macbook-air", 35900m));
 
-            var discount = AssertSingleDiscount(discounts, "main-001");
+            var discount = AssertSingleMainDiscount(discounts, "main-001");
             Assert.Equal(-4500m, discount.Amount);
             Assert.Equal(31400m, ApplyToTotal(35900m, discounts));
         }
@@ -431,10 +443,29 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
             };
         }
 
-        private static DiscountRecord AssertSingleDiscount(IReadOnlyList<DiscountRecord> discounts, params string[] relatedLineIds)
+        private static DiscountRecord AssertSingleMainDiscount(IReadOnlyList<DiscountRecord> discounts, params string[] relatedLineIds)
         {
             var discount = Assert.Single(discounts);
             Assert.Equal(DiscountRecordKind.Discount, discount.Kind);
+            Assert.Equal(AppleBtsConstants.MainProductDiscountName, discount.Name);
+            Assert.Equal(relatedLineIds, discount.RelatedLineIds);
+            return discount;
+        }
+
+        private static DiscountRecord AssertContainsMainDiscount(IReadOnlyList<DiscountRecord> discounts, params string[] relatedLineIds)
+        {
+            var discount = discounts.Single(x =>
+                x.Kind == DiscountRecordKind.Discount
+                && x.Name == AppleBtsConstants.MainProductDiscountName);
+            Assert.Equal(relatedLineIds, discount.RelatedLineIds);
+            return discount;
+        }
+
+        private static DiscountRecord AssertContainsGiftDiscount(IReadOnlyList<DiscountRecord> discounts, params string[] relatedLineIds)
+        {
+            var discount = discounts.Single(x =>
+                x.Kind == DiscountRecordKind.Discount
+                && x.Name == AppleBtsConstants.GiftDiscountName);
             Assert.Equal(relatedLineIds, discount.RelatedLineIds);
             return discount;
         }

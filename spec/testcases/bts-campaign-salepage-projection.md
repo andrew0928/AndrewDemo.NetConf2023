@@ -112,19 +112,22 @@
 - Then: `Product.Price` 應維持一般售價
 - And: 不直接回傳 `bts-price`
 
-### TC-BTS-403 收據以原價與 `BTS 優惠` 顯示
+### TC-BTS-403 收據以原價與分拆的 BTS 折扣顯示
 
 - Given: 主商品有原價、`bts-price` 與選取贈品
 - When: 建立收據
 - Then: 可條列原價商品行
-- And: 可條列 `BTS 優惠` 折扣行
+- And: 可條列 `BTS 主商品優惠` 折扣行
+- And: 若 gift subsidy 成立，可條列 `BTS 贈品優惠` 折扣行
 - And: 可條列贈品商品行
 
-### TC-BTS-404 `BTS 優惠` discount record 可關聯主商品與贈品 line
+### TC-BTS-404 主商品與贈品折扣需拆成獨立 discount record
 
-- Given: 一筆 BTS 優惠同時來自主商品價差與贈品補貼
+- Given: 同時存在主商品價差與贈品補貼
 - When: 規則回傳 `DiscountRecord`
-- Then: `RelatedLineIds` 可同時包含主商品 line 與贈品 line
+- Then: 應回傳兩筆折扣
+- And: `BTS 主商品優惠` 的 `RelatedLineIds` 只包含主商品 line
+- And: `BTS 贈品優惠` 的 `RelatedLineIds` 只包含 gift line
 
 ### TC-BTS-405 贈品補貼上限不得移轉到主商品
 

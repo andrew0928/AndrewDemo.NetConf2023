@@ -123,16 +123,19 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Tests
 
             var discounts = engine.Evaluate(cartContext);
 
-            Assert.Single(discounts);
+            Assert.Equal(2, discounts.Count);
 
-            var discount = discounts[0];
-            Assert.Equal(DiscountRecordKind.Discount, discount.Kind);
-            Assert.Equal(AppleBtsConstants.DiscountRuleId, discount.RuleId);
-            Assert.Equal(AppleBtsConstants.DiscountName, discount.Name);
-            Assert.Equal(-10490m, discount.Amount);
-            Assert.Equal(2, discount.RelatedLineIds.Count);
-            Assert.Contains(mainLineId, discount.RelatedLineIds);
-            Assert.Contains(giftLineId, discount.RelatedLineIds);
+            var mainDiscount = discounts.Single(x => x.Name == AppleBtsConstants.MainProductDiscountName);
+            Assert.Equal(DiscountRecordKind.Discount, mainDiscount.Kind);
+            Assert.Equal(AppleBtsConstants.DiscountRuleId, mainDiscount.RuleId);
+            Assert.Equal(-4500m, mainDiscount.Amount);
+            Assert.Equal(new[] { mainLineId }, mainDiscount.RelatedLineIds);
+
+            var giftDiscount = discounts.Single(x => x.Name == AppleBtsConstants.GiftDiscountName);
+            Assert.Equal(DiscountRecordKind.Discount, giftDiscount.Kind);
+            Assert.Equal(AppleBtsConstants.DiscountRuleId, giftDiscount.RuleId);
+            Assert.Equal(-5990m, giftDiscount.Amount);
+            Assert.Equal(new[] { giftLineId }, giftDiscount.RelatedLineIds);
 
             var total = cartContext.LineItems.Sum(x => (x.UnitPrice ?? 0m) * x.Quantity) + discounts.Sum(x => x.Amount);
             Assert.Equal(31400m, total);

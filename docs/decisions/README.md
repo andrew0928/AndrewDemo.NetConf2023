@@ -81,3 +81,4 @@
 | [2026-04-05](2026-04-05-buyer-satisfaction-nullable-semantics.md) | **BuyerSatisfaction 改為 Nullable 語意**。`null` 代表沒有判讀或沒有提供，`0` 僅代表明確的最低分；此案屬於 `.Core` 的通用語意修正，而不是 storefront 專屬行為。 |
 | [2026-04-05](2026-04-05-cart-line-removal-and-child-cascade.md) | **Cart Line 刪除與子項目 Cascade**。line-based cart 必須補齊以 `LineId` 為單位的刪除能力；刪除主商品 line 時，所有以 `ParentLineId` 綁定的子 line 必須一併移除。此案屬於 AppleBTS 過程中重新暴露的 `.Core / Phase 1` 通用缺口。 |
 | [2026-04-05](2026-04-05-apple-bts-storefront-phase1-boundary.md) | **AppleBTS Storefront Phase 1 邊界**。沿用 `CommonStorefront` 的 grammar 與 BFF 基礎，追加 `/bts`、`/bts/qualification`、`/bts/products/{id}`，並以 server-rendered 確認步驟處理主商品 + gift 的加入流程。 |
+| [2026-04-09](2026-04-09-bts-split-main-and-gift-discount-lines.md) | **AppleBTS 折扣需拆成主商品與贈品兩筆折扣行**。`BtsDiscountRule` 若同時存在主商品價差與 gift subsidy，必須分別輸出 `BTS 主商品優惠` 與 `BTS 贈品優惠`；此案屬於 AppleBTS extension 表達修正，不影響 `.Core` contract。 |

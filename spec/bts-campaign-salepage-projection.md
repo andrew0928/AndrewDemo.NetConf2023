@@ -122,12 +122,16 @@ BTS 相關驗證則是 member-side 狀態：
 - 收據可表達為：
   - 主商品 `35900`
   - 贈品 `5990`
-  - `BTS 優惠 = -10490`
+  - `BTS 主商品優惠 = -4500`
+  - `BTS 贈品優惠 = -5990`
 
 補充：
 
-- `BTS 優惠` 可由一筆或多筆 `DiscountRecord` 表達
-- 若 rule 回傳單筆 `DiscountRecord`，可用 `RelatedLineIds` 同時關聯主商品 line 與贈品 line
+- 若同時存在主商品價差與贈品補貼，應拆成兩筆 `DiscountRecord`
+  - `BTS 主商品優惠`
+  - `BTS 贈品優惠`
+- `BTS 主商品優惠` 的 `RelatedLineIds` 應只關聯主商品 line
+- `BTS 贈品優惠` 的 `RelatedLineIds` 應只關聯合法 gift line
 
 ### 3. 主商品與贈品群
 
@@ -180,7 +184,7 @@ BTS 相關驗證則是 member-side 狀態：
 
 - `Cart` 與 `Order` 對外只需要看到 `Product`
 - 不需要直接看到 `SKU`
-- 收據與訂單行可用 `Product` 與 `BTS 優惠` 來表達交易結果
+- 收據與訂單行可用 `Product`、`BTS 主商品優惠`、`BTS 贈品優惠` 來表達交易結果
 - gift relation 可由 `ParentLineId` 表達，不必額外建立 BTS cart provenance sidecar
 
 ## 非目標

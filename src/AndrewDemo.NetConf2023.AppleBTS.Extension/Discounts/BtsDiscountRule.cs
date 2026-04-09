@@ -65,10 +65,7 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Discounts
                 {
                     if (mainDiscountAmount < 0m)
                     {
-                        records.Add(CreateDiscountRecord(
-                            new[] { mainLine.LineId },
-                            mainDiscountAmount,
-                            includeGiftSubsidy: false));
+                        records.Add(CreateMainProductDiscountRecord(mainLine.LineId, mainDiscountAmount));
                     }
 
                     records.Add(giftQuantityHint!);
@@ -76,19 +73,16 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Discounts
                 }
 
                 var giftSubsidyAmount = CalculateGiftSubsidyAmount(childLines, offer);
-                var totalDiscountAmount = mainDiscountAmount - giftSubsidyAmount;
-                if (totalDiscountAmount < 0m)
+                if (mainDiscountAmount < 0m)
                 {
-                    var relatedLineIds = new List<string> { mainLine.LineId };
-                    if (giftSubsidyAmount > 0m)
-                    {
-                        relatedLineIds.AddRange(GetEligibleGiftLineIds(childLines, offer));
-                    }
+                    records.Add(CreateMainProductDiscountRecord(mainLine.LineId, mainDiscountAmount));
+                }
 
-                    records.Add(CreateDiscountRecord(
-                        relatedLineIds,
-                        totalDiscountAmount,
-                        includeGiftSubsidy: giftSubsidyAmount > 0m));
+                if (giftSubsidyAmount > 0m)
+                {
+                    records.Add(CreateGiftDiscountRecord(
+                        GetEligibleGiftLineIds(childLines, offer),
+                        -giftSubsidyAmount));
                 }
             }
 
@@ -231,19 +225,33 @@ namespace AndrewDemo.NetConf2023.AppleBTS.Extension.Discounts
                 .ToList();
         }
 
-        private static DiscountRecord CreateDiscountRecord(
-            IEnumerable<string> relatedLineIds,
-            decimal amount,
-            bool includeGiftSubsidy)
+        private static DiscountRecord CreateMainProductDiscountRecord(
+            string mainLineId,
+            decimal amount)
         {
             return new DiscountRecord
             {
                 RuleId = AppleBtsConstants.DiscountRuleId,
                 Kind = DiscountRecordKind.Discount,
-                Name = AppleBtsConstants.DiscountName,
-                Description = includeGiftSubsidy
-                    ? "主商品套用 BTS 價格，並補貼贈品售價"
-                    : "主商品套用 BTS 價格",
+                Name = AppleBtsConstants.MainProductDiscountName,
+                Description = "主商品套用 BTS 價格",
+                Amount = amount,
+                RelatedLineIds = new[] { mainLineId }
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList()
+            };
+        }
+
+        private static DiscountRecord CreateGiftDiscountRecord(
+            IEnumerable<string> relatedLineIds,
+            decimal amount)
+        {
+            return new DiscountRecord
+            {
+                RuleId = AppleBtsConstants.DiscountRuleId,
+                Kind = DiscountRecordKind.Discount,
+                Name = AppleBtsConstants.GiftDiscountName,
+                Description = "贈品套用 BTS 補貼",
                 Amount = amount,
                 RelatedLineIds = relatedLineIds
                     .Distinct(StringComparer.OrdinalIgnoreCase)
