@@ -1,21 +1,23 @@
-# Product Phase 1 設計稿
+# Product / Order Event Phase 1 設計稿
 
 ## 目的
 
 這份文件只回答一件事：
 
-- 在不引入 reservation-specific contract 的前提下，如何把目前系統重構成可支援自訂 `IProductService`、動態商品、以及 checkout 後 product fulfillment callback 的結構。
+- 在不引入 reservation-specific contract 的前提下，如何把目前系統重構成可支援自訂 `IProductService`、動態商品、以及 checkout 後 order side effect callback 的結構。
 
 本文件是給決策者 review 的設計稿，不是正式公開規格。
 
 ## 已確認決策
 
 - 每個 shop 只啟用一個 `IProductService`
+- 每個 shop 只啟用一個 `IOrderEventDispatcher`
 - 預設使用 `.Core` 內的 `DefaultProductService`
+- 預設使用 `.Core` 內的 `DefaultOrderEventDispatcher`
 - `ProductId` 改為 `string`
 - `/api/products` 只列 published products
 - 動態商品可以是 unpublished，但 `GetProductById(productId)` 必須能解析
-- ProductService 的 callback 採 in-process
+- order event callback 採 in-process
 - callback 失敗不推翻 order complete，但 order 需要區分 fulfillment 是否成功
 - product 延伸資料由 shop module 用 side-by-side collection / entity 自行管理
 - shared contract 不放 reservation 查詢、建立、確認、取消流程
@@ -37,18 +39,36 @@
 
 - 列出可公開瀏覽的商品
 - 依 `ProductId` 解析單一可購買商品
-- 在 order complete / cancel 後收到商品事件
-- 對需要後續處理的商品執行 fulfillment
 
 ### Product Domain 不負責的事情
 
+- order complete / cancel 後的 side effect callback
 - reservation 查詢
 - reservation 建立
 - reservation 在結帳前的確認
 - reservation-specific API
 - product 延伸資料的共用 schema
 
-這些流程屬於 shop 自己的整合邏輯，不進 `.Abstract`
+### Order Event Domain 要負責的事情
+
+- 在 order complete / cancel 後收到 order event
+- 對需要後續處理的商品或 reservation 執行 fulfillment / notification
+
+## 這次回頭修正的重點
+
+第一版 Phase 1 把 `HandleOrderCompleted` / `HandleOrderCancelled` 放進 `IProductService`。
+
+這樣做雖然能快速完成 decouple，但長期會讓 `IProductService` 同時負責：
+
+- 商品查詢
+- 訂單後續 side effect
+
+這兩個邊界實際上不是同一件事。
+
+因此這次調整改成：
+
+- `IProductService` 只負責 product query
+- `IOrderEventDispatcher` 負責 order side effect
 
 ## 建議的 shared model
 
@@ -67,9 +87,9 @@ shared `Product` 只保留主系統需要的固定欄位：
 - published product 可以被 `/api/products` 列出
 - unpublished dynamic product 不會出現在列表，但仍可被 `GetProductById` 解析
 
-### ProductOrderLine
+### OrderProductLine
 
-這是 product event 與 order product line 都需要的快照資料：
+這是 order event 與 order product line 都需要的快照資料：
 
 - `ProductId`
 - `ProductName`
@@ -93,20 +113,25 @@ shared `Product` 只保留主系統需要的固定欄位：
 語意：
 
 - `Order` 建立成功，不代表 fulfillment 一定成功
-- ProductService callback 失敗時，只反映在 fulfillment 狀態，不推翻 order complete
+- order event dispatch 失敗時，只反映在 fulfillment 狀態，不推翻 order complete
 
 ## 建議的 service 邊界
 
 ### IProductService
 
-Phase 1 只建議放 4 類能力：
+Phase 1 只建議放 2 類能力：
 
 - `GetPublishedProducts`
 - `GetProductById`
-- `HandleOrderCompleted`
-- `HandleOrderCancelled`
 
-這裡的 callback 單位是「order-scoped product event」。
+### IOrderEventDispatcher
+
+Phase 1 只建議放 2 類能力：
+
+- `Dispatch(OrderCompletedEvent)`
+- `Dispatch(OrderCancelledEvent)`
+
+這裡的 callback 單位是「order-scoped event」。
 
 也就是：
 
@@ -145,8 +170,8 @@ Phase 1 只建議放 4 類能力：
 3. 用商品快照建立 order product lines
 4. 用折扣結果建立 order discount lines
 5. 將 `Order` 持久化
-6. 建立 `ProductOrderCompletedEvent`
-7. 呼叫 `IProductService.HandleOrderCompleted(...)`
+6. 建立 `OrderCompletedEvent`
+7. 呼叫 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)`
 8. 若 callback 成功，`FulfillmentStatus = Succeeded`
 9. 若 callback 失敗，`FulfillmentStatus = Failed`
 10. `checkout/complete` 仍視為成功
@@ -172,24 +197,26 @@ Phase 1 只建議放 4 類能力：
 比較乾淨的做法是：
 
 - order service / checkout orchestration 負責整理成 product event payload
-- `IProductService` 只看到自己需要的資料
+- `IProductService` 只看到 product query 需要的資料
+- `IOrderEventDispatcher` 只看到 order side effect 需要的資料
 
-## 為什麼不先做 per-product event dispatcher
+## 為什麼不直接做多 handler event bus
 
-目前每個 shop 只會有一個 `IProductService`。
+目前這次回頭修正的目標是把責任拆乾淨，不是建立完整事件系統。
 
-因此現在就拆成：
+若現在就做成多 subscriber：
 
-- `OrderCompleted`
-- `ProductPurchased`
-- 多 handler routing
+- handler 排序
+- 失敗聚合規則
+- `FulfillmentStatus` 對應多 handler 的語意
+- retry / outbox 的期待
 
-會過早複雜化。
+都會一起進場，對目前目標太重。
 
 Phase 1 保持：
 
 - 每張訂單 callback 一次
-- `IProductService` 自己決定哪些 lines 需要真的處理
+- 每個 shop 一個 `IOrderEventDispatcher`
 
 就足夠了。
 
@@ -207,6 +234,7 @@ Phase 1 保持：
 - `CartsController` 加 item 時先做 product lookup
 - `CartContextFactory` 改依賴 `IProductService`
 - `CheckoutController` 不再直查 `_database.Products`
+- `CheckoutService` 改依賴 `IOrderEventDispatcher`
 
 ### Order
 
@@ -222,14 +250,15 @@ Phase 1 保持：
 - reservation API
 - durable event / outbox / retry
 - side-by-side extension schema 標準化
-- 多個 product handler routing
+- 多個 order event dispatcher routing
 - fulfillment token 的具體實作
 
 ## 建議的實作順序
 
-1. 先 freeze `/spec` 與 `.Abstract` 的 Product contract
+1. 先 freeze `/spec` 與 `.Abstract` 的 Product / Order Event contract
 2. 把 `ProductId` 全系統改為 `string`
 3. 建立 `IProductService` / `DefaultProductService`
-4. 讓 `ProductsController`、`CartsController`、`CartContextFactory`、`CheckoutController` 全部改走 service
-5. 重構 `Order` 與 fulfillment status
-6. 最後才補 callback 與整合測試
+4. 建立 `IOrderEventDispatcher` / `DefaultOrderEventDispatcher`
+5. 讓 `ProductsController`、`CartsController`、`CartContextFactory`、`CheckoutController` 全部改走 service
+6. 重構 `Order` 與 fulfillment status
+7. 最後才補 callback 與整合測試

@@ -53,7 +53,7 @@
 - complete checkout transaction
 - 建立 order
 - 套用 discount
-- 觸發 product callback
+- 觸發 order event dispatch
 - 更新 fulfillment status
 
 ### Checkout command / result
@@ -91,7 +91,7 @@ waiting room 的執行位置必須從 controller 移入 `CheckoutService`。
 - 操作 `Orders`
 - 執行 `WaitingRoomTicket`
 - 組裝 order lines
-- 觸發 product callback
+- 觸發 order event dispatch
 
 ## 行為要求
 
@@ -110,7 +110,7 @@ waiting room 的執行位置必須從 controller 移入 `CheckoutService`。
 
 - create 與 complete 的既有對外 API contract
 - complete 後建立 order 與 fulfillment status 的既有結果
-- product callback 失敗不推翻 order complete
+- order event dispatch 失敗不推翻 order complete
 
 ## 非目標
 

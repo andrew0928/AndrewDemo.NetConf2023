@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using AndrewDemo.NetConf2023.Core.Time;
 
@@ -22,6 +24,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             ShopId = "console",
             DatabaseFilePath = "shop-database.db",
             ProductServiceId = DefaultProductService.ServiceId,
+            OrderEventDispatcherId = DefaultOrderEventDispatcher.DispatcherId,
             EnabledDiscountRuleIds = new List<string>
             {
                 Product1SecondItemDiscountRule.BuiltInRuleId
@@ -37,10 +40,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static TimeProvider CurrentTimeProvider { get; } = TimeProviderFactory.Create(new TimeOptions());
 
         private static IProductService ProductService => new DefaultProductService(Database);
+        private static IOrderEventDispatcher OrderEventDispatcher { get; } = new DefaultOrderEventDispatcher();
 
         private static CheckoutService BuildCheckoutService()
         {
-            return new CheckoutService(Database, DiscountEngineService, ProductService, ShopManifest, CurrentTimeProvider);
+            return new CheckoutService(Database, DiscountEngineService, OrderEventDispatcher, ProductService, ShopManifest, CurrentTimeProvider);
         }
 
         private static Member? GetMemberByToken(string token)

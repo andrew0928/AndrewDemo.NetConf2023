@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using Xunit;
 
@@ -324,12 +326,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests
                 ShopId = "default",
                 DatabaseFilePath = "shop-database.db",
                 ProductServiceId = DefaultProductService.ServiceId,
+                OrderEventDispatcherId = DefaultOrderEventDispatcher.DispatcherId,
                 EnabledDiscountRuleIds = enabledRules.Select(x => x.RuleId).ToList()
             };
 
             return new CheckoutService(
                 Context,
                 new DiscountEngine(enabledRules),
+                new DefaultOrderEventDispatcher(),
                 new DefaultProductService(Context),
                 manifest,
                 FixedTimeProvider);

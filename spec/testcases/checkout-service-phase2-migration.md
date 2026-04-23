@@ -48,11 +48,11 @@
 - When: 檢查 complete 實作
 - Then: 不直接建立 order product lines / discount lines
 
-### TC-CK-103 CheckoutController 不再直接觸發 product callback
+### TC-CK-103 CheckoutController 不再直接觸發 order event callback
 
 - Given: `CheckoutController`
 - When: 檢查 complete 實作
-- Then: 不直接呼叫 `IProductService.HandleOrderCompleted(...)`
+- Then: 不直接呼叫 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)`
 
 ## Behavior Preservation
 

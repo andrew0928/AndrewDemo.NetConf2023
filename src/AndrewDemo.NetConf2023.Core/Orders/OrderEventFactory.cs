@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 
-namespace AndrewDemo.NetConf2023.Core.Products
+namespace AndrewDemo.NetConf2023.Core.Orders
 {
-    public static class ProductOrderEventFactory
+    public static class OrderEventFactory
     {
-        public static ProductOrderCompletedEvent CreateCompletedEvent(ShopManifest manifest, Order order, DateTime completedAt)
+        public static OrderCompletedEvent CreateCompletedEvent(ShopManifest manifest, Order order, DateTime completedAt)
         {
             ArgumentNullException.ThrowIfNull(manifest);
             ArgumentNullException.ThrowIfNull(order);
 
-            return new ProductOrderCompletedEvent
+            return new OrderCompletedEvent
             {
                 OrderId = order.Id,
                 ShopId = manifest.ShopId,
@@ -21,18 +21,18 @@ namespace AndrewDemo.NetConf2023.Core.Products
                 BuyerName = order.Buyer.Name,
                 CompletedAt = completedAt,
                 Lines = order.ProductLines
-                    .Select(ToProductOrderLine)
+                    .Select(ToOrderProductLine)
                     .ToArray()
             };
         }
 
-        public static ProductOrderCancelledEvent CreateCancelledEvent(ShopManifest manifest, Order order, IEnumerable<Order.OrderProductLine> affectedLines, DateTime cancelledAt)
+        public static OrderCancelledEvent CreateCancelledEvent(ShopManifest manifest, Order order, IEnumerable<Order.OrderProductLine> affectedLines, DateTime cancelledAt)
         {
             ArgumentNullException.ThrowIfNull(manifest);
             ArgumentNullException.ThrowIfNull(order);
             ArgumentNullException.ThrowIfNull(affectedLines);
 
-            return new ProductOrderCancelledEvent
+            return new OrderCancelledEvent
             {
                 OrderId = order.Id,
                 ShopId = manifest.ShopId,
@@ -40,14 +40,14 @@ namespace AndrewDemo.NetConf2023.Core.Products
                 BuyerName = order.Buyer.Name,
                 CancelledAt = cancelledAt,
                 AffectedLines = affectedLines
-                    .Select(ToProductOrderLine)
+                    .Select(ToOrderProductLine)
                     .ToArray()
             };
         }
 
-        private static ProductOrderLine ToProductOrderLine(Order.OrderProductLine line)
+        private static OrderProductLine ToOrderProductLine(Order.OrderProductLine line)
         {
-            return new ProductOrderLine
+            return new OrderProductLine
             {
                 ProductId = line.ProductId,
                 ProductName = line.ProductName,

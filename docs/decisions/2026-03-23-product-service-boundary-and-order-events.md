@@ -19,7 +19,7 @@
 - 每個商店可指定自己的 `IProductService`
 - 預設商店使用 `DefaultProductService`
 - 商店可販售動態產生的商品，例如預約完成後才建立的可購買 product
-- 結帳完成後，ProductService 需要收到商品訂購結果通知，進一步觸發 fulfillment
+- 結帳完成後，order event dispatcher 需要收到商品訂購結果通知，進一步觸發 fulfillment
 - 取消允許部分取消，需能指出被取消的商品 lines
 
 同時已確認以下原則：
@@ -61,33 +61,33 @@ shared product model 只保留主系統必要欄位，例如：
 - 動態商品可以是 unpublished
 - unpublished 動態商品仍可透過 `GetProductById(productId)` 被 cart / checkout 解析
 
-### 4. ProductService 的 callback 單位是「order-scoped product event」
+### 4. Order event dispatcher 的 callback 單位是「order-scoped event」
 
-不讓 `IProductService` 直接吃 raw `Order` entity。
+不讓 `IProductService` 直接吃 raw `Order` entity，也不讓 product query boundary 承擔 order side effect。
 
-`IProductService` 應接收：
+後續正式 contract 由 `IOrderEventDispatcher` 接收：
 
-- `ProductOrderCompletedEvent`
-- `ProductOrderCancelledEvent`
+- `OrderCompletedEvent`
+- `OrderCancelledEvent`
 
 這兩種 event 都是 order-scoped，但 payload 只包含 product domain 需要的資料：
 
 - 訂單識別資訊
 - 消費者資訊
 - 發生時間
-- `ProductOrderLine[]`
+- `OrderProductLine[]`
 
 其中：
 
-- `ProductOrderCompletedEvent` 帶整張訂單的商品 lines
-- `ProductOrderCancelledEvent` 帶被取消的 `AffectedLines`
-- discount lines 不進 product event payload
+- `OrderCompletedEvent` 帶整張訂單的商品 lines
+- `OrderCancelledEvent` 帶被取消的 `AffectedLines`
+- discount lines 不進 order event payload
 
 ### 5. 訂單完成與 fulfillment 結果分離
 
 只要扣款成功且訂單建立成功，`OrderComplete` 就算成功。
 
-`IProductService` 的 callback 若失敗：
+`IOrderEventDispatcher` 的 callback 若失敗：
 
 - 不得推翻訂單已完成的事實
 - 應反映在 fulfillment 狀態上
@@ -98,13 +98,14 @@ shared product model 只保留主系統必要欄位，例如：
 - 訂單是否完成
 - fulfillment 是否成功
 
-### 6. `IProductService` 的 shared scope 只涵蓋查詢與訂單事件
+### 6. `IProductService` 的 shared scope 只涵蓋商品查詢
 
-shared contract 只定義：
+`IProductService` shared contract 只定義：
 
 - published product 查詢
 - 依 product id 解析商品
-- 訂單完成 / 部分取消後的通知
+
+訂單完成 / 部分取消後的通知改由 `IOrderEventDispatcher` 承接。
 
 下列流程不放入 shared contract：
 
@@ -178,11 +179,12 @@ shared contract 只定義：
 1. 先產出 `/docs` 的 Product Phase 1 設計稿。
 2. 產出 `/spec` 與 `/spec/testcases` 的 ProductService 與 order event 規格。
 3. 待 spec 確認後，再調整 `.Abstract`：
-   - `Product`
-   - `IProductService`
-   - `ProductOrderCompletedEvent`
-   - `ProductOrderCancelledEvent`
-   - `ProductOrderLine`
+- `Product`
+- `IProductService`
+- `IOrderEventDispatcher`
+- `OrderCompletedEvent`
+- `OrderCancelledEvent`
+- `OrderProductLine`
 4. 再進入 `.Core` 與 `.API` 的重構：
    - `DefaultProductService`
    - `ProductsController`

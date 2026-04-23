@@ -24,7 +24,7 @@
 3. 載入 cart / buyer / products
 4. 建立並持久化 order
 5. 刪除 checkout transaction
-6. 執行 product callback
+6. 執行 order event dispatch
 7. 更新 fulfillment status
 
 ### Buyer validation
@@ -39,7 +39,7 @@
 
 ### Fulfillment failure
 
-若 `IProductService.HandleOrderCompleted(...)` 失敗：
+若 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)` 失敗：
 
 - order 仍視為已建立成功
 - `FulfillmentStatus` 更新為 `Failed`

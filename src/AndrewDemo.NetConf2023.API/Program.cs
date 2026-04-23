@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.AppleBTS.Extension;
@@ -9,6 +10,7 @@ using AndrewDemo.NetConf2023.API.Configuration;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using AndrewDemo.NetConf2023.Core.Time;
 using DotNetEnv;
@@ -61,6 +63,7 @@ namespace AndrewDemo.NetConf2023.API
             });
 
             builder.Services.AddSingleton<DefaultProductService>();
+            builder.Services.AddSingleton<DefaultOrderEventDispatcher>();
             builder.Services.AddSingleton<IProductService>(sp =>
             {
                 var manifest = sp.GetRequiredService<ShopManifest>();
@@ -69,6 +72,16 @@ namespace AndrewDemo.NetConf2023.API
                 {
                     DefaultProductService.ServiceId => sp.GetRequiredService<DefaultProductService>(),
                     _ => throw new InvalidOperationException($"unsupported product service id: {manifest.ProductServiceId}")
+                };
+            });
+            builder.Services.AddSingleton<IOrderEventDispatcher>(sp =>
+            {
+                var manifest = sp.GetRequiredService<ShopManifest>();
+
+                return manifest.OrderEventDispatcherId switch
+                {
+                    DefaultOrderEventDispatcher.DispatcherId => sp.GetRequiredService<DefaultOrderEventDispatcher>(),
+                    _ => throw new InvalidOperationException($"unsupported order event dispatcher id: {manifest.OrderEventDispatcherId}")
                 };
             });
 

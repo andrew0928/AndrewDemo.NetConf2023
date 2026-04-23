@@ -27,7 +27,7 @@
   - cart / buyer 載入
   - order 建立
   - discount 試算
-  - product callback
+  - order event callback
   - fulfillment status 更新
 
 `.Core` 中反而只有 [WaitingRoomTicket](/Users/andrew/code-work/andrewshop.apidemo/src/AndrewDemo.NetConf2023.Core/Checkout.cs#L7)，沒有真正的 `CheckoutService`。
@@ -84,7 +84,7 @@
 - `CheckoutTransactions`
 - `Orders`
 - `DiscountEngine`
-- `ProductOrderEventFactory`
+- `OrderEventFactory`
 
 ## CheckoutService 建議責任
 
@@ -119,8 +119,8 @@
 - 載入 cart / buyer
 - 建立 order
 - 套用 discount
-- 建立 product event
-- 執行 product callback
+- 建立 order event
+- 執行 order event callback
 - 更新 fulfillment status
 - 回傳 completed result
 
@@ -139,7 +139,7 @@
 
 - `WaitingRoomTicket`
 - `Order` 如何組裝
-- 何時建立 `ProductOrderCompletedEvent`
+- 何時建立 `OrderCompletedEvent`
 - 何時更新 `FulfillmentStatus`
 
 ### Core 不應依賴的事情
@@ -155,7 +155,7 @@
 - create 可建立 transaction
 - complete 可建立 order
 - complete 會套用 discount
-- complete 會觸發 product callback
+- complete 會觸發 order event dispatch
 - callback 失敗時 fulfillment status 仍更新為 `Failed`
 
 但這些測試應以「維持既有行為」為主，不在本輪擴大成 checkout redesign。

@@ -14,9 +14,21 @@
 - When: API 啟動
 - Then: 解析出對應的 `IProductService`
 
-### TC-PR-002 未知 ProductServiceId 啟動失敗
+### TC-PR-002 ShopManifest 可指定 OrderEventDispatcherId
+
+- Given: manifest 內設定 `OrderEventDispatcherId=default-order-event-dispatcher`
+- When: API 啟動
+- Then: 解析出對應的 `IOrderEventDispatcher`
+
+### TC-PR-003 未知 ProductServiceId 啟動失敗
 
 - Given: manifest 內設定未知的 `ProductServiceId`
+- When: API 啟動
+- Then: 啟動階段直接失敗，不可默默 fallback
+
+### TC-PR-004 未知 OrderEventDispatcherId 啟動失敗
+
+- Given: manifest 內設定未知的 `OrderEventDispatcherId`
 - When: API 啟動
 - Then: 啟動階段直接失敗，不可默默 fallback
 
@@ -63,31 +75,31 @@
 - When: 完成 checkout
 - Then: order product lines 需保留 `ProductId`、`ProductName`、`UnitPrice`、`Quantity`、`LineAmount`
 
-### TC-PR-302 discount lines 不得進入 product event
+### TC-PR-302 discount lines 不得進入 order event
 
 - Given: checkout 同時有商品 lines 與 discount lines
-- When: 建立 `ProductOrderCompletedEvent`
+- When: 建立 `OrderCompletedEvent`
 - Then: event payload 只包含商品 lines
 
-### TC-PR-303 order complete 成功後觸發 product completed event
+### TC-PR-303 order complete 成功後觸發 order completed event
 
 - Given: 支付成功且 order 建立成功
 - When: 完成 checkout
-- Then: 建立 `ProductOrderCompletedEvent`
-- And: 呼叫 `IProductService.HandleOrderCompleted(...)`
+- Then: 建立 `OrderCompletedEvent`
+- And: 呼叫 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)`
 
-### TC-PR-304 product callback 失敗不推翻 order complete
+### TC-PR-304 order event callback 失敗不推翻 order complete
 
 - Given: 支付成功且 order 建立成功
-- And: `IProductService.HandleOrderCompleted(...)` 拋出例外
+- And: `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)` 拋出例外
 - When: 完成 checkout
 - Then: order 仍視為完成
 - And: fulfillment status 為 `Failed`
 
-### TC-PR-305 product callback 成功時 fulfillment status 為 Succeeded
+### TC-PR-305 order event callback 成功時 fulfillment status 為 Succeeded
 
 - Given: 支付成功且 order 建立成功
-- And: `IProductService.HandleOrderCompleted(...)` 成功
+- And: `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)` 成功
 - When: 完成 checkout
 - Then: fulfillment status 為 `Succeeded`
 
@@ -97,7 +109,7 @@
 
 - Given: 一張 order 內有多筆商品
 - When: 取消其中部分商品
-- Then: 建立 `ProductOrderCancelledEvent`
+- Then: 建立 `OrderCancelledEvent`
 - And: `AffectedLines` 只包含被取消的商品 lines
 
 ### TC-PR-402 全單取消是 affected lines 全部命中

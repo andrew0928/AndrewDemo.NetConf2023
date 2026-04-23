@@ -70,6 +70,8 @@
       "default": {
         "ShopId": "default",
         "DatabaseFilePath": "shop-database.db",
+        "ProductServiceId": "default-product-service",
+        "OrderEventDispatcherId": "default-order-event-dispatcher",
         "EnabledDiscountRuleIds": [
           "product-1-second-item-40-off"
         ]
@@ -83,6 +85,8 @@
 
 - `ShopId`: 商店識別碼，必填
 - `DatabaseFilePath`: 該商店使用的資料庫檔路徑，必填
+- `ProductServiceId`: product query 邊界的 handler id，必填
+- `OrderEventDispatcherId`: order side-effect 邊界的 dispatcher id，必填
 - `EnabledDiscountRuleIds`: 啟用的 discount rule id 清單，可為空
 
 ### 行為要求

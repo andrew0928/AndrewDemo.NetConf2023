@@ -2,9 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using AndrewDemo.NetConf2023.Core.Time;
 
@@ -14,14 +16,16 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
     {
         private readonly IShopDatabaseContext _database;
         private readonly DiscountEngine _discountEngine;
+        private readonly IOrderEventDispatcher _orderEventDispatcher;
         private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
         private readonly TimeProvider _timeProvider;
 
-        public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
+        public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine, IOrderEventDispatcher orderEventDispatcher, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
         {
             _database = database;
             _discountEngine = discountEngine;
+            _orderEventDispatcher = orderEventDispatcher;
             _productService = productService;
             _shopManifest = shopManifest;
             _timeProvider = timeProvider;
@@ -187,13 +191,13 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
 
             try
             {
-                var productEvent = ProductOrderEventFactory.CreateCompletedEvent(_shopManifest, order, completedAt);
-                _productService.HandleOrderCompleted(productEvent);
+                var orderEvent = OrderEventFactory.CreateCompletedEvent(_shopManifest, order, completedAt);
+                _orderEventDispatcher.Dispatch(orderEvent);
                 order.FulfillmentStatus = OrderFulfillmentStatus.Succeeded;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[checkout] product fulfillment failed for order {order.Id}: {ex}");
+                Console.WriteLine($"[checkout] order event dispatch failed for order {order.Id}: {ex}");
                 order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
             }
 

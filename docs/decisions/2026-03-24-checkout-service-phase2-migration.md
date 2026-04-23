@@ -23,7 +23,7 @@
 - cart / buyer 載入
 - order 建立
 - discount 試算
-- product callback
+- order event callback
 - fulfillment status 更新
 
 反而 `.Core` 的 [Checkout.cs](/Users/andrew/code-work/andrewshop.apidemo/src/AndrewDemo.NetConf2023.Core/Checkout.cs#L7) 目前只有 `WaitingRoomTicket`，沒有真正的 checkout service。
