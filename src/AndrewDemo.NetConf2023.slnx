@@ -10,6 +10,7 @@
   </Folder>
   <Project Path="../tests/AndrewDemo.NetConf2023.Core.Tests/AndrewDemo.NetConf2023.Core.Tests.csproj" />
   <Project Path="../tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests.csproj" />
+  <Project Path="../tests/AndrewDemo.NetConf2023.PetShop.Extension.Tests/AndrewDemo.NetConf2023.PetShop.Extension.Tests.csproj" />
   <Project Path="AndrewDemo.NetConf2023.Abstract/AndrewDemo.NetConf2023.Abstract.csproj" />
   <Project Path="AndrewDemo.NetConf2023.API/AndrewDemo.NetConf2023.API.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.API/AndrewDemo.NetConf2023.AppleBTS.API.csproj" />
@@ -17,6 +18,7 @@
   <Project Path="AndrewDemo.NetConf2023.Core/AndrewDemo.NetConf2023.Core.csproj" />
   <Project Path="AndrewDemo.NetConf2023.DatabaseInit/AndrewDemo.NetConf2023.DatabaseInit.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.Extension/AndrewDemo.NetConf2023.AppleBTS.Extension.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.PetShop.Extension/AndrewDemo.NetConf2023.PetShop.Extension.csproj" />
   <Project Path="AndrewDemo.NetConf2023.Storefront.Shared/AndrewDemo.NetConf2023.Storefront.Shared.csproj" />
   <Project Path="AndrewDemo.NetConf2023.CommonStorefront/AndrewDemo.NetConf2023.CommonStorefront.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.Storefront/AndrewDemo.NetConf2023.AppleBTS.Storefront.csproj" />

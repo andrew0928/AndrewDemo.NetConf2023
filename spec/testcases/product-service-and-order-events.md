@@ -40,15 +40,15 @@
 - When: 呼叫 `GetPublishedProducts`
 - Then: 回傳所有 published products
 
-### TC-PR-102 hidden dynamic product 不出現在列表
+### TC-PR-102 hidden product 不出現在列表
 
-- Given: store 內有一筆 `IsPublished = false` 的 dynamic product
+- Given: store 內有一筆 `IsPublished = false` 的 hidden product
 - When: 呼叫 `GetPublishedProducts`
 - Then: 該商品不得出現在列表中
 
-### TC-PR-103 hidden dynamic product 可由 id 解析
+### TC-PR-103 hidden product 可由 id 解析
 
-- Given: store 內有一筆 `IsPublished = false` 的 dynamic product
+- Given: store 內有一筆 `IsPublished = false` 的 hidden product
 - When: 呼叫 `GetProductById(productId)`
 - Then: 可成功取得該商品
 

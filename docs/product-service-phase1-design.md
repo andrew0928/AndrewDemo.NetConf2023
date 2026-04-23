@@ -85,7 +85,7 @@ shared `Product` 只保留主系統需要的固定欄位：
 這代表：
 
 - published product 可以被 `/api/products` 列出
-- unpublished dynamic product 不會出現在列表，但仍可被 `GetProductById` 解析
+- unpublished hidden product 不會出現在列表，但仍可被 `GetProductById` 解析
 
 ### OrderProductLine
 
@@ -146,12 +146,12 @@ Phase 1 只建議放 2 類能力：
 
 1. `ProductsController` 呼叫 `IProductService.GetPublishedProducts()`
 2. 回傳 `IsPublished = true` 的 products
-3. hidden / dynamic product 不出現在列表中
+3. hidden product 不出現在列表中
 
-### 2. 動態商品加入購物車
+### 2. hidden product 加入購物車
 
 1. shop 自己的流程先完成 reservation 或其他前置整合
-2. custom `IProductService` 內部建立 dynamic product record，取得 `ProductId`
+2. custom flow 建立或選定一筆 hidden product，取得 `ProductId`
 3. 外部流程把這個 `ProductId` 加入 cart
 4. `CartsController` 加入購物車前，用 `IProductService.GetProductById(productId)` 驗證商品存在
 
