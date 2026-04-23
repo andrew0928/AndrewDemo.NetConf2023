@@ -122,34 +122,34 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             return product;
         }
 
-        public bool ConfirmFromOrder(int orderId, string productId, DateTime confirmedAt)
+        public PetShopReservationConfirmationResult ConfirmFromOrder(int orderId, string productId, DateTime confirmedAt)
         {
             if (string.IsNullOrWhiteSpace(productId))
             {
-                return false;
+                return PetShopReservationConfirmationResult.NotApplicable();
             }
 
             var reservation = _repository.FindReservationByProductId(productId);
             if (reservation == null)
             {
-                return false;
+                return PetShopReservationConfirmationResult.NotApplicable();
             }
 
             if (reservation.Status == PetShopReservationStatus.Confirmed
                 && reservation.ConfirmedOrderId == orderId)
             {
-                return true;
+                return PetShopReservationConfirmationResult.AlreadyConfirmed(reservation);
             }
 
             if (reservation.Status != PetShopReservationStatus.Holding)
             {
-                return false;
+                return PetShopReservationConfirmationResult.NotApplicable();
             }
 
             if (reservation.HoldExpiresAt <= confirmedAt)
             {
                 ExpireHold(reservation, confirmedAt);
-                return false;
+                return PetShopReservationConfirmationResult.NotApplicable();
             }
 
             reservation.Status = PetShopReservationStatus.Confirmed;
@@ -158,7 +158,7 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
 
             _repository.UpdateReservation(reservation);
 
-            return true;
+            return PetShopReservationConfirmationResult.Confirmed(reservation);
         }
 
         private void ExpireHold(PetShopReservationRecord reservation, DateTime expiredAt)

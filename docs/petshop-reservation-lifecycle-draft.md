@@ -41,7 +41,7 @@ C4Context
     Rel(customer, petshop, "建立 hold / 查詢 reservation")
     Rel(customer, coreShop, "加入 cart / checkout")
     Rel(coreShop, petshop, "IProductService.GetProductById / IOrderEventDispatcher.Dispatch")
-    Rel(petshop, notification, "後續通知 confirmed reservation", "deferred")
+    Rel(petshop, notification, "PoC console log；正式通知 channel deferred")
     Rel(notification, staff, "通知已預約", "deferred")
 ```
 
@@ -116,7 +116,7 @@ classDiagram
         +CreateHold(request) PetShopReservationHoldResult
         +CancelHold(reservationId, cancelledAt) bool
         +ApplyReservationProductPolicy(product, evaluatedAt) Product?
-        +ConfirmFromOrder(orderId, productId, confirmedAt) bool
+        +ConfirmFromOrder(orderId, productId, confirmedAt) PetShopReservationConfirmationResult
     }
 
     class PetShopReservationRepository {
@@ -232,6 +232,7 @@ sequenceDiagram
     alt holding and not expired
         ReservationService->>Repo: UpdateReservation(Confirmed)
         ReservationService-->>Dispatcher: true
+        Dispatcher->>Dispatcher: Console.WriteLine(PoC notification)
     else duplicate same order
         ReservationService-->>Dispatcher: true
     else invalid / expired
@@ -343,7 +344,7 @@ P1A 採 concrete-first。PetShop extension 內部不先建立 `IPetShopIdGenerat
 - `CancelHold(reservationId, cancelledAt)`: checkout 前取消 `Holding` reservation，轉為 `Cancelled`。
 - `ApplyReservationProductPolicy(product, now)`: 依 reservation status 決定 hidden product 是否可被 cart / checkout 解析。
 - `ExpireHold(reservationId, now)`: 將 `Holding` 改為 `Expired`。
-- `ConfirmFromOrder(orderId, productId, confirmedAt)`: 由 order event 觸發，將 `Holding` 改為 `Confirmed`，並寫入 `OrderId`。
+- `ConfirmFromOrder(orderId, productId, confirmedAt)`: 由 order event 觸發，將 `Holding` 改為 `Confirmed`，寫入 `OrderId`，並回傳 confirmation result 供 dispatcher 判斷是否要輸出 PoC notification log。
 
 `CreateHold` 成功後才會建立 hidden `Product`。`Expired` / `Cancelled` / `Confirmed` 後，hidden product record 保留但不可解析，物理清理可留給後續 maintenance job，避免舊 cart line、稽核與 order event retry 找不到對應紀錄。
 
@@ -380,18 +381,19 @@ P1A 採 concrete-first。PetShop extension 內部不先建立 `IPetShopIdGenerat
 第一版行為：
 
 - `Dispatch(OrderCompletedEvent)`: 逐筆檢查 order line 的 `ProductId`，找到 PetShop reservation product 後呼叫 `ConfirmFromOrder(...)`。
+- reservation 新轉為 `Confirmed` 時，PoC 先輸出一行 console log，代表通知服務人員與消費者。
 - 非 PetShop reservation product line 應忽略，不應造成整張訂單 dispatch 失敗。
 - 重複處理同一 order event 必須 idempotent。
 - `Dispatch(OrderCancelledEvent)`: P1A 先保留 no-op 或記錄；checkout 後取消交易屬於後續延伸需求。
 
-checkout 成功後，reservation 只透過 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)` 回頭轉為 `Confirmed`。若 dispatcher 失敗，既有 checkout 語意是不 rollback order；reservation 會停留在 `Holding` 或後續過期，需由後續 retry / 補償設計處理。
+checkout 成功後，reservation 只透過 `IOrderEventDispatcher.Dispatch(OrderCompletedEvent)` 回頭轉為 `Confirmed`。若 dispatcher 失敗，既有 checkout 語意是不 rollback order；reservation 會停留在 `Holding` 或後續過期，需由後續 retry / 補償設計處理。正式通知可靠度仍是後續需求；目前只有 console log side effect。
 
 ## 第一版風險與後續決策點
 
 - `.Core` 目前不做 buyer-aware product validation；PetShop API / Storefront 必須確保 hidden product id 只回傳給 reservation owner。
 - `.Core` 目前不限制 quantity；PetShop reservation product 第一版應在 P1B 決定是否透過 API / UI 限制 cart quantity，或另開 `.Core` validation hook。
 - lazy expiration 足以支持第一版 demo，但若多 instance / 高併發成為目標，應引入 storage-native unique constraint 或 slot lock record。
-- discount 延後到 M4-P4；屆時需要決定 discount rule 如何辨識 reservation service line。
+- discount 已在 M4-P4 以 `PetShopReservationPurchaseThresholdDiscountRule` 處理；reservation line 只作為資格條件，滿額門檻看一般商品金額。
 - checkout 後取消交易先略過，作為未來延伸需求；現階段 `Dispatch(OrderCancelledEvent)` 不改 reservation 狀態。
 
 ## 情境決策表

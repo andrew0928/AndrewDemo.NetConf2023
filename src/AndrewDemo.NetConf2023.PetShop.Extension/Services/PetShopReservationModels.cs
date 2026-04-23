@@ -1,3 +1,5 @@
+using AndrewDemo.NetConf2023.PetShop.Extension.Records;
+
 namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
 {
     public sealed class CreatePetShopReservationHoldRequest
@@ -38,6 +40,49 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             {
                 Succeeded = false,
                 ErrorCode = errorCode
+            };
+        }
+    }
+
+    public sealed class PetShopReservationConfirmationResult
+    {
+        public bool IsConfirmedNow { get; init; }
+        public bool IsAlreadyConfirmed { get; init; }
+        public string ReservationId { get; init; } = string.Empty;
+        public string ProductId { get; init; } = string.Empty;
+        public int BuyerMemberId { get; init; }
+        public string StaffId { get; init; } = string.Empty;
+
+        public static PetShopReservationConfirmationResult NotApplicable()
+        {
+            return new PetShopReservationConfirmationResult();
+        }
+
+        public static PetShopReservationConfirmationResult Confirmed(PetShopReservationRecord reservation)
+        {
+            ArgumentNullException.ThrowIfNull(reservation);
+
+            return new PetShopReservationConfirmationResult
+            {
+                IsConfirmedNow = true,
+                ReservationId = reservation.ReservationId,
+                ProductId = reservation.ProductId,
+                BuyerMemberId = reservation.BuyerMemberId,
+                StaffId = reservation.StaffId
+            };
+        }
+
+        public static PetShopReservationConfirmationResult AlreadyConfirmed(PetShopReservationRecord reservation)
+        {
+            ArgumentNullException.ThrowIfNull(reservation);
+
+            return new PetShopReservationConfirmationResult
+            {
+                IsAlreadyConfirmed = true,
+                ReservationId = reservation.ReservationId,
+                ProductId = reservation.ProductId,
+                BuyerMemberId = reservation.BuyerMemberId,
+                StaffId = reservation.StaffId
             };
         }
     }

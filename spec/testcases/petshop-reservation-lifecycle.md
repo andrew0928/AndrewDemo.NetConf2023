@@ -144,6 +144,7 @@
 - Then: `res-001` 變成 `Confirmed`
 - And: `res-001.ConfirmedOrderId = 9001`
 - And: product record 保留但 `GetProductById` 回傳 `null`
+- And: 輸出一行 PoC console log，代表通知服務人員與消費者
 
 狀態異動：
 
@@ -152,7 +153,7 @@
 | 1 | `2026-05-01T01:00:00Z` | `CreateHoldCommitted` | `res-001: 無 -> Holding` | `pet-rsv-prod-001: 無 -> Hidden` | `GetProductById -> Product` | hold 建立成功。 |
 | 2 | `2026-05-01T01:12:00Z` | `CheckoutProductLookup` | `res-001: Holding -> Holding` | `pet-rsv-prod-001: Hidden -> Hidden` | `GetProductById -> Product` | `GetProductById` 回傳 `Product` snapshot。 |
 | 3 | `2026-05-01T01:12:00Z` | `OrderCreated` | `res-001: Holding -> Holding` | `pet-rsv-prod-001: Hidden -> Hidden` | `GetProductById -> Product` | `.Core` 建立 `OrderId = 9001`。 |
-| 4 | `2026-05-01T01:12:00Z` | `OrderCompletedDispatched` | `res-001: Holding -> Confirmed` | `pet-rsv-prod-001: Hidden -> Hidden` | `GetProductById -> null` | `ConfirmedOrderId = 9001`。 |
+| 4 | `2026-05-01T01:12:00Z` | `OrderCompletedDispatched` | `res-001: Holding -> Confirmed` | `pet-rsv-prod-001: Hidden -> Hidden` | `GetProductById -> null` | `ConfirmedOrderId = 9001`，並輸出 PoC notification log。 |
 
 ### TC-PET-RSV-006 歷史 Expired / Cancelled 不阻擋重新預約
 
@@ -181,6 +182,7 @@
 - When: 再次收到同一筆 `OrderCompletedEvent(OrderId=9001, ProductId=pet-rsv-prod-001)`
 - Then: reservation 狀態保持不變
 - And: 不建立第二筆 confirmation side effect
+- And: 不重複輸出 notification log
 - And: `GetProductById` 維持回傳 `null`
 
 狀態異動：

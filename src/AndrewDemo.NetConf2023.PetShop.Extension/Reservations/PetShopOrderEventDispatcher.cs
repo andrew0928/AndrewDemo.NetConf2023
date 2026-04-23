@@ -18,7 +18,14 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Reservations
 
             foreach (var line in orderEvent.Lines)
             {
-                _reservationService.ConfirmFromOrder(orderEvent.OrderId, line.ProductId, orderEvent.CompletedAt);
+                var result = _reservationService.ConfirmFromOrder(orderEvent.OrderId, line.ProductId, orderEvent.CompletedAt);
+                if (!result.IsConfirmedNow)
+                {
+                    continue;
+                }
+
+                Console.WriteLine(
+                    $"[PetShop] reservation confirmed; notify staff and customer. orderId={orderEvent.OrderId}; reservationId={result.ReservationId}; productId={result.ProductId}; staffId={result.StaffId}; buyerMemberId={result.BuyerMemberId}");
             }
         }
 

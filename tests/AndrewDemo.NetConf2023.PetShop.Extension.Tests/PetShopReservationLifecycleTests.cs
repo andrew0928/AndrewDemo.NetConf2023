@@ -113,31 +113,45 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Tests
             Assert.NotNull(product);
 
             var dispatcher = new PetShopOrderEventDispatcher(fixture.Service);
-            dispatcher.Dispatch(new OrderCompletedEvent
+            using var consoleOutput = new StringWriter();
+            var originalOutput = Console.Out;
+
+            try
             {
-                OrderId = 9001,
-                ShopId = "petshop",
-                BuyerId = 101,
-                BuyerName = "buyer-101",
-                CompletedAt = HoldRequestedAt.AddMinutes(12),
-                Lines = new[]
+                Console.SetOut(consoleOutput);
+                dispatcher.Dispatch(new OrderCompletedEvent
                 {
-                    new OrderProductLine
+                    OrderId = 9001,
+                    ShopId = "petshop",
+                    BuyerId = 101,
+                    BuyerName = "buyer-101",
+                    CompletedAt = HoldRequestedAt.AddMinutes(12),
+                    Lines = new[]
                     {
-                        ProductId = hold.ProductId,
-                        ProductName = product!.Name,
-                        UnitPrice = product.Price,
-                        Quantity = 1,
-                        LineAmount = product.Price
+                        new OrderProductLine
+                        {
+                            ProductId = hold.ProductId,
+                            ProductName = product!.Name,
+                            UnitPrice = product.Price,
+                            Quantity = 1,
+                            LineAmount = product.Price
+                        }
                     }
-                }
-            });
+                });
+            }
+            finally
+            {
+                Console.SetOut(originalOutput);
+            }
 
             var reservation = fixture.Repository.FindReservation(hold.ReservationId);
 
             Assert.Equal(PetShopReservationStatus.Confirmed, reservation!.Status);
             Assert.Equal(9001, reservation.ConfirmedOrderId);
             Assert.Null(fixture.LookupProduct(hold.ProductId, HoldRequestedAt.AddMinutes(13)));
+            Assert.Contains("notify staff and customer", consoleOutput.ToString(), StringComparison.Ordinal);
+            Assert.Contains("staffId=staff-amy", consoleOutput.ToString(), StringComparison.Ordinal);
+            Assert.Contains("buyerMemberId=101", consoleOutput.ToString(), StringComparison.Ordinal);
         }
 
         [Fact]
@@ -190,14 +204,28 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Tests
                 }
             };
 
-            dispatcher.Dispatch(orderEvent);
-            dispatcher.Dispatch(orderEvent);
+            using var consoleOutput = new StringWriter();
+            var originalOutput = Console.Out;
+
+            try
+            {
+                Console.SetOut(consoleOutput);
+                dispatcher.Dispatch(orderEvent);
+                dispatcher.Dispatch(orderEvent);
+            }
+            finally
+            {
+                Console.SetOut(originalOutput);
+            }
 
             var reservation = fixture.Repository.FindReservation(hold.ReservationId);
 
             Assert.Equal(PetShopReservationStatus.Confirmed, reservation!.Status);
             Assert.Equal(9001, reservation.ConfirmedOrderId);
             Assert.Null(fixture.LookupProduct(hold.ProductId, HoldRequestedAt.AddMinutes(13)));
+            Assert.Single(consoleOutput
+                .ToString()
+                .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries));
         }
 
         private static PetShopFixture CreateFixture()

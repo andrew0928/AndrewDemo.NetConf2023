@@ -4,6 +4,7 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension
     {
         public const string ProductServiceId = "petshop-product-service";
         public const string OrderEventDispatcherId = "petshop-order-event-dispatcher";
+        public const string ReservationPurchaseThresholdDiscountRuleId = "petshop-reservation-purchase-threshold-discount";
         public const string ReservationsCollectionName = "petshop_reservations";
     }
 }
