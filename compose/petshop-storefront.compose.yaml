@@ -53,13 +53,17 @@ services:
   petshop-storefront:
     build:
       context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.CommonStorefront/Dockerfile
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.Storefront/Dockerfile
     image: andrewdemo-netconf2023-petshop-storefront:local
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://petshop-api:8080
       - Storefront__CoreApi__PublicApiBaseUrl=
       - Storefront__CoreApi__OAuthClientId=andrewshop-petshop-storefront
+      - Storefront__PetShopApi__BaseUrl=http://petshop-reservationapi:8080
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     depends_on:
       - petshop-api
       - petshop-reservationapi

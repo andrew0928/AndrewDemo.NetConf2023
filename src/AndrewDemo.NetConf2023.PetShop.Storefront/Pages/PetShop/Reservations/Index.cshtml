@@ -1,0 +1,46 @@
+@page "/petshop/reservations"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.PetShop.Reservations.IndexModel
+@{
+    ViewData["Title"] = "我的預約";
+}
+<section>
+    <h1 class="page-heading">我的預約</h1>
+    <p class="hint-text">這裡列出目前帳號建立的美容預約與 hold 狀態。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (!Model.Reservations.Any())
+{
+    <section class="panel">
+        <p>目前沒有預約紀錄。</p>
+        <p><a class="button button--primary" href="/petshop/reservations/new">建立新預約</a></p>
+    </section>
+}
+else
+{
+    <section class="product-grid" aria-label="我的預約清單">
+        @foreach (var reservation in Model.Reservations)
+        {
+            <article class="product-card">
+                <h2 class="product-card__title"><a href="/petshop/reservations/@reservation.ReservationId">@reservation.ServiceName</a></h2>
+                <p><strong>狀態：</strong>@Model.DisplayStatus(reservation.Status)</p>
+                <p><strong>時間：</strong>@Model.FormatDateTime(reservation.StartAt)</p>
+                <p><strong>場地：</strong>@reservation.VenueId</p>
+                <p><strong>服務人員：</strong>@reservation.StaffId</p>
+                <p><strong>價格：</strong>NT$ @reservation.Price</p>
+                <div class="page-actions">
+                    <a class="button button--secondary" href="/petshop/reservations/@reservation.ReservationId">查看預約</a>
+                </div>
+            </article>
+        }
+    </section>
+}
+
+<div class="page-actions">
+    <a class="button button--primary" href="/petshop/reservations/new">建立新預約</a>
+    <a class="button button--secondary" href="/petshop">返回美容服務</a>
+</div>

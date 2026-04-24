@@ -1,0 +1,54 @@
+@page "/cart"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.CartModel
+@{
+    ViewData["Title"] = "購物車";
+}
+<section>
+    <h1 class="page-heading">購物車</h1>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (!Model.Lines.Any())
+{
+    <section class="panel">
+        <p>目前購物車是空的。</p>
+        <p><a class="button button--secondary" href="/products">前往商品列表</a></p>
+    </section>
+}
+else
+{
+    <ul class="cart-lines">
+        @foreach (var line in Model.Lines)
+        {
+            <li>
+                <h2>@line.ProductName</h2>
+                <p class="cart-line__meta">商品代碼：@line.ProductId</p>
+                @if (!string.IsNullOrWhiteSpace(line.ParentLineId))
+                {
+                    <p class="cart-line__meta">附屬於商品 line：@line.ParentLineId</p>
+                }
+                <p>單價：NT$ @line.UnitPrice</p>
+                <p>數量：@line.Quantity</p>
+                <p>小計：NT$ @line.LineAmount</p>
+                <form method="post" asp-page-handler="RemoveLine">
+                    <input type="hidden" name="lineId" value="@line.LineId" />
+                    <div class="page-actions">
+                        <button class="button button--secondary" type="submit">刪除此項</button>
+                    </div>
+                </form>
+            </li>
+        }
+    </ul>
+
+    <partial name="_PriceSummary" model="Model.PriceSummary" />
+
+    <div class="page-actions">
+        <a class="button button--primary" href="/checkout">前往結帳</a>
+        <a class="button button--secondary" href="/products">繼續購物</a>
+        <a class="button button--secondary" href="/petshop">預約美容服務</a>
+    </div>
+}

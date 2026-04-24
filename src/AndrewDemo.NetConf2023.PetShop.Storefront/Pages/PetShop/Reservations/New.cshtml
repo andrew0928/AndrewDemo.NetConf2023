@@ -1,0 +1,96 @@
+@page "/petshop/reservations/new"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.PetShop.Reservations.NewModel
+@{
+    ViewData["Title"] = "建立美容預約";
+}
+<section>
+    <h1 class="page-heading">建立美容預約</h1>
+    <p class="hint-text">請先選擇服務與日期，再選擇可用的時間、場地與服務人員。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+<section class="panel">
+    <h2>查詢可預約時段</h2>
+    <form method="get">
+        <div class="field">
+            <label for="serviceId">美容服務</label>
+            <select id="serviceId" name="serviceId">
+                <option value="">請選擇服務</option>
+                @foreach (var service in Model.Services)
+                {
+                    if (service.ServiceId == Model.ServiceId)
+                    {
+                        <option value="@service.ServiceId" selected>
+                            @service.Name - NT$ @service.Price / @service.DurationMinutes 分鐘
+                        </option>
+                    }
+                    else
+                    {
+                        <option value="@service.ServiceId">
+                            @service.Name - NT$ @service.Price / @service.DurationMinutes 分鐘
+                        </option>
+                    }
+                }
+            </select>
+        </div>
+        <div class="field">
+            <label for="date">預約日期</label>
+            <input id="date" name="date" type="date" value="@Model.Date" />
+        </div>
+        <div class="page-actions">
+            <button class="button button--secondary" type="submit">查詢可用時段</button>
+            <a class="button button--secondary" href="/petshop">返回服務目錄</a>
+        </div>
+    </form>
+</section>
+
+@if (Model.SelectedService != null)
+{
+    <section class="panel">
+        <h2>@Model.SelectedService.Name</h2>
+        @if (!string.IsNullOrWhiteSpace(Model.SelectedService.Description))
+        {
+            <p>@Model.SelectedService.Description</p>
+        }
+        <p><strong>價格：</strong>NT$ @Model.SelectedService.Price</p>
+        <p><strong>服務時間：</strong>@Model.SelectedService.DurationMinutes 分鐘</p>
+    </section>
+}
+
+@if (Model.ShouldShowSlots)
+{
+    if (!Model.AvailabilitySlots.Any())
+    {
+        <section class="panel">
+            <p>這個日期目前沒有可預約的時段。</p>
+        </section>
+    }
+    else
+    {
+        <section class="product-grid" aria-label="可預約時段">
+            @foreach (var slot in Model.AvailabilitySlots)
+            {
+                <article class="product-card">
+                    <h2 class="product-card__title">@Model.FormatDateTime(slot.StartAt)</h2>
+                    <p><strong>結束時間：</strong>@Model.FormatDateTime(slot.EndAt)</p>
+                    <p><strong>場地：</strong>@(slot.VenueName ?? slot.VenueId)</p>
+                    <p><strong>服務人員：</strong>@(slot.StaffName ?? slot.StaffId)</p>
+                    <form method="post" asp-page-handler="CreateHold">
+                        <input type="hidden" name="serviceId" value="@slot.ServiceId" />
+                        <input type="hidden" name="date" value="@Model.Date" />
+                        <input type="hidden" name="startAt" value="@slot.StartAt.ToString("O")" />
+                        <input type="hidden" name="venueId" value="@slot.VenueId" />
+                        <input type="hidden" name="staffId" value="@slot.StaffId" />
+                        <div class="page-actions">
+                            <button class="button button--primary" type="submit">保留這個時段</button>
+                        </div>
+                    </form>
+                </article>
+            }
+        </section>
+    }
+}

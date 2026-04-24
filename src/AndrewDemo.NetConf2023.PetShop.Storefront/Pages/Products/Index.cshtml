@@ -1,0 +1,40 @@
+@page "/products"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "商品列表";
+}
+<section>
+    <h1 class="page-heading">商品列表</h1>
+    <p class="hint-text">這裡顯示標準商品。美容預約請前往寵物美容預約專區。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (!Model.Products.Any())
+{
+    <section class="panel">
+        <p>目前沒有可瀏覽的商品。</p>
+    </section>
+}
+else
+{
+    <section class="product-grid" aria-label="商品列表">
+        @foreach (var product in Model.Products)
+        {
+            <article class="product-card">
+                <h2 class="product-card__title"><a href="/products/@product.Id">@product.Name</a></h2>
+                @if (!string.IsNullOrWhiteSpace(product.Description))
+                {
+                    <p>@product.Description</p>
+                }
+                <p class="product-card__price">NT$ @product.Price</p>
+                <div class="page-actions">
+                    <a class="button button--secondary" href="/products/@product.Id">查看商品</a>
+                </div>
+            </article>
+        }
+    </section>
+}

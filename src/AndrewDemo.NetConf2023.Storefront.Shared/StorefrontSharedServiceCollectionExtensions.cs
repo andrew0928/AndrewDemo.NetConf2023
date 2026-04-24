@@ -1,6 +1,7 @@
 using AndrewDemo.NetConf2023.Storefront.Shared.Authentication;
 using AndrewDemo.NetConf2023.Storefront.Shared.Clients;
 using AndrewDemo.NetConf2023.Storefront.Shared.Configuration;
+using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,6 +15,8 @@ public static class StorefrontSharedServiceCollectionExtensions
     {
         services.Configure<StorefrontSessionOptions>(configuration.GetSection(StorefrontSessionOptions.SectionName));
         services.Configure<CoreApiOptions>(configuration.GetSection(CoreApiOptions.SectionName));
+        services.Configure<TimeOptions>(configuration.GetSection(TimeOptions.SectionName));
+        services.AddConfiguredTimeProvider(sp => sp.GetRequiredService<IOptions<TimeOptions>>().Value);
         services.AddHttpContextAccessor();
         services.AddDistributedMemoryCache();
         services.AddSession(options =>

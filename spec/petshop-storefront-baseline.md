@@ -2,8 +2,8 @@
 
 ## 狀態
 
-- phase: M4-P3A
-- status: proposed-for-review
+- phase: M4-P3
+- status: accepted; implemented; browser-smoke-passed
 - 日期：2026-04-24
 
 ## 範圍

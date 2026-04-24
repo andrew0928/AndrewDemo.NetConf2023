@@ -1,0 +1,40 @@
+@page "/member"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.Member.IndexModel
+@{
+    ViewData["Title"] = "會員資料";
+}
+<section>
+    <h1 class="page-heading">會員資料</h1>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+else if (Model.Member != null)
+{
+    <section class="panel">
+        <dl class="summary-list">
+            <div class="summary-list__row">
+                <dt>會員編號</dt>
+                <dd>@Model.Member.Id</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>名稱</dt>
+                <dd>@Model.Member.Name</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>商店註記</dt>
+                <dd>@(string.IsNullOrWhiteSpace(Model.Member.ShopNotes) ? "無" : Model.Member.ShopNotes)</dd>
+            </div>
+        </dl>
+    </section>
+
+    <section class="panel">
+        <h2>PetShop 預約</h2>
+        <p>查看美容預約狀態，包含「預約確認中」與結帳後的「已預約」。</p>
+        <div class="page-actions">
+            <a class="button button--secondary" href="/petshop/reservations">查看我的預約</a>
+        </div>
+    </section>
+}

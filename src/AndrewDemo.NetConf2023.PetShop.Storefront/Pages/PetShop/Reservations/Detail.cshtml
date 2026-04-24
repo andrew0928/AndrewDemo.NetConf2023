@@ -1,0 +1,94 @@
+@page "/petshop/reservations/{id}"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.PetShop.Reservations.DetailModel
+@{
+    ViewData["Title"] = "預約明細";
+}
+<section>
+    <h1 class="page-heading">預約明細</h1>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (Model.Reservation == null)
+{
+    <section class="panel">
+        <p>找不到指定的預約，或你沒有權限查看。</p>
+        <p><a class="button button--secondary" href="/petshop/reservations">返回我的預約</a></p>
+    </section>
+}
+else
+{
+    <section class="panel">
+        <h2>@Model.Reservation.ServiceName</h2>
+        <dl class="summary-list">
+            <div class="summary-list__row">
+                <dt>狀態</dt>
+                <dd>@Model.DisplayStatus(Model.Reservation.Status)</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>預約時間</dt>
+                <dd>@Model.FormatDateTime(Model.Reservation.StartAt) - @Model.FormatDateTime(Model.Reservation.EndAt)</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>場地</dt>
+                <dd>@Model.Reservation.VenueId</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>服務人員</dt>
+                <dd>@Model.Reservation.StaffId</dd>
+            </div>
+            <div class="summary-list__row">
+                <dt>價格</dt>
+                <dd>NT$ @Model.Reservation.Price</dd>
+            </div>
+            @if (Model.Reservation.Status == "holding")
+            {
+                <div class="summary-list__row">
+                    <dt>保留到期</dt>
+                    <dd>@Model.FormatDateTime(Model.Reservation.HoldExpiresAt)</dd>
+                </div>
+            }
+            @if (Model.Reservation.ConfirmedOrderId != null)
+            {
+                <div class="summary-list__row">
+                    <dt>訂單編號</dt>
+                    <dd>@Model.Reservation.ConfirmedOrderId</dd>
+                </div>
+            }
+        </dl>
+    </section>
+
+    @if (Model.Reservation.Status == "holding")
+    {
+        <section class="panel">
+            <h2>下一步</h2>
+            <p>這筆預約目前為「預約確認中」。加入購物車並完成結帳後，才會正式標記為「已預約」。</p>
+            <div class="page-actions">
+                @if (!string.IsNullOrWhiteSpace(Model.Reservation.CheckoutProductId))
+                {
+                    <form method="post" asp-page-handler="AddToCart">
+                        <button class="button button--primary" type="submit">加入購物車</button>
+                    </form>
+                }
+                <form method="post" asp-page-handler="CancelHold">
+                    <button class="button button--secondary" type="submit">取消預約保留</button>
+                </form>
+            </div>
+        </section>
+    }
+    else if (Model.Reservation.Status == "confirmed")
+    {
+        <section class="panel">
+            <h2>已完成預約</h2>
+            <p>這筆美容服務已完成結帳並正式預約。</p>
+        </section>
+    }
+
+    <div class="page-actions">
+        <a class="button button--secondary" href="/petshop/reservations">返回我的預約</a>
+        <a class="button button--secondary" href="/petshop">返回美容服務</a>
+    </div>
+}

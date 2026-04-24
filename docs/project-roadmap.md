@@ -672,7 +672,7 @@ API spec draft：
 
 目標：在已確認 API 與 domain flow 後，再實作 PetShop storefront。
 
-狀態：進行中。
+狀態：完成。
 最後記錄：2026-04-24。
 
 預期範圍：
@@ -720,7 +720,8 @@ API spec draft：
 
 #### M4-P3B Reservation Flow Pages
 
-狀態：未開始。
+狀態：完成。
+最後記錄：2026-04-24。
 
 目標：實作使用者建立美容預約、加入購物車、取消 checkout 前 hold 的主要頁面。
 
@@ -742,9 +743,20 @@ API spec draft：
 - checkout 前可取消 hold，取消後不可再加入 cart。
 - cart / checkout 仍使用標準 storefront 頁面與標準 `.API`。
 
+完成內容：
+
+- `/petshop` 顯示 PetShop 美容服務目錄，並提供建立預約與我的預約入口。
+- `/petshop/reservations/new` 支援服務/日期查詢 availability、slot 選擇與登入後 create hold。
+- `/petshop/reservations` 與 `/petshop/reservations/{id}` 顯示目前會員 reservation list / detail。
+- holding reservation detail 可透過 server-side action 取得 owner-visible `checkoutProductId`，並加入標準 cart。
+- holding reservation detail 可在 checkout 前執行 `cancel-hold`，取消後不再顯示加入購物車 action。
+- PetShop Storefront 已補齊 `/products`、`/cart`、`/checkout`、`/member`、`/member/orders` 與 `/auth/*`，其中 cart / checkout / member 沿用 CommonStorefront 的標準頁面模式。
+- `/member` 第一版提供 PetShop reservation 入口；更完整的 reservation/order browser smoke 與 compose 驗證留到 M4-P3C。
+
 #### M4-P3C Member / Order Integration 與 Browser Smoke
 
-狀態：未開始。
+狀態：完成。
+最後記錄：2026-04-24。
 
 目標：補齊會員 reservation 狀態、訂單折扣顯示與 PetShop storefront compose/browser 驗證。
 
@@ -761,6 +773,13 @@ API spec draft：
 - checkout completed 後，reservation detail/list 可看到 `confirmed`。
 - 含 reservation + 一般商品滿額的訂單可在 storefront 顯示折扣明細。
 - PetShop storefront 可透過 `http://localhost:5238` 完成主要 browser flow。
+
+完成內容：
+
+- `compose/petshop-storefront.compose.yaml` 已切換為啟動 `AndrewDemo.NetConf2023.PetShop.Storefront`。
+- nginx edge 仍維持 `http://localhost:5238` 作為整合入口，`/api/*` 指向標準 `.API`，`/petshop-api/*` 指向 PetShop API，其他 route 指向 PetShop Storefront。
+- 使用者已以 browser 驗證 PetShop storefront flow 可運作。
+- M4-P3 第一版完成範圍維持在 consumer-facing reservation / cart / checkout / member flow；confirmed 後取消/改期、staff/admin UI 與 durable notification 留待未來需求。
 
 ### M4-P4 PetShop Discount / Promotion
 
