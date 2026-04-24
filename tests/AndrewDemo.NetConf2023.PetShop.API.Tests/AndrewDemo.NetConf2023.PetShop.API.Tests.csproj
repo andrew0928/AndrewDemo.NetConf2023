@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
+    <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.API\AndrewDemo.NetConf2023.API.csproj" />
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.PetShop.Extension\AndrewDemo.NetConf2023.PetShop.Extension.csproj" />
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.PetShop.API\AndrewDemo.NetConf2023.PetShop.API.csproj" />
   </ItemGroup>
