@@ -13,6 +13,10 @@ using AndrewDemo.NetConf2023.Core.Discounts;
 using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using AndrewDemo.NetConf2023.Core.Time;
+using AndrewDemo.NetConf2023.PetShop.Extension;
+using AndrewDemo.NetConf2023.PetShop.Extension.Products;
+using AndrewDemo.NetConf2023.PetShop.Extension.Reservations;
+using AndrewDemo.NetConf2023.PetShop.Extension.Services;
 using DotNetEnv;
 using Microsoft.Extensions.Options;
 
@@ -71,6 +75,7 @@ namespace AndrewDemo.NetConf2023.API
                 return manifest.ProductServiceId switch
                 {
                     DefaultProductService.ServiceId => sp.GetRequiredService<DefaultProductService>(),
+                    PetShopConstants.ProductServiceId => sp.GetRequiredService<PetShopProductService>(),
                     _ => throw new InvalidOperationException($"unsupported product service id: {manifest.ProductServiceId}")
                 };
             });
@@ -81,6 +86,7 @@ namespace AndrewDemo.NetConf2023.API
                 return manifest.OrderEventDispatcherId switch
                 {
                     DefaultOrderEventDispatcher.DispatcherId => sp.GetRequiredService<DefaultOrderEventDispatcher>(),
+                    PetShopConstants.OrderEventDispatcherId => sp.GetRequiredService<PetShopOrderEventDispatcher>(),
                     _ => throw new InvalidOperationException($"unsupported order event dispatcher id: {manifest.OrderEventDispatcherId}")
                 };
             });
@@ -93,6 +99,17 @@ namespace AndrewDemo.NetConf2023.API
             if (enabledModules.Contains("apple-bts", StringComparer.OrdinalIgnoreCase))
             {
                 builder.Services.AddAppleBtsExtension();
+            }
+
+            if (enabledModules.Contains("petshop", StringComparer.OrdinalIgnoreCase))
+            {
+                builder.Services.AddSingleton(sp =>
+                {
+                    var options = new PetShopCatalogOptions();
+                    builder.Configuration.GetSection("PetShop:Catalog").Bind(options);
+                    return options;
+                });
+                builder.Services.AddPetShopExtension();
             }
 
             builder.Services.AddSingleton<DiscountEngine>(sp =>

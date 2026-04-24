@@ -1,0 +1,121 @@
+@apiHost = http://localhost:5208
+@petshopApiHost = http://localhost:5218
+@accessToken = paste-token-here
+@cartId = 1
+@reservationId = paste-reservation-id-here
+@checkoutProductId = paste-checkout-product-id-here
+@transactionId = 1
+@paymentId = 9001
+
+# 使用前請先啟動 PetShop compose:
+# docker compose -f compose/petshop.compose.yaml up --build
+#
+# 若要先重建乾淨資料庫:
+# docker compose -f compose/petshop.compose.yaml down -v
+# docker compose -f compose/petshop.compose.yaml up --build
+#
+# 建議順序:
+# authorize -> token -> products -> services -> availability -> create hold
+# -> create cart -> add reservation product -> add normal product -> estimate
+# -> checkout create -> checkout complete -> get reservation
+#
+# 範例預期:
+# grooming-basic 預約 2000 + pet-food-premium 1500 - 預約購買滿額折扣 100 = 3400
+
+### OAuth authorize (從 Location header 取出 code)
+POST {{apiHost}}/api/login/authorize
+Content-Type: application/x-www-form-urlencoded
+
+name=petshop-local-user&password=ignored&client_id=local-http&redirect_uri=https://localhost/callback&state=petshop
+
+### OAuth token exchange
+POST {{apiHost}}/api/login/token
+Content-Type: application/x-www-form-urlencoded
+
+code=paste-oauth-code-here
+
+### 讀取標準商品目錄
+GET {{apiHost}}/api/products
+
+### 讀取 PetShop 美容服務目錄
+GET {{petshopApiHost}}/petshop-api/services
+
+### 查詢可預約 slot
+GET {{petshopApiHost}}/petshop-api/availability?serviceId=grooming-basic&date=2026-05-01
+
+### 建立 reservation hold
+POST {{petshopApiHost}}/petshop-api/reservations/holds
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "serviceId": "grooming-basic",
+  "startAt": "2026-05-01T02:00:00Z",
+  "venueId": "room-a",
+  "staffId": "staff-amy"
+}
+
+### 查詢目前會員 reservations
+GET {{petshopApiHost}}/petshop-api/reservations
+Authorization: Bearer {{accessToken}}
+
+### 查詢單筆 reservation
+GET {{petshopApiHost}}/petshop-api/reservations/{{reservationId}}
+Authorization: Bearer {{accessToken}}
+
+### 建立購物車
+POST {{apiHost}}/api/carts/create
+Authorization: Bearer {{accessToken}}
+
+### 加入預約對應 hidden product
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "{{checkoutProductId}}",
+  "qty": 1
+}
+
+### 加入一般商品，觸發預約購買滿額折扣
+POST {{apiHost}}/api/carts/{{cartId}}/items
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "productId": "pet-food-premium",
+  "qty": 1
+}
+
+### 試算 PetShop 預約購買滿額折扣
+POST {{apiHost}}/api/carts/{{cartId}}/estimate
+Authorization: Bearer {{accessToken}}
+
+### 建立 checkout transaction
+POST {{apiHost}}/api/checkout/create
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "cartId": {{cartId}}
+}
+
+### 完成 checkout，預期會確認 reservation 並輸出 PetShop PoC notification log
+POST {{apiHost}}/api/checkout/complete
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "transactionId": {{transactionId}},
+  "paymentId": {{paymentId}},
+  "satisfaction": 5,
+  "shopComments": "PetShop local smoke test"
+}
+
+### checkout 後重新查詢 reservation，預期 status = confirmed
+GET {{petshopApiHost}}/petshop-api/reservations/{{reservationId}}
+Authorization: Bearer {{accessToken}}
+
+### checkout 前取消 hold (獨立情境使用，不要在 checkout 後執行)
+POST {{petshopApiHost}}/petshop-api/reservations/{{reservationId}}/cancel-hold
+Authorization: Bearer {{accessToken}}

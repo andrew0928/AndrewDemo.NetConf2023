@@ -28,6 +28,7 @@
     <ProjectReference Include="..\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
     <ProjectReference Include="..\AndrewDemo.NetConf2023.Abstract\AndrewDemo.NetConf2023.Abstract.csproj" />
     <ProjectReference Include="..\AndrewDemo.NetConf2023.AppleBTS.Extension\AndrewDemo.NetConf2023.AppleBTS.Extension.csproj" />
+    <ProjectReference Include="..\AndrewDemo.NetConf2023.PetShop.Extension\AndrewDemo.NetConf2023.PetShop.Extension.csproj" />
   </ItemGroup>
 
   <ItemGroup>

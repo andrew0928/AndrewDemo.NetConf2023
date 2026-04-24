@@ -71,7 +71,7 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Tests
 
             var cancelled = fixture.Service.CancelHold(hold.ReservationId, HoldRequestedAt.AddMinutes(15));
 
-            Assert.True(cancelled);
+            Assert.Equal(PetShopReservationCancelHoldStatus.CancelledNow, cancelled.Status);
 
             var reservation = fixture.Repository.FindReservation(hold.ReservationId);
             var product = fixture.Repository.FindProduct(hold.ProductId);
@@ -169,7 +169,9 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Tests
 
             using var cancelledFixture = CreateFixture();
             var cancelledHold = cancelledFixture.CreateHold();
-            cancelledFixture.Service.CancelHold(cancelledHold.ReservationId, HoldRequestedAt.AddMinutes(15));
+            var cancelled = cancelledFixture.Service.CancelHold(cancelledHold.ReservationId, HoldRequestedAt.AddMinutes(15));
+
+            Assert.Equal(PetShopReservationCancelHoldStatus.CancelledNow, cancelled.Status);
 
             var afterCancelled = cancelledFixture.CreateHold(buyerMemberId: 202, requestedAt: HoldRequestedAt.AddMinutes(16));
 

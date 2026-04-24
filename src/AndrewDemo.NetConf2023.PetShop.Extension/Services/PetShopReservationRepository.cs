@@ -41,6 +41,19 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             }
         }
 
+        public IReadOnlyList<PetShopReservationRecord> FindReservationsByBuyer(int buyerMemberId)
+        {
+            lock (_sync)
+            {
+                return Reservations
+                    .Query()
+                    .Where(item => item.BuyerMemberId == buyerMemberId)
+                    .ToList()
+                    .Select(CloneReservation)
+                    .ToList();
+            }
+        }
+
         public Product? FindProduct(string productId)
         {
             lock (_sync)
@@ -70,7 +83,12 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
 
             lock (_sync)
             {
-                if (HasActiveReservationAtSlot(reservation, evaluatedAt))
+                if (HasActiveReservationAtSlot(
+                    reservation.StartAt,
+                    reservation.EndAt,
+                    reservation.VenueId,
+                    reservation.StaffId,
+                    evaluatedAt))
                 {
                     return false;
                 }
@@ -78,6 +96,19 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
                 Reservations.Insert(CloneReservation(reservation));
                 _database.Products.Insert(CloneProduct(product));
                 return true;
+            }
+        }
+
+        public bool HasActiveReservationAtSlot(
+            DateTime startAt,
+            DateTime endAt,
+            string venueId,
+            string staffId,
+            DateTime evaluatedAt)
+        {
+            lock (_sync)
+            {
+                return HasActiveReservationAtSlotCore(startAt, endAt, venueId, staffId, evaluatedAt);
             }
         }
 
@@ -91,10 +122,15 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             }
         }
 
-        private bool HasActiveReservationAtSlot(PetShopReservationRecord candidate, DateTime evaluatedAt)
+        private bool HasActiveReservationAtSlotCore(
+            DateTime startAt,
+            DateTime endAt,
+            string venueId,
+            string staffId,
+            DateTime evaluatedAt)
         {
-            var candidateStartAt = NormalizeUtc(candidate.StartAt);
-            var candidateEndAt = NormalizeUtc(candidate.EndAt);
+            var candidateStartAt = NormalizeUtc(startAt);
+            var candidateEndAt = NormalizeUtc(endAt);
             var evaluationAt = NormalizeUtc(evaluatedAt);
 
             return Reservations
@@ -103,8 +139,8 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
                 .Any(existing =>
                     NormalizeUtc(existing.StartAt) == candidateStartAt
                     && NormalizeUtc(existing.EndAt) == candidateEndAt
-                    && existing.VenueId == candidate.VenueId
-                    && existing.StaffId == candidate.StaffId
+                    && existing.VenueId == venueId
+                    && existing.StaffId == staffId
                     && (existing.Status == PetShopReservationStatus.Confirmed
                         || (existing.Status == PetShopReservationStatus.Holding && NormalizeUtc(existing.HoldExpiresAt) > evaluationAt)));
         }

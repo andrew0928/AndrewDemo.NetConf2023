@@ -44,6 +44,60 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
         }
     }
 
+    public enum PetShopReservationCancelHoldStatus
+    {
+        NotFound = 0,
+        CancelledNow = 1,
+        AlreadyCancelled = 2,
+        HoldExpired = 3,
+        ReservationNotCancellable = 4
+    }
+
+    public sealed class PetShopReservationCancelHoldResult
+    {
+        public PetShopReservationCancelHoldStatus Status { get; init; }
+
+        public static PetShopReservationCancelHoldResult NotFound()
+        {
+            return new PetShopReservationCancelHoldResult
+            {
+                Status = PetShopReservationCancelHoldStatus.NotFound
+            };
+        }
+
+        public static PetShopReservationCancelHoldResult CancelledNow()
+        {
+            return new PetShopReservationCancelHoldResult
+            {
+                Status = PetShopReservationCancelHoldStatus.CancelledNow
+            };
+        }
+
+        public static PetShopReservationCancelHoldResult AlreadyCancelled()
+        {
+            return new PetShopReservationCancelHoldResult
+            {
+                Status = PetShopReservationCancelHoldStatus.AlreadyCancelled
+            };
+        }
+
+        public static PetShopReservationCancelHoldResult HoldExpired()
+        {
+            return new PetShopReservationCancelHoldResult
+            {
+                Status = PetShopReservationCancelHoldStatus.HoldExpired
+            };
+        }
+
+        public static PetShopReservationCancelHoldResult ReservationNotCancellable()
+        {
+            return new PetShopReservationCancelHoldResult
+            {
+                Status = PetShopReservationCancelHoldStatus.ReservationNotCancellable
+            };
+        }
+    }
+
     public sealed class PetShopReservationConfirmationResult
     {
         public bool IsConfirmedNow { get; init; }
@@ -85,5 +139,25 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
                 StaffId = reservation.StaffId
             };
         }
+    }
+
+    public sealed class PetShopReservationSnapshot
+    {
+        public string ReservationId { get; init; } = string.Empty;
+        public int BuyerMemberId { get; init; }
+        public string ServiceId { get; init; } = string.Empty;
+        public string ServiceName { get; init; } = string.Empty;
+        public string? ServiceDescription { get; init; }
+        public decimal Price { get; init; }
+        public DateTime StartAt { get; init; }
+        public DateTime EndAt { get; init; }
+        public string VenueId { get; init; } = string.Empty;
+        public string StaffId { get; init; } = string.Empty;
+        public string Status { get; init; } = string.Empty;
+        public DateTime HoldExpiresAt { get; init; }
+        public string? CheckoutProductId { get; init; }
+        public int? ConfirmedOrderId { get; init; }
+        public DateTime CreatedAt { get; init; }
+        public DateTime UpdatedAt { get; init; }
     }
 }

@@ -1,0 +1,59 @@
+services:
+  petshop-seed:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.DatabaseInit/Dockerfile
+    image: andrewdemo-netconf2023-petshop-seed:local
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - petshop-data:/data
+    restart: "no"
+
+  petshop-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.petshop
+    image: andrewdemo-netconf2023-petshop-api:local
+    ports:
+      - "5208:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  petshop-reservationapi:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.API/Dockerfile
+    image: andrewdemo-netconf2023-petshop-reservationapi:local
+    ports:
+      - "5218:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  petshop-data:
+    driver: local

@@ -56,33 +56,38 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             return PetShopReservationHoldResult.CreateSucceeded(reservationId, productId);
         }
 
-        public bool CancelHold(string reservationId, DateTime cancelledAt)
+        public PetShopReservationCancelHoldResult CancelHold(string reservationId, DateTime cancelledAt)
         {
             if (string.IsNullOrWhiteSpace(reservationId))
             {
-                return false;
+                return PetShopReservationCancelHoldResult.NotFound();
             }
 
             var reservation = _repository.FindReservation(reservationId);
             if (reservation == null)
             {
-                return false;
+                return PetShopReservationCancelHoldResult.NotFound();
             }
 
             if (reservation.Status == PetShopReservationStatus.Cancelled)
             {
-                return true;
+                return PetShopReservationCancelHoldResult.AlreadyCancelled();
+            }
+
+            if (reservation.Status == PetShopReservationStatus.Expired)
+            {
+                return PetShopReservationCancelHoldResult.HoldExpired();
             }
 
             if (reservation.Status != PetShopReservationStatus.Holding)
             {
-                return false;
+                return PetShopReservationCancelHoldResult.ReservationNotCancellable();
             }
 
             if (reservation.HoldExpiresAt <= cancelledAt)
             {
                 ExpireHold(reservation, cancelledAt);
-                return false;
+                return PetShopReservationCancelHoldResult.HoldExpired();
             }
 
             reservation.Status = PetShopReservationStatus.Cancelled;
@@ -90,7 +95,7 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
 
             _repository.UpdateReservation(reservation);
 
-            return true;
+            return PetShopReservationCancelHoldResult.CancelledNow();
         }
 
         public Product? ApplyReservationProductPolicy(Product product, DateTime evaluatedAt)
@@ -161,12 +166,109 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
             return PetShopReservationConfirmationResult.Confirmed(reservation);
         }
 
+        public PetShopReservationSnapshot? GetReservationSnapshot(
+            string reservationId,
+            DateTime evaluatedAt,
+            bool applyLazyExpiration = true)
+        {
+            if (string.IsNullOrWhiteSpace(reservationId))
+            {
+                return null;
+            }
+
+            var reservation = _repository.FindReservation(reservationId);
+            if (reservation == null)
+            {
+                return null;
+            }
+
+            if (applyLazyExpiration)
+            {
+                NormalizeReservationForEvaluation(reservation, evaluatedAt);
+            }
+
+            return BuildSnapshot(reservation);
+        }
+
+        public IReadOnlyList<PetShopReservationSnapshot> GetReservationsByBuyer(int buyerMemberId, DateTime evaluatedAt)
+        {
+            return _repository.FindReservationsByBuyer(buyerMemberId)
+                .Select(reservation =>
+                {
+                    NormalizeReservationForEvaluation(reservation, evaluatedAt);
+                    return BuildSnapshot(reservation);
+                })
+                .Where(snapshot => snapshot != null)
+                .Cast<PetShopReservationSnapshot>()
+                .OrderBy(snapshot => snapshot.StartAt)
+                .ThenBy(snapshot => snapshot.CreatedAt)
+                .ToList();
+        }
+
+        public bool HasActiveReservationAtSlot(
+            DateTime startAt,
+            DateTime endAt,
+            string venueId,
+            string staffId,
+            DateTime evaluatedAt)
+        {
+            return _repository.HasActiveReservationAtSlot(startAt, endAt, venueId, staffId, evaluatedAt);
+        }
+
+        public Product? GetReservationProduct(string productId)
+        {
+            if (string.IsNullOrWhiteSpace(productId))
+            {
+                return null;
+            }
+
+            return _repository.FindProduct(productId);
+        }
+
         private void ExpireHold(PetShopReservationRecord reservation, DateTime expiredAt)
         {
             reservation.Status = PetShopReservationStatus.Expired;
             reservation.UpdatedAt = expiredAt;
 
             _repository.UpdateReservation(reservation);
+        }
+
+        private void NormalizeReservationForEvaluation(PetShopReservationRecord reservation, DateTime evaluatedAt)
+        {
+            ArgumentNullException.ThrowIfNull(reservation);
+
+            if (reservation.Status == PetShopReservationStatus.Holding
+                && reservation.HoldExpiresAt <= evaluatedAt)
+            {
+                ExpireHold(reservation, evaluatedAt);
+            }
+        }
+
+        private PetShopReservationSnapshot BuildSnapshot(PetShopReservationRecord reservation)
+        {
+            ArgumentNullException.ThrowIfNull(reservation);
+
+            var product = _repository.FindProduct(reservation.ProductId);
+
+            return new PetShopReservationSnapshot
+            {
+                ReservationId = reservation.ReservationId,
+                BuyerMemberId = reservation.BuyerMemberId,
+                ServiceId = reservation.ServiceId,
+                ServiceName = product?.Name ?? string.Empty,
+                ServiceDescription = product?.Description,
+                Price = product?.Price ?? 0m,
+                StartAt = reservation.StartAt,
+                EndAt = reservation.EndAt,
+                VenueId = reservation.VenueId,
+                StaffId = reservation.StaffId,
+                Status = ToApiStatus(reservation.Status),
+                HoldExpiresAt = reservation.HoldExpiresAt,
+                CheckoutProductId = reservation.Status == PetShopReservationStatus.Holding ? reservation.ProductId : null,
+                ConfirmedOrderId = reservation.ConfirmedOrderId,
+                CreatedAt = reservation.CreatedAt,
+                UpdatedAt = reservation.UpdatedAt
+            };
         }
 
         private static string NewReservationId()
@@ -177,6 +279,18 @@ namespace AndrewDemo.NetConf2023.PetShop.Extension.Services
         private static string NewReservationProductId()
         {
             return $"pet-rsv-prod-{Guid.NewGuid():N}";
+        }
+
+        private static string ToApiStatus(PetShopReservationStatus status)
+        {
+            return status switch
+            {
+                PetShopReservationStatus.Holding => "holding",
+                PetShopReservationStatus.Confirmed => "confirmed",
+                PetShopReservationStatus.Expired => "expired",
+                PetShopReservationStatus.Cancelled => "cancelled",
+                _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+            };
         }
     }
 }

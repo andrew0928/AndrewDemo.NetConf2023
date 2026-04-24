@@ -1,0 +1,82 @@
+services:
+  petshop-seed:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.DatabaseInit/Dockerfile
+    image: andrewdemo-netconf2023-petshop-seed:local
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - petshop-storefront-data:/data
+    restart: "no"
+
+  petshop-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.petshop
+    image: andrewdemo-netconf2023-petshop-api:local
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-storefront-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  petshop-reservationapi:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.API/Dockerfile
+    image: andrewdemo-netconf2023-petshop-reservationapi:local
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-storefront-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  petshop-storefront:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.CommonStorefront/Dockerfile
+    image: andrewdemo-netconf2023-petshop-storefront:local
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://petshop-api:8080
+      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-petshop-storefront
+    depends_on:
+      - petshop-api
+      - petshop-reservationapi
+    restart: unless-stopped
+
+  petshop-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "5238:80"
+    volumes:
+      - ./nginx/petshop-storefront.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - petshop-storefront
+      - petshop-api
+      - petshop-reservationapi
+    restart: unless-stopped
+
+volumes:
+  petshop-storefront-data:
+    driver: local

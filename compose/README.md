@@ -2,7 +2,7 @@
 
 模擬 Azure Container App 的運作方式，使用 init container + emptyDir 模式。
 
-本目錄目前有兩套主要用途：
+本目錄目前有多套主要用途：
 
 - `compose.yaml`
   - 舊的標準 API 本機環境
@@ -13,6 +13,17 @@
     - `applebts-api`
     - `applebts-btsapi`
   - 共用單一 AppleBTS 專屬資料庫 volume
+- `petshop.compose.yaml`
+  - PetShop 專屬 API 本機驗證環境
+  - 同時啟動：
+    - `petshop-seed`
+    - `petshop-api`
+    - `petshop-reservationapi`
+  - 共用單一 PetShop 專屬資料庫 volume
+- `petshop-storefront.compose.yaml`
+  - PetShop frontend / reverse proxy 整合驗證環境
+  - 第一版 frontend 先沿用 `CommonStorefront` baseline
+  - 透過 nginx edge 整合 `/`、`/api/*` 與 `/petshop-api/*`
 
 ## 架構說明
 
@@ -113,6 +124,80 @@ cd /Users/andrew/code-work/andrewshop.apidemo
 scripts/applebts/run-decision-table.sh
 ```
 
+## PetShop 本機驗證
+
+### 啟動 PetShop API 環境
+
+```bash
+cd /Users/andrew/code-work/andrewshop.apidemo
+docker compose -f compose/petshop.compose.yaml up --build
+```
+
+若要先重建乾淨資料庫：
+
+```bash
+cd /Users/andrew/code-work/andrewshop.apidemo
+docker compose -f compose/petshop.compose.yaml down -v
+docker compose -f compose/petshop.compose.yaml up --build
+```
+
+### PetShop API 本機端點
+
+- 標準 API: `http://localhost:5208`
+- PetShop API: `http://localhost:5218`
+- 標準 Swagger: [http://localhost:5208/swagger](http://localhost:5208/swagger)
+- PetShop Swagger: [http://localhost:5218/swagger](http://localhost:5218/swagger)
+
+### 使用 VS Code `.http` 測試
+
+請直接開啟：
+
+- [petshop-local.http](/Users/andrew/code-work/andrewshop.apidemo/compose/petshop-local.http)
+
+建議順序：
+
+1. `OAuth authorize`
+2. 從 `Location` header 取 `code`
+3. `OAuth token exchange`
+4. 把 `access_token` 填到 `@accessToken`
+5. `讀取標準商品目錄`
+6. `讀取 PetShop 美容服務目錄`
+7. `查詢可預約 slot`
+8. `建立 reservation hold`
+9. 把 response 的 `reservationId` / `checkoutProductId` 填到變數
+10. `建立購物車`
+11. `加入預約對應 hidden product`
+12. `加入一般商品，觸發預約購買滿額折扣`
+13. `試算 PetShop 預約購買滿額折扣`
+14. `建立 checkout transaction`
+15. `完成 checkout`
+16. 重新查詢 reservation，確認 `status = confirmed`
+
+### 啟動 PetShop storefront + reverse proxy 環境
+
+```bash
+cd /Users/andrew/code-work/andrewshop.apidemo
+docker compose -f compose/petshop-storefront.compose.yaml up --build
+```
+
+若要先重建乾淨資料庫：
+
+```bash
+cd /Users/andrew/code-work/andrewshop.apidemo
+docker compose -f compose/petshop-storefront.compose.yaml down -v
+docker compose -f compose/petshop-storefront.compose.yaml up --build
+```
+
+### PetShop storefront 端點
+
+- Storefront / edge: `http://localhost:5238`
+- 標準 API through edge: `http://localhost:5238/api/*`
+- PetShop API through edge: `http://localhost:5238/petshop-api/*`
+- 標準 Swagger through edge: [http://localhost:5238/swagger](http://localhost:5238/swagger)
+- PetShop Swagger through edge: [http://localhost:5238/petshop-swagger](http://localhost:5238/petshop-swagger)
+
+PetShop 專屬 reservation UI 尚未進入 M4-P3 實作；此 compose 先驗證 CommonStorefront、core API、PetShop API 與 reverse proxy 可在同一個 host/volume 拓樸下協作。
+
 ## AppleBTS Time Shift 驗證
 
 AppleBTS compose 已支援用環境變數覆蓋 host 的 `TimeProvider` 設定：
@@ -194,6 +279,14 @@ docker compose down -v
 # AppleBTS compose
 docker compose -f compose/applebts.compose.yaml down
 docker compose -f compose/applebts.compose.yaml down -v
+
+# PetShop compose
+docker compose -f compose/petshop.compose.yaml down
+docker compose -f compose/petshop.compose.yaml down -v
+
+# PetShop storefront compose
+docker compose -f compose/petshop-storefront.compose.yaml down
+docker compose -f compose/petshop-storefront.compose.yaml down -v
 ```
 
 ## 重要特性
@@ -237,6 +330,16 @@ env \
   docker compose -f compose/applebts.compose.yaml up --build
 ```
 
+PetShop compose 也支援相同的 `TimeProvider` host 設定：
+
+```bash
+env \
+  Time__Mode=Shifted \
+  Time__ExpectedStartupLocal='2026-05-01T09:00:00' \
+  Time__TimeZoneId=Asia/Taipei \
+  docker compose -f compose/petshop.compose.yaml up --build
+```
+
 ## 疑難排解
 
 ### 查看 init container 日誌
@@ -245,6 +348,9 @@ docker compose logs seed
 
 # AppleBTS seed
 docker compose -f compose/applebts.compose.yaml logs applebts-seed
+
+# PetShop seed
+docker compose -f compose/petshop.compose.yaml logs petshop-seed
 ```
 
 ### 檢查共享資料
@@ -253,6 +359,9 @@ docker compose run --rm api ls -lh /data/
 
 # AppleBTS 共享資料
 docker compose -f compose/applebts.compose.yaml run --rm applebts-api ls -lh /data/
+
+# PetShop 共享資料
+docker compose -f compose/petshop.compose.yaml run --rm petshop-api ls -lh /data/
 ```
 
 ### 進入 API 容器偵錯
@@ -264,4 +373,10 @@ docker compose -f compose/applebts.compose.yaml exec applebts-api sh
 
 # AppleBTS BTS API
 docker compose -f compose/applebts.compose.yaml exec applebts-btsapi sh
+
+# PetShop 標準 API
+docker compose -f compose/petshop.compose.yaml exec petshop-api sh
+
+# PetShop reservation API
+docker compose -f compose/petshop.compose.yaml exec petshop-reservationapi sh
 ```
