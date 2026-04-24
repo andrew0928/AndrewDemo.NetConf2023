@@ -1,0 +1,24 @@
+@page "/"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.IndexModel
+@{
+    ViewData["Title"] = "首頁";
+}
+<section class="panel">
+    <h1 class="page-heading">Andrew Shop PetShop Storefront</h1>
+    <p>這個 storefront 以通用購物流程為基礎，額外提供寵物美容預約與預約商品結帳流程。</p>
+    <div class="page-actions">
+        <a class="button button--primary" href="/petshop">前往寵物美容預約</a>
+        <a class="button button--secondary" href="/products">瀏覽一般商品</a>
+        <a class="button button--secondary" href="/cart">查看購物車</a>
+    </div>
+</section>
+
+<section class="panel">
+    <h2>PetShop 第一版流程</h2>
+    <ul class="task-list">
+        <li>瀏覽美容服務與價格</li>
+        <li>選擇可用時段、場地與服務人員</li>
+        <li>建立「預約確認中」的 reservation hold</li>
+        <li>將 reservation 加入購物車並與一般商品一起結帳</li>
+    </ul>
+</section>

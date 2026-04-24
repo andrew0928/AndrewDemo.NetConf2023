@@ -1,0 +1,49 @@
+@page "/petshop"
+@model AndrewDemo.NetConf2023.PetShop.Storefront.Pages.PetShop.IndexModel
+@{
+    ViewData["Title"] = "寵物美容預約";
+}
+<section>
+    <h1 class="page-heading">寵物美容預約</h1>
+    <p class="hint-text">預約成功後會先保留 30 分鐘並顯示為「預約確認中」，加入購物車完成結帳後才會正式成為「已預約」。</p>
+</section>
+
+@if (Model.ErrorSummary.Errors.Count > 0)
+{
+    <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (!Model.Services.Any())
+{
+    <section class="panel">
+        <p>目前沒有可預約的美容服務。</p>
+    </section>
+}
+else
+{
+    <section class="product-grid" aria-label="PetShop 美容服務目錄">
+        @foreach (var service in Model.Services)
+        {
+            <article class="product-card">
+                <h2 class="product-card__title">@service.Name</h2>
+                @if (!string.IsNullOrWhiteSpace(service.Description))
+                {
+                    <p>@service.Description</p>
+                }
+                <p><strong>價格：</strong>NT$ @service.Price</p>
+                <p><strong>服務時間：</strong>@service.DurationMinutes 分鐘</p>
+                <div class="page-actions">
+                    <a class="button button--primary" href="/petshop/reservations/new?serviceId=@service.ServiceId">選擇預約時段</a>
+                </div>
+            </article>
+        }
+    </section>
+}
+
+<section class="panel">
+    <h2>我的預約</h2>
+    <p>登入後可查看目前預約、取消 checkout 前的 hold，或確認 checkout 後的預約狀態。</p>
+    <div class="page-actions">
+        <a class="button button--secondary" href="/petshop/reservations">查看我的預約</a>
+    </div>
+</section>

@@ -672,7 +672,8 @@ API spec draft：
 
 目標：在已確認 API 與 domain flow 後，再實作 PetShop storefront。
 
-狀態：未開始。
+狀態：進行中。
+最後記錄：2026-04-24。
 
 預期範圍：
 
@@ -680,6 +681,86 @@ API spec draft：
 - reservation flow pages
 - cart / checkout integration
 - member reservation/order status
+
+拆解原則：
+
+- PetShop Storefront 需要同時驗證 reservation BFF、hidden product 加入 cart、checkout completed 後 reservation confirmed，以及 member reservation 狀態顯示；一次完成容易讓規格、UI 與 topology 混在同一個 review package。
+- 因此 M4-P3 拆成 P3A / P3B / P3C；P3A 先固定 route / BFF contract / testcase 與最小 skeleton，P3B 實作核心預約購物流程，P3C 再做 member/order 整合與 browser smoke。
+
+#### M4-P3A PetShop Storefront Spec / Skeleton
+
+狀態：完成。
+最後記錄：2026-04-24。
+
+目標：固定 PetShop Storefront 第一版頁面、BFF client 邊界與驗收案例，建立可 build 的最小網站骨架。
+
+預期範圍：
+
+- `spec/petshop-storefront-baseline.md`
+- `spec/testcases/petshop-storefront-baseline.md`
+- `AndrewDemo.NetConf2023.PetShop.Storefront` skeleton
+- `PetShopApiClient` typed client contract
+- `PetShopApiOptions`
+- PetShop Storefront appsettings / Dockerfile / solution registration
+
+完成基準：
+
+- PetShop Storefront 明確沿用 storefront family 的 server-side BFF 與 UI grammar。
+- 第一版 route、auth boundary、reservation flow 與 non-goals 已固定。
+- testcase 能覆蓋 service catalog、availability、create hold、add reservation product to cart、cancel hold、checkout confirmation 與 member reservation status。
+- 專案可 build，且不改動 `.Abstract` / `.Core` contract。
+
+完成內容：
+
+- `spec/petshop-storefront-baseline.md` 已建立。
+- `spec/testcases/petshop-storefront-baseline.md` 已建立。
+- `AndrewDemo.NetConf2023.PetShop.Storefront` skeleton 已加入 solution。
+- `PetShopApiClient`、PetShop API DTO 與 `PetShopApiOptions` 已建立。
+- `/` 與 `/petshop` 最小頁面已建立，`/petshop` 可透過 BFF client 讀取 service catalog。
+
+#### M4-P3B Reservation Flow Pages
+
+狀態：未開始。
+
+目標：實作使用者建立美容預約、加入購物車、取消 checkout 前 hold 的主要頁面。
+
+預期範圍：
+
+- `/petshop`
+- `/petshop/reservations/new`
+- `/petshop/reservations`
+- `/petshop/reservations/{id}`
+- availability 查詢與 slot 選擇
+- create hold 成功後顯示「預約確認中」
+- holding reservation 加入購物車
+- checkout 前 cancel hold
+
+完成基準：
+
+- 使用者可從服務目錄完成 reservation hold。
+- holding reservation 可透過 server-side BFF 加入標準 cart。
+- checkout 前可取消 hold，取消後不可再加入 cart。
+- cart / checkout 仍使用標準 storefront 頁面與標準 `.API`。
+
+#### M4-P3C Member / Order Integration 與 Browser Smoke
+
+狀態：未開始。
+
+目標：補齊會員 reservation 狀態、訂單折扣顯示與 PetShop storefront compose/browser 驗證。
+
+預期範圍：
+
+- `/member` reservation 摘要或入口
+- `/member/orders` PetShop reservation order / discount 顯示確認
+- `petshop-storefront.compose.yaml` 切換為 `PetShop.Storefront`
+- nginx edge 驗證
+- browser smoke 驗收記錄
+
+完成基準：
+
+- checkout completed 後，reservation detail/list 可看到 `confirmed`。
+- 含 reservation + 一般商品滿額的訂單可在 storefront 顯示折扣明細。
+- PetShop storefront 可透過 `http://localhost:5238` 完成主要 browser flow。
 
 ### M4-P4 PetShop Discount / Promotion
 
