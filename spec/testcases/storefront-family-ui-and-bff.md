@@ -47,21 +47,21 @@
 - Then: 頁面仍可完整閱讀與操作
 - And: 送出按鈕易於觸控點擊
 
-## TC-UI-06 OAuth login authority 沿用 `/api/login`
+## TC-UI-06 OAuth login authority 使用 `/oauth/*`
 
 - Given: 使用者尚未登入
 - When: 進入受保護頁面
 - Then: storefront redirect 到自身 `/auth/login`
-- And: `/auth/login` 再導向 `/api/login/authorize`
+- And: `/auth/login` 再導向 `/oauth/authorize`
 - And: storefront 本身不直接提供另一套 authority login form
 
 ## TC-UI-07 OAuth callback 與 server-side token exchange
 
-- Given: `/api/login/authorize` 完成登入並 redirect 回 storefront callback
+- Given: `/oauth/authorize` 完成登入並 redirect 回 storefront callback
 - When: storefront 收到 `code`
-- Then: storefront 在 server side 呼叫 `/api/login/token`
+- Then: storefront 在 server side 呼叫 `/oauth/token`
 - And: token 儲存在 server-side session 或 secure cookie
-- And: browser 不直接以 JavaScript 呼叫 `/api/login/token`
+- And: browser 不直接以 JavaScript 呼叫 `/oauth/token`
 
 ## TC-UI-08 AppleBTS Storefront 顯示 BTS 專屬頁面
 

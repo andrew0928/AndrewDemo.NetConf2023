@@ -165,7 +165,6 @@ namespace AndrewDemo.NetConf2023.API
 
 
                 if (context.Request.Path.StartsWithSegments("/api")
-                    && !context.Request.Path.StartsWithSegments("/api/login")
                     && !IsAnonymousApiRequest(context))
                 {
                     if (!context.Request.Headers.TryGetValue("Authorization", out var token))

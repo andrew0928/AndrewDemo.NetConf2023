@@ -144,8 +144,8 @@ classDiagram
 | `/checkout` | 結帳頁 | Y | `POST /api/checkout/create`、`POST /api/checkout/complete` |
 | `/member` | 會員資料 | Y | `GET /api/member` |
 | `/member/orders` | 訂單列表 | Y | `GET /api/member/orders` |
-| `/auth/login` | 導向 login authority | N | redirect 到 `/api/login/authorize` |
-| `/auth/callback` | OAuth callback | N | `POST /api/login/token` |
+| `/auth/login` | 導向 login authority | N | redirect 到 `/oauth/authorize` |
+| `/auth/callback` | OAuth callback | N | `POST /oauth/token` |
 | `/auth/logout` | 登出 | Y | 清除 session / cookie |
 
 ## Session 與 Auth Flow
@@ -167,12 +167,12 @@ sequenceDiagram
     U->>SF: GET /cart
     SF-->>U: 302 /auth/login?returnUrl=/cart
     U->>SF: GET /auth/login?returnUrl=/cart
-    SF-->>U: 302 /api/login/authorize?...redirect_uri=/auth/callback
-    U->>API: GET /api/login/authorize
-    U->>API: POST /api/login/authorize
+    SF-->>U: 302 /oauth/authorize?...redirect_uri=/auth/callback
+    U->>API: GET /oauth/authorize
+    U->>API: POST /oauth/authorize
     API-->>U: 302 /auth/callback?code=...
     U->>SF: GET /auth/callback?code=...
-    SF->>API: POST /api/login/token
+    SF->>API: POST /oauth/token
     API-->>SF: access_token
     SF-->>U: set session/cookie and 302 /cart
 ```
@@ -274,7 +274,7 @@ method 邊界建議：
 | CS-08 | 會員頁與訂單頁可讀取資料 | covered | 對應 `TC-CS-008` |
 | CS-09 | 手機版可操作 | covered | 對應 `TC-CS-009` |
 | CS-10 | 鍵盤操作與 skip link | covered | 對應 `TC-CS-010` |
-| CS-11 | browser 不直接呼叫 `/api/login/token` | covered | 對應 `TC-CS-011` |
+| CS-11 | browser 不直接呼叫 `/oauth/token` | covered | 對應 `TC-CS-011` |
 | CS-12 | storefront server side 不繞 Front Door 呼叫 backend | covered | 對應 `TC-CS-012` |
 
 ## 後續工作

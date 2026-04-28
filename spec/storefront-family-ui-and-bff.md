@@ -57,7 +57,7 @@
 
 ### 5. OAuth / Login
 
-- login UI 第一版沿用 `/api/login/authorize`
+- login authority 使用標準 `.API` 提供的 `/oauth/authorize`
 - storefront 不重刻 login authority UI
 - storefront 必須自行處理 callback 與 session
 
@@ -66,6 +66,7 @@
 對外網站 path 應遵循：
 
 - `/*` -> storefront
+- `/oauth/*` -> `.API`
 - `/api/*` -> `.API`
 - `/bts-api/*` -> `AndrewDemo.NetConf2023.AppleBTS.API`
 - `/petshop-api/*` -> `PetShop.API`

@@ -42,7 +42,7 @@ AndrewShop API 使用 OAuth2 Authorization Code Flow 進行身份驗證。所有
 
 ### 授權端點（Authorization Endpoint）
 
-**URL**: `GET https://shop.chicken-house.net/api/login/authorize`
+**URL**: `GET https://shop.chicken-house.net/oauth/authorize`
 
 使用者將被重導向到此頁面進行登入和授權。
 
@@ -59,7 +59,7 @@ AndrewShop API 使用 OAuth2 Authorization Code Flow 進行身份驗證。所有
 #### 範例請求
 
 ```
-https://shop.chicken-house.net/api/login/authorize?
+https://shop.chicken-house.net/oauth/authorize?
   client_id=andrewshop-webapp&
   redirect_uri=http://localhost:3000/auth/callback&
   response_type=code&
@@ -81,7 +81,7 @@ http://localhost:3000/auth/callback?
 
 ### Token 端點（Token Endpoint）
 
-**URL**: `POST https://shop.chicken-house.net/api/login/token`  
+**URL**: `POST https://shop.chicken-house.net/oauth/token`
 **Content-Type**: `application/x-www-form-urlencoded`
 
 用 authorization code 換取 access token。
@@ -97,7 +97,7 @@ http://localhost:3000/auth/callback?
 #### 範例請求
 
 ```bash
-curl -X POST https://shop.chicken-house.net/api/login/token \
+curl -X POST https://shop.chicken-house.net/oauth/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "code=3d43909de43148fa91019c0e43dd670c"
 ```
@@ -106,7 +106,7 @@ curl -X POST https://shop.chicken-house.net/api/login/token \
 
 ```javascript
 const response = await axios.post(
-  'https://shop.chicken-house.net/api/login/token',
+  'https://shop.chicken-house.net/oauth/token',
   new URLSearchParams({ code: authorizationCode }),
   {
     headers: {
@@ -186,7 +186,7 @@ axios.interceptors.response.use(
         state: generateRandomState(), // 實作 CSRF 保護
       });
       
-      window.location.href = `https://shop.chicken-house.net/api/login/authorize?${params}`;
+      window.location.href = `https://shop.chicken-house.net/oauth/authorize?${params}`;
     }
     return Promise.reject(error);
   }
@@ -235,7 +235,7 @@ app.post('/api/auth/token', async (req, res) => {
   
   try {
     const response = await axios.post(
-      'https://shop.chicken-house.net/api/login/token',
+      'https://shop.chicken-house.net/oauth/token',
       new URLSearchParams({ code }),
       {
         headers: {
@@ -404,8 +404,8 @@ npm run dev:auth   # 後端: http://localhost:3001
 
 | 端點 | 方法 | 用途 | 需要授權 |
 |------|------|------|----------|
-| `/api/login/authorize` | GET | 授權頁面 | ❌ |
-| `/api/login/token` | POST | Token exchange | ❌ |
+| `/oauth/authorize` | GET | 授權頁面 | ❌ |
+| `/oauth/token` | POST | Token exchange | ❌ |
 | `/api/products` | GET | 取得商品列表 | ✅ |
 | `/api/products/{id}` | GET | 取得商品詳情 | ✅ |
 | `/api/carts/create` | POST | 建立購物車 | ✅ |

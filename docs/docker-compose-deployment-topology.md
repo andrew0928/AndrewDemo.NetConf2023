@@ -32,12 +32,13 @@
 - 提供 browser 單一入口
 - 負責 path routing：
   - `/*` -> `CommonStorefront`
+  - `/oauth/*` -> `.API`
   - `/api/*` -> `.API`
   - `/swagger/*` -> `.API` Swagger UI
 
 `nginx` 的目的，是讓本機驗證時能模擬未來正式站點的同源入口，特別是：
 
-- `/auth/login -> /api/login/authorize -> /auth/callback`
+- `/auth/login -> /oauth/authorize -> /auth/callback`
 - `/products`
 - `/cart`
 - `/checkout`
@@ -162,6 +163,7 @@ flowchart TB
 Browser
   -> common-edge (nginx) :5128
      -> /*          -> common-storefront
+     -> /oauth/*   -> common-api
      -> /api/*      -> common-api
      -> /swagger/*  -> common-api
 
@@ -196,9 +198,9 @@ Browser
 Browser
   -> nginx
   -> /auth/login
-  -> /api/login/authorize
+  -> /oauth/authorize
   -> /auth/callback
-  -> CommonStorefront server-side 呼叫 /api/login/token
+  -> CommonStorefront server-side 呼叫 /oauth/token
 ```
 
 ### 3. Seed 初始化

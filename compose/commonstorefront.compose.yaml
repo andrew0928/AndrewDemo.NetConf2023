@@ -32,7 +32,7 @@ services:
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://common-api:8080
-      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
       - Storefront__CoreApi__OAuthClientId=andrewshop-common-storefront
     depends_on:
       - common-api

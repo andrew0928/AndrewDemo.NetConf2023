@@ -54,12 +54,12 @@
 
 ### 3. OAuth / Login
 
-- login authority UI 第一版沿用 `/api/login/authorize`
+- login authority UI 使用標準 `.API` 提供的 `/oauth/authorize`
 - `CommonStorefront` 必須提供：
   - `/auth/login`
   - `/auth/callback`
   - `/auth/logout`
-- `/auth/callback` 必須在 server side 呼叫 `/api/login/token`
+- `/auth/callback` 必須在 server side 呼叫 `/oauth/token`
 - access token 必須由 storefront server side 保存，不直接暴露給 browser JavaScript
 
 ### 4. Page Routes

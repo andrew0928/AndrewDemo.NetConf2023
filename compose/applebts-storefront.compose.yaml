@@ -58,7 +58,7 @@ services:
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://applebts-api:8080
-      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
       - Storefront__CoreApi__OAuthClientId=andrewshop-applebts-storefront
       - Storefront__AppleBtsApi__BaseUrl=http://applebts-btsapi:8080
     depends_on:

@@ -29,10 +29,10 @@ public sealed class StorefrontAuthService
         _sessionAccessor.SetPendingAuth(state, normalizedReturnUrl);
 
         var callbackUrl = $"{httpContext.Request.Scheme}://{httpContext.Request.Host}/auth/callback";
-        var publicApiBaseUrl = string.IsNullOrWhiteSpace(_options.PublicApiBaseUrl)
+        var publicOAuthBaseUrl = string.IsNullOrWhiteSpace(_options.PublicOAuthBaseUrl)
             ? $"{httpContext.Request.Scheme}://{httpContext.Request.Host}"
-            : _options.PublicApiBaseUrl.TrimEnd('/');
-        var authorizeUrl = $"{publicApiBaseUrl}/api/login/authorize";
+            : _options.PublicOAuthBaseUrl.TrimEnd('/');
+        var authorizeUrl = $"{publicOAuthBaseUrl}/oauth/authorize";
 
         return QueryHelpers.AddQueryString(authorizeUrl, new Dictionary<string, string?>
         {

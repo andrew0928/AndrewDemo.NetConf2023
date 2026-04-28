@@ -46,7 +46,7 @@ redirect_uri="${base_url}/auth/callback"
 state="applebts-smoke"
 
 curl -sS -D "$authorize_post_headers" -o /dev/null -b "$cookie_jar" -c "$cookie_jar" \
-    -X POST "$base_url/api/login/authorize" \
+    -X POST "$base_url/oauth/authorize" \
     --data-urlencode "name=bts-storefront-user" \
     --data-urlencode "client_id=$client_id" \
     --data-urlencode "redirect_uri=$redirect_uri" \

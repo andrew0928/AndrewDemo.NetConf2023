@@ -1,24 +1,49 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Parse command line arguments
+REGISTRY="${REGISTRY:-andrew0928.azurecr.io}"
+PLATFORMS="${PLATFORMS:-linux/amd64,linux/arm64}"
+DATE_TAG="${DATE_TAG:-$(date +%Y%m%d)}"
+BUILD_CONTEXT="${BUILD_CONTEXT:-.}"
 PUSH_IMAGES=false
+
+IMAGES=(
+    "andrewdemo-shop-api|src/AndrewDemo.NetConf2023.API/Dockerfile"
+    "andrewdemo-shop-applebts-seed|src/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/Dockerfile"
+    "andrewdemo-shop-applebts-btsapi|src/AndrewDemo.NetConf2023.AppleBTS.API/Dockerfile"
+    "andrewdemo-shop-applebts-storefront|src/AndrewDemo.NetConf2023.AppleBTS.Storefront/Dockerfile"
+    "andrewdemo-shop-petshop-seed|src/AndrewDemo.NetConf2023.PetShop.DatabaseInit/Dockerfile"
+    "andrewdemo-shop-petshop-reservationapi|src/AndrewDemo.NetConf2023.PetShop.API/Dockerfile"
+    "andrewdemo-shop-petshop-storefront|src/AndrewDemo.NetConf2023.PetShop.Storefront/Dockerfile"
+)
 
 show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Build and optionally push Docker images for AndrewShop.ApiDemo"
+    echo "Build and optionally push release Docker images for AndrewShop.ApiDemo."
     echo ""
     echo "Options:"
-    echo "  --push    Push images to registry after building"
+    echo "  --push    Build multi-arch images and push them to the registry"
     echo "  --help    Show this help message"
     echo ""
-    echo "Note: Docker engine must enable containerd image store"
-    echo "Edit /etc/docker/daemon.json to add:"
-    echo '{"features": {"containerd-snapshotter": true}}'
+    echo "Environment variables:"
+    echo "  REGISTRY       Target registry. Default: andrew0928.azurecr.io"
+    echo "  PLATFORMS      buildx platforms for --push. Default: linux/amd64,linux/arm64"
+    echo "  DATE_TAG       Date tag. Default: current date in yyyyMMdd"
+    echo "  BUILD_CONTEXT  Docker build context. Default: ."
+    echo ""
+    echo "Tags:"
+    echo "  develop"
+    echo "  develop${DATE_TAG}"
+    echo "  ${DATE_TAG}"
+    echo ""
+    echo "Note:"
+    echo "  nginx is intentionally excluded. Production edge routing is handled by Azure Front Door."
+    echo "  The standard API image is built once; AppleBTS/PetShop behavior is selected by runtime environment variables."
 }
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
+    case "$1" in
         --push)
             PUSH_IMAGES=true
             shift
@@ -35,39 +60,48 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# build solution
-dotnet publish src/AndrewDemo.NetConf2023.sln -c Release /t:PublishContainer -m
+build_image() {
+    local repository="$1"
+    local dockerfile="$2"
+    local image="${REGISTRY}/${repository}"
 
-# build init container (seed) - multi-arch for Azure Container Apps
+    echo ""
+    echo "==> Building ${image}"
+    echo "    Dockerfile: ${dockerfile}"
+
+    if [ "$PUSH_IMAGES" = true ]; then
+        docker buildx build \
+            --platform "$PLATFORMS" \
+            -f "$dockerfile" \
+            -t "${image}:develop" \
+            -t "${image}:develop${DATE_TAG}" \
+            -t "${image}:${DATE_TAG}" \
+            --push \
+            "$BUILD_CONTEXT"
+    else
+        docker build \
+            -f "$dockerfile" \
+            -t "${repository}:develop" \
+            -t "${repository}:${DATE_TAG}" \
+            -t "${image}:develop" \
+            -t "${image}:develop${DATE_TAG}" \
+            -t "${image}:${DATE_TAG}" \
+            "$BUILD_CONTEXT"
+    fi
+}
+
+echo "Registry: ${REGISTRY}"
+echo "Date tag: ${DATE_TAG}"
+
 if [ "$PUSH_IMAGES" = true ]; then
-    # Build and push multi-arch image directly to registry
-    docker buildx build --platform linux/amd64,linux/arm64 \
-        -t andrew0928.azurecr.io/andrewdemo-shop-seed:develop \
-        -t andrew0928.azurecr.io/andrewdemo-shop-seed:develop$(date +%Y%m%d) \
-        -t andrew0928.azurecr.io/andrewdemo-shop-seed:$(date +%Y%m%d) \
-        --push \
-        src/seed/
+    echo "Mode: buildx multi-arch push"
+    echo "Platforms: ${PLATFORMS}"
 else
-    # Local build only (native arch)
-    docker build -t andrewdemo-netconf2023-seed:develop \
-        -t andrewdemo-netconf2023-seed:$(date +%Y%m%d) \
-        src/seed/
+    echo "Mode: local build only"
+    echo "Platforms: Docker native platform"
 fi
 
-# tag images (only for API, seed is handled above)
-docker tag andrewdemo-netconf2023-api:develop         andrew0928.azurecr.io/andrewdemo-shop-api:develop
-docker tag andrewdemo-netconf2023-api:develop         andrew0928.azurecr.io/andrewdemo-shop-api:develop$(date +%Y%m%d)
-docker tag andrewdemo-netconf2023-api:$(date +%Y%m%d) andrew0928.azurecr.io/andrewdemo-shop-api:$(date +%Y%m%d)
-
-# Seed tags only needed for local development
-if [ "$PUSH_IMAGES" = false ]; then
-    docker tag andrewdemo-netconf2023-seed:develop         andrew0928.azurecr.io/andrewdemo-shop-seed:develop
-    docker tag andrewdemo-netconf2023-seed:develop         andrew0928.azurecr.io/andrewdemo-shop-seed:develop$(date +%Y%m%d)
-    docker tag andrewdemo-netconf2023-seed:$(date +%Y%m%d) andrew0928.azurecr.io/andrewdemo-shop-seed:$(date +%Y%m%d)
-fi
-
-# push images
-if [ "$PUSH_IMAGES" = true ]; then
-    docker push andrew0928.azurecr.io/andrewdemo-shop-api:$(date +%Y%m%d)
-    # seed image already pushed during buildx build above
-fi
+for image_spec in "${IMAGES[@]}"; do
+    IFS='|' read -r repository dockerfile <<< "$image_spec"
+    build_image "$repository" "$dockerfile"
+done

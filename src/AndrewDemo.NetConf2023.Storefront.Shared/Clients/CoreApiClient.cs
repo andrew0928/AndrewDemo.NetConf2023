@@ -145,7 +145,7 @@ public sealed class CoreApiClient
 
     public async Task<TokenExchangeResponse> ExchangeTokenAsync(string code, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/login/token");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/oauth/token");
         request.Content = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             ["code"] = code

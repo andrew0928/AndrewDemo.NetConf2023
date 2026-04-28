@@ -23,13 +23,13 @@
 # grooming-basic 預約 2000 + pet-food-premium 1500 - 預約購買滿額折扣 100 = 3400
 
 ### OAuth authorize (從 Location header 取出 code)
-POST {{apiHost}}/api/login/authorize
+POST {{apiHost}}/oauth/authorize
 Content-Type: application/x-www-form-urlencoded
 
 name=petshop-local-user&password=ignored&client_id=local-http&redirect_uri=https://localhost/callback&state=petshop
 
 ### OAuth token exchange
-POST {{apiHost}}/api/login/token
+POST {{apiHost}}/oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 code=paste-oauth-code-here

@@ -6,7 +6,7 @@ public sealed class CoreApiOptions
 
     public string BaseUrl { get; set; } = "http://localhost:5108";
 
-    public string? PublicApiBaseUrl { get; set; }
+    public string? PublicOAuthBaseUrl { get; set; }
 
     public string OAuthClientId { get; set; } = "andrewshop-common-storefront";
 }

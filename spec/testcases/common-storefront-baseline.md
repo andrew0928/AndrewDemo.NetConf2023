@@ -44,13 +44,13 @@
 - Given: 使用者尚未登入
 - When: 直接開啟 `/cart`
 - Then: 會被導向 `/auth/login`
-- And: `/auth/login` 會再導向 `/api/login/authorize`
+- And: `/auth/login` 會再導向 `/oauth/authorize`
 
 ### TC-CS-005 OAuth callback 由 server side 交換 token
 
-- Given: `/api/login/authorize` 完成登入
+- Given: `/oauth/authorize` 完成登入
 - When: 使用者被 redirect 回 `/auth/callback?code=...`
-- Then: `CommonStorefront` 在 server side 呼叫 `/api/login/token`
+- Then: `CommonStorefront` 在 server side 呼叫 `/oauth/token`
 - And: token 由 storefront session 或 secure cookie 保存
 
 ### TC-CS-006 登出會清除 storefront session
@@ -117,11 +117,11 @@
 
 ## BFF / Topology
 
-### TC-CS-013 browser 不直接呼叫 `/api/login/token`
+### TC-CS-013 browser 不直接呼叫 `/oauth/token`
 
 - Given: 使用者完成登入流程
 - When: 檢查 browser 端行為
-- Then: browser 不直接以 JavaScript 呼叫 `/api/login/token`
+- Then: browser 不直接以 JavaScript 呼叫 `/oauth/token`
 - And: token exchange 發生在 storefront server side
 
 ### TC-CS-014 storefront server side 不繞 Front Door 呼叫 backend

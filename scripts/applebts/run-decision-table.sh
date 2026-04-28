@@ -72,7 +72,7 @@ login() {
   local headers_file
   headers_file="$(mktemp)"
 
-  curl -sS -D "$headers_file" -o /dev/null -X POST "${API_HOST}/api/login/authorize" \
+  curl -sS -D "$headers_file" -o /dev/null -X POST "${API_HOST}/oauth/authorize" \
     --data-urlencode "name=${name}" \
     --data-urlencode "password=ignored" \
     --data-urlencode "client_id=applebts-script" \
@@ -93,7 +93,7 @@ login() {
     return 1
   fi
 
-  curl -sS --fail-with-body -X POST "${API_HOST}/api/login/token" \
+  curl -sS --fail-with-body -X POST "${API_HOST}/oauth/token" \
     -H "Content-Type: application/x-www-form-urlencoded" \
     -d "code=${code}" \
     | jq -r '.access_token'

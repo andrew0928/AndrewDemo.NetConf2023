@@ -58,7 +58,7 @@ services:
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://petshop-api:8080
-      - Storefront__CoreApi__PublicApiBaseUrl=
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
       - Storefront__CoreApi__OAuthClientId=andrewshop-petshop-storefront
       - Storefront__PetShopApi__BaseUrl=http://petshop-reservationapi:8080
       - Time__Mode=${Time__Mode:-System}

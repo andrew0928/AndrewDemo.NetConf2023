@@ -12,6 +12,7 @@
   <Project Path="../tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests/AndrewDemo.NetConf2023.AppleBTS.Extension.Tests.csproj" />
   <Project Path="../tests/AndrewDemo.NetConf2023.PetShop.Extension.Tests/AndrewDemo.NetConf2023.PetShop.Extension.Tests.csproj" />
   <Project Path="../tests/AndrewDemo.NetConf2023.PetShop.API.Tests/AndrewDemo.NetConf2023.PetShop.API.Tests.csproj" />
+  <Project Path="../tests/AndrewDemo.NetConf2023.WebContract.Tests/AndrewDemo.NetConf2023.WebContract.Tests.csproj" />
   <Project Path="AndrewDemo.NetConf2023.Abstract/AndrewDemo.NetConf2023.Abstract.csproj" />
   <Project Path="AndrewDemo.NetConf2023.API/AndrewDemo.NetConf2023.API.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.API/AndrewDemo.NetConf2023.AppleBTS.API.csproj" />

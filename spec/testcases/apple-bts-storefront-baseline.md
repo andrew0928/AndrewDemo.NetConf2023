@@ -19,7 +19,7 @@
 - Given: 使用者尚未登入
 - When: 開啟 `/bts/qualification`
 - Then: storefront 先導向自身 `/auth/login`
-- And: 再導向 `/api/login/authorize`
+- And: 再導向 `/oauth/authorize`
 
 ## TC-BTS-UI-03 教育資格頁可完成驗證
 

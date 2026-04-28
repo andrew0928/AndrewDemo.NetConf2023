@@ -10,7 +10,7 @@
 
 #
 # Development 模式下，
-# POST /api/login/authorize 會額外回傳 X-OAuth-Code header。
+# POST /oauth/authorize 會額外回傳 X-OAuth-Code header。
 # 因此這份檔案可以在 VS Code REST Client 直接串接：
 # 1. 先送 authorize
 # 2. 從 response header 自動取得 oauth_code
@@ -22,7 +22,7 @@
 ### OAuth2 Step 1: authorize
 # @name oauth_authorize
 # @no-redirect
-POST {{baseURL}}/api/login/authorize
+POST {{baseURL}}/oauth/authorize
 Content-Type: application/x-www-form-urlencoded
 
 name={{member_name}}&password={{member_password}}&client_id={{client_id}}&redirect_uri={{redirect_uri}}&state={{state}}
@@ -31,7 +31,7 @@ name={{member_name}}&password={{member_password}}&client_id={{client_id}}&redire
 
 ### OAuth2 Step 2: exchange code for access token
 # @name oauth_token
-POST {{baseURL}}/api/login/token
+POST {{baseURL}}/oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 code={{oauth_code}}

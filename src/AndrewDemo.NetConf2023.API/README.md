@@ -47,7 +47,7 @@ set authentication to: oauth
 
 - client id: 0000
 - client secret: 0000
-- authorization url: https://shop.chicken-house.net/api/login/authorize
-- token url: https://shop.chicken-house.net/api/login/token
+- authorization url: https://shop.chicken-house.net/oauth/authorize
+- token url: https://shop.chicken-house.net/oauth/token
 - score: 
 - token exchange method: default(post request)

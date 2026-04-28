@@ -13,7 +13,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     /// <summary>
     /// 處理登入與 OAuth2 授權流程。
     /// </summary>
-    [Route("api/login")]
+    [Route("oauth")]
     [ApiController]
     [AllowAnonymous]
     public class LoginController : ControllerBase
@@ -72,11 +72,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             {
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    Console.WriteLine($"[/api/login/authorize] Login failed: empty name");
+                    Console.WriteLine($"[/oauth/authorize] Login failed: empty name");
                     return BadRequest("Name is required");
                 }
 
-                Console.WriteLine($"[/api/login/authorize] User not found: {name}, registering...");
+                Console.WriteLine($"[/oauth/authorize] User not found: {name}, registering...");
                 member = new Member { Name = name };
                 _database.Members.Insert(member);
             }
@@ -91,14 +91,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             string code = Guid.NewGuid().ToString("N");
             _codes[code] = token;
-            Console.WriteLine($"[/api/login/authorize] Authorize success: {name}, code: {code}, token: {token}");
+            Console.WriteLine($"[/oauth/authorize] Authorize success: {name}, code: {code}, token: {token}");
 
             if (_environment.IsDevelopment())
             {
                 Response.Headers.Append("X-OAuth-Code", code);
             }
 
-            Console.WriteLine($"[/api/login/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
+            Console.WriteLine($"[/oauth/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
             return Redirect($"{redirectURL}?code={code}&state={state}");
         }
 
@@ -114,18 +114,18 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [Consumes("application/x-www-form-urlencoded")]
         public IActionResult PostToken([FromForm]TokenRequest request)
         {
-            Console.WriteLine($"[/api/login/token] Request Form: [{request}]");
+            Console.WriteLine($"[/oauth/token] Request Form: [{request}]");
 
             if (!_codes.ContainsKey(request.code))
             {
-                Console.WriteLine($"[/api/login/token] Invalid code: {request.code}");
+                Console.WriteLine($"[/oauth/token] Invalid code: {request.code}");
                 return BadRequest();
             }
 
             string token = _codes[request.code];
             _codes.Remove(request.code);
 
-            Console.WriteLine($"[/api/login/token] Return access-token: {token}");
+            Console.WriteLine($"[/oauth/token] Return access-token: {token}");
 
             return Ok(new
             {

@@ -17,13 +17,13 @@
 # authorize -> token -> catalog -> qualification/verify -> create cart -> add main -> add gift -> estimate
 
 ### OAuth authorize (從 Location header 取出 code)
-POST {{apiHost}}/api/login/authorize
+POST {{apiHost}}/oauth/authorize
 Content-Type: application/x-www-form-urlencoded
 
 name=local-user&password=ignored&client_id=local-http&redirect_uri=https://localhost/callback&state=applebts
 
 ### OAuth token exchange
-POST {{apiHost}}/api/login/token
+POST {{apiHost}}/oauth/token
 Content-Type: application/x-www-form-urlencoded
 
 code=paste-oauth-code-here

@@ -15,8 +15,8 @@
 - UI 走 ASP.NET Core server-side rendering / BFF 模式
 - browser 不直接持有 bearer token 呼叫 `/api`、`/bts-api`、`/petshop-api`
 - storefront 在 server side 呼叫 backend API
-- login UI 第一版沿用 `/api/login`
-- 對外網站入口由 Azure Front Door 整合 `/*`、`/api/*`、`/bts-api/*`、`/petshop-api/*`
+- login authority 使用標準 `.API` 提供的 `/oauth/*`
+- 對外網站入口由 Azure Front Door 或 nginx 整合 `/*`、`/oauth/*`、`/api/*`、`/bts-api/*`、`/petshop-api/*`
 - 後端 container apps 彼此直接互聯
 
 ## 建議的專案切分
@@ -117,7 +117,10 @@ Browser
 對外 path 應維持一致：
 
 - `/*` -> 對應 storefront
+- `/oauth/*` -> 標準 `.API`
 - `/api/*` -> 標準 `.API`
+- `/bts-api/*` -> AppleBTS API
+- `/petshop-api/*` -> PetShop API
 - `/bts-api/*` -> `AndrewDemo.NetConf2023.AppleBTS.API`
 - `/petshop-api/*` -> `PetShop.API`
 
@@ -131,10 +134,10 @@ Browser
 
 ## OAuth / Login Flow
 
-第一版不重刻 login UI，直接沿用既有：
+第一版不重刻 login UI，直接使用標準 `.API` 提供的 OAuth namespace：
 
-- `/api/login/authorize`
-- `/api/login/token`
+- `/oauth/authorize`
+- `/oauth/token`
 
 storefront 只補：
 
@@ -146,10 +149,10 @@ storefront 只補：
 
 1. browser 進 storefront 任一受保護頁面
 2. storefront 判定尚未登入，redirect 到 storefront 自己的 `/auth/login`
-3. `/auth/login` 302 到 `/api/login/authorize`
+3. `/auth/login` 302 到 `/oauth/authorize`
 4. 使用者在既有 login UI 完成登入
 5. `.API` redirect 回 storefront `/auth/callback?code=...`
-6. storefront 在 server side 呼叫 `/api/login/token`
+6. storefront 在 server side 呼叫 `/oauth/token`
 7. storefront 取得 bearer token 後，寫入 server-side session 或 secure auth cookie
 8. 後續所有頁面由 storefront server side 代呼叫 `/api`、`/bts-api`、`/petshop-api`
 
