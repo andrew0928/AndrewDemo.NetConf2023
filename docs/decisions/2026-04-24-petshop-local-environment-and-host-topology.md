@@ -16,7 +16,7 @@ reservation hold 成功後會建立 hidden standard `Product`，因此兩個 hos
 
 ## 決策
 
-- PetShop 本機 API 驗證環境使用 `compose/petshop.compose.yaml`：
+- PetShop 本機 API 驗證環境使用 `compose/petshop.api-dev.compose.yaml`：
   - `petshop-seed`
   - `petshop-api`
   - `petshop-reservationapi`
@@ -37,7 +37,7 @@ reservation hold 成功後會建立 hidden standard `Product`，因此兩個 hos
 - API 本機驗證先用不同 port 區隔：
   - `petshop-api` 對外 port `5208`
   - `petshop-reservationapi` 對外 port `5218`
-- PetShop frontend / reverse proxy 驗證環境使用 `compose/petshop-storefront.compose.yaml`：
+- PetShop frontend / reverse proxy 驗證環境使用 `compose/petshop.site-dev.compose.yaml`：
   - `petshop-storefront` 第一版先沿用 `CommonStorefront`
   - `petshop-edge` 使用 nginx 對外 port `5238`
   - `/api/*` proxy 到標準 `.API`
@@ -73,5 +73,5 @@ reservation hold 成功後會建立 hidden standard `Product`，因此兩個 hos
 
 ## 後續工作
 
-- 進入 M4-P3 時建立 `AndrewDemo.NetConf2023.PetShop.Storefront`，並替換 `petshop-storefront.compose.yaml` 的 storefront build target。
+- 進入 M4-P3 時建立 `AndrewDemo.NetConf2023.PetShop.Storefront`，並替換 `petshop.site-dev.compose.yaml` 的 storefront build target。
 - 若後續需要 browser smoke script，再補 PetShop edge port 的端對端驗證腳本。

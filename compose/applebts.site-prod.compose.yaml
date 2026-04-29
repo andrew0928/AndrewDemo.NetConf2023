@@ -1,0 +1,81 @@
+# site: applebts
+# mode: site-prod
+# intent: 本地端驗證 build.sh 已建置並推送到 registry 的正式部署 image；不在 compose up 時 on-the-fly build。
+# topology: seed + core API + BTS API + AppleBTS Storefront + nginx reverse proxy。
+# database: persistent named volume，由 AppleBTS seed 初始化；core API 與 BTS API 共用同一份資料庫。
+# security baseline: 只 publish nginx edge port；backend APIs / storefront container 只在 compose internal network 可達。
+# public surface: 對外只開放 storefront routes 與 /oauth/*；/api/*、/bts-api/* 與 swagger 不預設公開。
+name: andrewshop-applebts-site-prod
+
+services:
+  applebts-seed:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-applebts-seed:${IMAGE_TAG:-develop}
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - applebts-site-prod-data:/data
+    restart: "no"
+
+  applebts-api:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-api:${IMAGE_TAG:-develop}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=5108
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - applebts-site-prod-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  applebts-btsapi:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-applebts-btsapi:${IMAGE_TAG:-develop}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=AppleBts
+      - ASPNETCORE_HTTP_PORTS=5109
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=apple-bts
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - applebts-site-prod-data:/data
+    depends_on:
+      applebts-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  applebts-storefront:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-applebts-storefront:${IMAGE_TAG:-develop}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://applebts-api:5108
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-applebts-storefront
+      - Storefront__AppleBtsApi__BaseUrl=http://applebts-btsapi:5109
+    depends_on:
+      - applebts-api
+      - applebts-btsapi
+    restart: unless-stopped
+
+  applebts-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "${APPLEBTS_SITE_PORT:-8081}:80"
+    volumes:
+      - ./nginx/applebts.site-prod.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - applebts-storefront
+      - applebts-api
+      - applebts-btsapi
+    restart: unless-stopped
+
+volumes:
+  applebts-site-prod-data:
+    driver: local

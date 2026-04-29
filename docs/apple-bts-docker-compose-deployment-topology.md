@@ -236,7 +236,7 @@ flowchart TB
 
 對應檔案：
 
-- [compose/applebts-storefront.compose.yaml](../compose/applebts-storefront.compose.yaml)
+- [compose/applebts.site-dev.compose.yaml](../compose/applebts.site-dev.compose.yaml)
 - [compose/nginx/applebts-storefront.conf](../compose/nginx/applebts-storefront.conf)
 
 實際結構如下：

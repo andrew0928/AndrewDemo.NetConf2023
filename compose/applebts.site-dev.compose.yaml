@@ -1,20 +1,30 @@
+# site: applebts
+# mode: site-dev
+# intent: 本地完整 Apple BTS 網站驗證；docker compose up 後啟動完整 website stack。
+# topology: seed + core API + BTS API + AppleBTS Storefront + nginx reverse proxy。
+# database: named volume，由 AppleBTS seed 初始化；core API 與 BTS API 共用同一份資料庫。
+# observability: edge、storefront 與 backend APIs 都開放 host port，方便本地偵錯；此 mode 不作為 security baseline。
+name: andrewshop-applebts-site-dev
+
 services:
   applebts-seed:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/Dockerfile
-    image: andrewdemo-netconf2023-applebts-seed:local
+    image: andrewdemo-shop-applebts-seed:local
     environment:
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
     volumes:
-      - applebts-storefront-data:/data
+      - applebts-site-dev-data:/data
     restart: "no"
 
   applebts-api:
     build:
       context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.applebts
-    image: andrewdemo-netconf2023-applebts-api:local
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
+    image: andrewdemo-shop-common-api:local
+    ports:
+      - "5108:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=AppleBts
       - ASPNETCORE_HTTP_PORTS=8080
@@ -24,17 +34,19 @@ services:
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - applebts-storefront-data:/data
+      - applebts-site-dev-data:/data
     depends_on:
       applebts-seed:
         condition: service_completed_successfully
-    restart: unless-stopped
+    restart: "no"
 
   applebts-btsapi:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.API/Dockerfile
-    image: andrewdemo-netconf2023-applebts-btsapi:local
+    image: andrewdemo-shop-applebts-btsapi:local
+    ports:
+      - "5118:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=AppleBts
       - ASPNETCORE_HTTP_PORTS=8080
@@ -44,17 +56,19 @@ services:
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - applebts-storefront-data:/data
+      - applebts-site-dev-data:/data
     depends_on:
       applebts-seed:
         condition: service_completed_successfully
-    restart: unless-stopped
+    restart: "no"
 
   applebts-storefront:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.Storefront/Dockerfile
-    image: andrewdemo-netconf2023-applebts-storefront:local
+    image: andrewdemo-shop-applebts-storefront:local
+    ports:
+      - "5139:8080"
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://applebts-api:8080
@@ -64,7 +78,7 @@ services:
     depends_on:
       - applebts-api
       - applebts-btsapi
-    restart: unless-stopped
+    restart: "no"
 
   applebts-edge:
     image: nginx:1.27-alpine
@@ -76,8 +90,8 @@ services:
       - applebts-storefront
       - applebts-api
       - applebts-btsapi
-    restart: unless-stopped
+    restart: "no"
 
 volumes:
-  applebts-storefront-data:
+  applebts-site-dev-data:
     driver: local

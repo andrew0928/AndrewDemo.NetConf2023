@@ -5,13 +5,13 @@
 @mainLineId = paste-main-line-id-here
 
 # 使用前請先啟動 AppleBTS compose:
-# docker compose -f compose/applebts.compose.yaml up --build
+# docker compose -f compose/applebts.api-dev.compose.yaml up --build
 #
 # 若要驗證 TimeProvider 的 BTS 時間窗:
 # 1. BTS 期間內
-#    env Time__Mode=Shifted Time__ExpectedStartupLocal='2026-04-04T18:35:00' Time__TimeZoneId=Asia/Taipei docker compose -f compose/applebts.compose.yaml up --build
+#    env Time__Mode=Shifted Time__ExpectedStartupLocal='2026-04-04T18:35:00' Time__TimeZoneId=Asia/Taipei docker compose -f compose/applebts.api-dev.compose.yaml up --build
 # 2. BTS 期間外
-#    env Time__Mode=Shifted Time__ExpectedStartupLocal='2026-01-01T18:35:00' Time__TimeZoneId=Asia/Taipei docker compose -f compose/applebts.compose.yaml up --build
+#    env Time__Mode=Shifted Time__ExpectedStartupLocal='2026-01-01T18:35:00' Time__TimeZoneId=Asia/Taipei docker compose -f compose/applebts.api-dev.compose.yaml up --build
 #
 # 建議順序:
 # authorize -> token -> catalog -> qualification/verify -> create cart -> add main -> add gift -> estimate

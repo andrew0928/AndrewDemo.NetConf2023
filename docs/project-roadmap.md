@@ -664,9 +664,9 @@ API spec draft：
 - 標準 `.API` 已可透過 `appsettings.PetShop.json` 啟用 `petshop` module。
 - 標準 `.API` 已可依 `ShopManifest` 解析 `PetShopProductService` 與 `PetShopOrderEventDispatcher`。
 - `AndrewDemo.NetConf2023.PetShop.DatabaseInit` 已建立，負責 seed PetShop 一般商品、SKU 與 inventory；reservation / hidden product 仍由 runtime flow 動態建立。
-- `compose/petshop.compose.yaml` 已提供 PetShop API-level E2E 本機環境。
+- `compose/petshop.api-dev.compose.yaml` 已提供 PetShop API-level E2E 本機環境。
 - `compose/petshop-local.http` 已提供 OAuth、reservation hold、cart、discount estimate、checkout complete 與 reservation confirmed 的手動驗證流程。
-- `compose/petshop-storefront.compose.yaml` 已提供 frontend + nginx reverse proxy 整合環境；第一版 storefront 先沿用 `CommonStorefront` baseline，PetShop reservation UI 留到 M4-P3。
+- `compose/petshop.site-dev.compose.yaml` 已提供 frontend + nginx reverse proxy 整合環境；第一版 storefront 先沿用 `CommonStorefront` baseline，PetShop reservation UI 留到 M4-P3。
 
 ### M4-P3 PetShop Storefront
 
@@ -764,7 +764,7 @@ API spec draft：
 
 - `/member` reservation 摘要或入口
 - `/member/orders` PetShop reservation order / discount 顯示確認
-- `petshop-storefront.compose.yaml` 切換為 `PetShop.Storefront`
+- `petshop.site-dev.compose.yaml` 切換為 `PetShop.Storefront`
 - nginx edge 驗證
 - browser smoke 驗收記錄
 
@@ -776,7 +776,7 @@ API spec draft：
 
 完成內容：
 
-- `compose/petshop-storefront.compose.yaml` 已切換為啟動 `AndrewDemo.NetConf2023.PetShop.Storefront`。
+- `compose/petshop.site-dev.compose.yaml` 已切換為啟動 `AndrewDemo.NetConf2023.PetShop.Storefront`。
 - nginx edge 仍維持 `http://localhost:5238` 作為整合入口，`/api/*` 指向標準 `.API`，`/petshop-api/*` 指向 PetShop API，其他 route 指向 PetShop Storefront。
 - 使用者已以 browser 驗證 PetShop storefront flow 可運作。
 - M4-P3 第一版完成範圍維持在 consumer-facing reservation / cart / checkout / member flow；confirmed 後取消/改期、staff/admin UI 與 durable notification 留待未來需求。

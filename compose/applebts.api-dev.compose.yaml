@@ -1,20 +1,17 @@
-services:
-  applebts-seed:
-    build:
-      context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.DatabaseInit/Dockerfile
-    image: andrewdemo-netconf2023-applebts-seed:local
-    environment:
-      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
-    volumes:
-      - applebts-data:/data
-    restart: "no"
+# site: applebts
+# mode: api-dev
+# intent: Apple BTS API 開發、驗證與除錯；不啟動 seed、storefront 或 reverse proxy。
+# topology: 啟動標準 core API 與 AppleBTS vertical API，兩者共用同一份 ephemeral LiteDB volume。
+# database: 不初始化資料；使用 shared local volume 作為暫存資料庫，方便觀察跨 API token / qualification 行為。
+# public surface: 直接開放 core API 與 BTS API ports，方便 Swagger、logs 與 API debug。
+name: andrewshop-applebts-api-dev
 
+services:
   applebts-api:
     build:
       context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.applebts
-    image: andrewdemo-netconf2023-applebts-api:local
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
+    image: andrewdemo-shop-common-api:local
     ports:
       - "5108:8080"
     environment:
@@ -26,17 +23,14 @@ services:
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - applebts-data:/data
-    depends_on:
-      applebts-seed:
-        condition: service_completed_successfully
-    restart: unless-stopped
+      - applebts-api-dev-data:/data
+    restart: "no"
 
   applebts-btsapi:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.AppleBTS.API/Dockerfile
-    image: andrewdemo-netconf2023-applebts-btsapi:local
+    image: andrewdemo-shop-applebts-btsapi:local
     ports:
       - "5118:8080"
     environment:
@@ -48,12 +42,9 @@ services:
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - applebts-data:/data
-    depends_on:
-      applebts-seed:
-        condition: service_completed_successfully
-    restart: unless-stopped
+      - applebts-api-dev-data:/data
+    restart: "no"
 
 volumes:
-  applebts-data:
+  applebts-api-dev-data:
     driver: local

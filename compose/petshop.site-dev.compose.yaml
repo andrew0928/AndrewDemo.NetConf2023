@@ -1,0 +1,100 @@
+# site: petshop
+# mode: site-dev
+# intent: 本地完整 PetShop 網站驗證；docker compose up 後啟動完整 website stack。
+# topology: seed + core API + PetShop reservation API + PetShop Storefront + nginx reverse proxy。
+# database: named volume，由 PetShop seed 初始化；core API 與 reservation API 共用同一份資料庫。
+# observability: edge、storefront 與 backend APIs 都開放 host port，方便本地偵錯；此 mode 不作為 security baseline。
+name: andrewshop-petshop-site-dev
+
+services:
+  petshop-seed:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.DatabaseInit/Dockerfile
+    image: andrewdemo-shop-petshop-seed:local
+    environment:
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - petshop-site-dev-data:/data
+    restart: "no"
+
+  petshop-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
+    image: andrewdemo-shop-common-api:local
+    ports:
+      - "5208:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-site-dev-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: "no"
+
+  petshop-reservationapi:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.API/Dockerfile
+    image: andrewdemo-shop-petshop-reservationapi:local
+    ports:
+      - "5218:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=PetShop
+      - ASPNETCORE_HTTP_PORTS=8080
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+      - SHOP_ID=petshop
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    volumes:
+      - petshop-site-dev-data:/data
+    depends_on:
+      petshop-seed:
+        condition: service_completed_successfully
+    restart: "no"
+
+  petshop-storefront:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.PetShop.Storefront/Dockerfile
+    image: andrewdemo-shop-petshop-storefront:local
+    ports:
+      - "5239:8080"
+    environment:
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://petshop-api:8080
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-petshop-storefront
+      - Storefront__PetShopApi__BaseUrl=http://petshop-reservationapi:8080
+      - Time__Mode=${Time__Mode:-System}
+      - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
+      - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
+    depends_on:
+      - petshop-api
+      - petshop-reservationapi
+    restart: "no"
+
+  petshop-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "5238:80"
+    volumes:
+      - ./nginx/petshop-storefront.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - petshop-storefront
+      - petshop-api
+      - petshop-reservationapi
+    restart: "no"
+
+volumes:
+  petshop-site-dev-data:
+    driver: local

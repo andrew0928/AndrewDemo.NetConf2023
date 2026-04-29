@@ -1,0 +1,55 @@
+# site: common
+# mode: site-prod
+# intent: 本地端驗證 build.sh 已建置並推送到 registry 的正式部署 image；不在 compose up 時 on-the-fly build。
+# topology: seed + core API + CommonStorefront + nginx reverse proxy。
+# database: persistent named volume，由 seed 初始化；可用 down -v 重置。
+# security baseline: 只 publish nginx edge port；backend API / storefront container 只在 compose internal network 可達。
+# public surface: 對外只開放 storefront routes 與 /oauth/*；/api/* 與 swagger 不預設公開。
+name: andrewshop-common-site-prod
+
+services:
+  common-seed:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-seed:${IMAGE_TAG:-develop}
+    volumes:
+      - common-site-prod-data:/data
+    restart: "no"
+
+  common-api:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-api:${IMAGE_TAG:-develop}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=5108
+      - SHOP_DATABASE_FILEPATH=/data/shop-database.db
+    volumes:
+      - common-site-prod-data:/data
+    depends_on:
+      common-seed:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  common-storefront:
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-storefront:${IMAGE_TAG:-develop}
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_HTTP_PORTS=8080
+      - Storefront__CoreApi__BaseUrl=http://common-api:5108
+      - Storefront__CoreApi__PublicOAuthBaseUrl=
+      - Storefront__CoreApi__OAuthClientId=andrewshop-common-storefront
+    depends_on:
+      - common-api
+    restart: unless-stopped
+
+  common-edge:
+    image: nginx:1.27-alpine
+    ports:
+      - "${COMMON_SITE_PORT:-8080}:80"
+    volumes:
+      - ./nginx/common.site-prod.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - common-storefront
+      - common-api
+    restart: unless-stopped
+
+volumes:
+  common-site-prod-data:
+    driver: local

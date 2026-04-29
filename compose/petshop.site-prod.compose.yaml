@@ -1,66 +1,64 @@
+# site: petshop
+# mode: site-prod
+# intent: 本地端驗證 build.sh 已建置並推送到 registry 的正式部署 image；不在 compose up 時 on-the-fly build。
+# topology: seed + core API + PetShop reservation API + PetShop Storefront + nginx reverse proxy。
+# database: persistent named volume，由 PetShop seed 初始化；core API 與 reservation API 共用同一份資料庫。
+# security baseline: 只 publish nginx edge port；backend APIs / storefront container 只在 compose internal network 可達。
+# public surface: 對外只開放 storefront routes 與 /oauth/*；/api/*、/petshop-api/* 與 swagger 不預設公開。
+name: andrewshop-petshop-site-prod
+
 services:
   petshop-seed:
-    build:
-      context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.PetShop.DatabaseInit/Dockerfile
-    image: andrewdemo-netconf2023-petshop-seed:local
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-petshop-seed:${IMAGE_TAG:-develop}
     environment:
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
     volumes:
-      - petshop-storefront-data:/data
+      - petshop-site-prod-data:/data
     restart: "no"
 
   petshop-api:
-    build:
-      context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile.petshop
-    image: andrewdemo-netconf2023-petshop-api:local
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-api:${IMAGE_TAG:-develop}
     environment:
       - ASPNETCORE_ENVIRONMENT=PetShop
-      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTP_PORTS=5108
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
       - SHOP_ID=petshop
       - Time__Mode=${Time__Mode:-System}
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - petshop-storefront-data:/data
+      - petshop-site-prod-data:/data
     depends_on:
       petshop-seed:
         condition: service_completed_successfully
     restart: unless-stopped
 
   petshop-reservationapi:
-    build:
-      context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.PetShop.API/Dockerfile
-    image: andrewdemo-netconf2023-petshop-reservationapi:local
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-petshop-reservationapi:${IMAGE_TAG:-develop}
     environment:
       - ASPNETCORE_ENVIRONMENT=PetShop
-      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTP_PORTS=5109
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
       - SHOP_ID=petshop
       - Time__Mode=${Time__Mode:-System}
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
     volumes:
-      - petshop-storefront-data:/data
+      - petshop-site-prod-data:/data
     depends_on:
       petshop-seed:
         condition: service_completed_successfully
     restart: unless-stopped
 
   petshop-storefront:
-    build:
-      context: ..
-      dockerfile: src/AndrewDemo.NetConf2023.PetShop.Storefront/Dockerfile
-    image: andrewdemo-netconf2023-petshop-storefront:local
+    image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-petshop-storefront:${IMAGE_TAG:-develop}
     environment:
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=8080
-      - Storefront__CoreApi__BaseUrl=http://petshop-api:8080
+      - Storefront__CoreApi__BaseUrl=http://petshop-api:5108
       - Storefront__CoreApi__PublicOAuthBaseUrl=
       - Storefront__CoreApi__OAuthClientId=andrewshop-petshop-storefront
-      - Storefront__PetShopApi__BaseUrl=http://petshop-reservationapi:8080
+      - Storefront__PetShopApi__BaseUrl=http://petshop-reservationapi:5109
       - Time__Mode=${Time__Mode:-System}
       - Time__ExpectedStartupLocal=${Time__ExpectedStartupLocal:-}
       - Time__TimeZoneId=${Time__TimeZoneId:-Asia/Taipei}
@@ -72,9 +70,9 @@ services:
   petshop-edge:
     image: nginx:1.27-alpine
     ports:
-      - "5238:80"
+      - "${PETSHOP_SITE_PORT:-8082}:80"
     volumes:
-      - ./nginx/petshop-storefront.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/petshop.site-prod.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - petshop-storefront
       - petshop-api
@@ -82,5 +80,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  petshop-storefront-data:
+  petshop-site-prod-data:
     driver: local

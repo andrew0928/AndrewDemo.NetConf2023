@@ -8,11 +8,11 @@
 @paymentId = 9001
 
 # 使用前請先啟動 PetShop compose:
-# docker compose -f compose/petshop.compose.yaml up --build
+# docker compose -f compose/petshop.api-dev.compose.yaml up --build
 #
 # 若要先重建乾淨資料庫:
-# docker compose -f compose/petshop.compose.yaml down -v
-# docker compose -f compose/petshop.compose.yaml up --build
+# docker compose -f compose/petshop.api-dev.compose.yaml down -v
+# docker compose -f compose/petshop.api-dev.compose.yaml up --build
 #
 # 建議順序:
 # authorize -> token -> products -> services -> availability -> create hold

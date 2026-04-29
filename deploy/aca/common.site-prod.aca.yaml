@@ -1,0 +1,116 @@
+# site: common
+# mode: site-prod
+# target: Azure Container Apps
+# intent: 將 compose/common.site-prod.compose.yaml 的正式部署拓撲一對一部署為單一 Container App。
+# topology: init seed + core API + CommonStorefront + nginx edge sidecar。
+# database: /data 使用 ACA EmptyDir replica-scoped volume；seed initContainer 啟動時重建 demo database。
+# security baseline: 只開放 nginx ingress targetPort 80；/api/* 不由 nginx 對外發佈，browser 僅能走 storefront 與 /oauth/*。
+# note: 同一個 Container App 內的 containers 共用 network namespace，因此 app containers 必須使用不同內部 port。
+identity:
+  type: SystemAssigned
+properties:
+  configuration:
+    activeRevisionsMode: Single
+    ingress:
+      external: true
+      targetPort: 80
+      transport: Auto
+      allowInsecure: false
+      traffic:
+        - latestRevision: true
+          weight: 100
+    registries:
+      - server: andrew0928.azurecr.io
+        identity: system
+  template:
+    initContainers:
+      - name: common-seed
+        image: andrew0928.azurecr.io/andrewdemo-shop-common-seed:develop
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+        volumeMounts:
+          - volumeName: common-data
+            mountPath: /data
+    containers:
+      - name: common-edge
+        image: nginx:1.27-alpine
+        command:
+          - /bin/sh
+          - -c
+        args:
+          - |
+            cat > /etc/nginx/conf.d/default.conf <<'NGINX'
+            map $http_x_forwarded_proto $andrew_forwarded_proto {
+                default $http_x_forwarded_proto;
+                "" $scheme;
+            }
+
+            server {
+                listen 80;
+                server_name _;
+
+                location /oauth/ {
+                    proxy_pass http://127.0.0.1:5108;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host $http_host;
+                    proxy_set_header X-Forwarded-Host $http_host;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $andrew_forwarded_proto;
+                }
+
+                location / {
+                    proxy_pass http://127.0.0.1:8080;
+                    proxy_http_version 1.1;
+                    proxy_set_header Host $http_host;
+                    proxy_set_header X-Forwarded-Host $http_host;
+                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                    proxy_set_header X-Forwarded-Proto $andrew_forwarded_proto;
+                }
+            }
+            NGINX
+            nginx -g 'daemon off;'
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+      - name: common-api
+        image: andrew0928.azurecr.io/andrewdemo-shop-common-api:develop
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ASPNETCORE_HTTP_PORTS
+            value: "5108"
+          - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+            value: "true"
+          - name: SHOP_DATABASE_FILEPATH
+            value: /data/shop-database.db
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+        volumeMounts:
+          - volumeName: common-data
+            mountPath: /data
+      - name: common-storefront
+        image: andrew0928.azurecr.io/andrewdemo-shop-common-storefront:develop
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: Production
+          - name: ASPNETCORE_HTTP_PORTS
+            value: "8080"
+          - name: ASPNETCORE_FORWARDEDHEADERS_ENABLED
+            value: "true"
+          - name: Storefront__CoreApi__BaseUrl
+            value: http://127.0.0.1:5108
+          - name: Storefront__CoreApi__PublicOAuthBaseUrl
+            value: ""
+          - name: Storefront__CoreApi__OAuthClientId
+            value: andrewshop-common-storefront
+        resources:
+          cpu: 0.25
+          memory: 0.5Gi
+    scale:
+      minReplicas: 1
+      maxReplicas: 1
+    volumes:
+      - name: common-data
+        storageType: EmptyDir

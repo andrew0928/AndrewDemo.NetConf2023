@@ -11,14 +11,14 @@
 - 本文件是 `AndrewDemo.NetConf2023.PetShop.Storefront` 第一版的正式驗收清單。
 - P3A 完成條件為 spec / testcase / skeleton 可 build。
 - P3B 完成條件為 reservation flow pages 可依本文件主要案例操作。
-- P3C 完成條件為 `petshop-storefront.compose.yaml` 可啟動並用 browser smoke 驗收主要 happy path。
+- P3C 完成條件為 `petshop.site-dev.compose.yaml` 可啟動並用 browser smoke 驗收主要 happy path。
 - 若某 testcase 因時間控制或環境限制無法執行，必須標示為 blocked。
 
 ## 驗收結果
 
 - 2026-04-24：`dotnet build src/AndrewDemo.NetConf2023.slnx -m:1` 通過。
 - 2026-04-24：`dotnet test src/AndrewDemo.NetConf2023.slnx -m:1` 通過。
-- 2026-04-24：`petshop-storefront.compose.yaml` 已切換為啟動 `AndrewDemo.NetConf2023.PetShop.Storefront`。
+- 2026-04-24：`petshop.site-dev.compose.yaml` 已切換為啟動 `AndrewDemo.NetConf2023.PetShop.Storefront`。
 - 2026-04-24：使用者以 browser 驗證 PetShop storefront flow，結果 OK。
 
 ## Decision Table

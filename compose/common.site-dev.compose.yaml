@@ -1,34 +1,46 @@
+# site: common
+# mode: site-dev
+# intent: 本地完整網站驗證；docker compose up 後啟動完整 website stack。
+# topology: seed + core API + CommonStorefront + nginx reverse proxy。
+# database: named volume，由 seed 初始化；可用 down -v 重置。
+# observability: edge、storefront 與 backend API 都開放 host port，方便本地偵錯；此 mode 不作為 security baseline。
+name: andrewshop-common-site-dev
+
 services:
   common-seed:
     build:
       context: ../src/seed
       dockerfile: Dockerfile
-    image: andrewdemo-netconf2023-common-seed:local
+    image: andrewdemo-shop-common-seed:local
     volumes:
-      - common-data:/data
+      - common-site-dev-data:/data
     restart: "no"
 
   common-api:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
-    image: andrewdemo-netconf2023-common-api:local
+    image: andrewdemo-shop-common-api:local
+    ports:
+      - "5108:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db
     volumes:
-      - common-data:/data
+      - common-site-dev-data:/data
     depends_on:
       common-seed:
         condition: service_completed_successfully
-    restart: unless-stopped
+    restart: "no"
 
   common-storefront:
     build:
       context: ..
       dockerfile: src/AndrewDemo.NetConf2023.CommonStorefront/Dockerfile
-    image: andrewdemo-netconf2023-common-storefront:local
+    image: andrewdemo-shop-common-storefront:local
+    ports:
+      - "5129:8080"
     environment:
       - ASPNETCORE_HTTP_PORTS=8080
       - Storefront__CoreApi__BaseUrl=http://common-api:8080
@@ -36,7 +48,7 @@ services:
       - Storefront__CoreApi__OAuthClientId=andrewshop-common-storefront
     depends_on:
       - common-api
-    restart: unless-stopped
+    restart: "no"
 
   common-edge:
     image: nginx:1.27-alpine
@@ -47,8 +59,8 @@ services:
     depends_on:
       - common-storefront
       - common-api
-    restart: unless-stopped
+    restart: "no"
 
 volumes:
-  common-data:
+  common-site-dev-data:
     driver: local

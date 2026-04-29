@@ -1,0 +1,20 @@
+# site: common
+# mode: api-dev
+# intent: API 開發、驗證與除錯；最小相依性、最大可觀測性。
+# topology: 只啟動標準 core API，不啟動 seed、storefront 或 reverse proxy。
+# database: 使用 container writable layer 內的 LiteDB 檔案；移除 container 即可重置。
+# public surface: 直接開放 core API port，方便 Swagger、logs 與 API debug。
+name: andrewshop-common-api-dev
+
+services:
+  common-api:
+    build:
+      context: ..
+      dockerfile: src/AndrewDemo.NetConf2023.API/Dockerfile
+    image: andrewdemo-shop-common-api:local
+    ports:
+      - "5108:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+    restart: "no"

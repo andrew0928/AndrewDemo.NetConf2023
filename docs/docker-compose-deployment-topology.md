@@ -154,7 +154,7 @@ flowchart TB
 
 對應檔案：
 
-- [compose/commonstorefront.compose.yaml](/Users/andrew/code-work/andrewshop.apidemo/compose/commonstorefront.compose.yaml)
+- [compose/common.site-dev.compose.yaml](/Users/andrew/code-work/andrewshop.apidemo/compose/common.site-dev.compose.yaml)
 - [compose/nginx/commonstorefront.conf](/Users/andrew/code-work/andrewshop.apidemo/compose/nginx/commonstorefront.conf)
 
 實際結構如下：
