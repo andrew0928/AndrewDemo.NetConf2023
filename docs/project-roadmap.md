@@ -6,7 +6,7 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
-## TiP 研究方向：原則確認中
+## TiP 研究方向：領域物件分類已確認
 
 最後記錄：2026-10-16。
 
@@ -14,7 +14,9 @@
 
 已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
 
-原則與名詞解釋見 [TiP 設計原則](tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)。目前先收斂需求原則；來源判定、分類傳遞與處理政策尚待展開，未變更既有 `/spec` 或 `.Abstract` contract。
+已確認 `.Core` 管理的 8 種持久化領域物件分類：`Order`、`Member`、`Cart`、`CheckoutTransactionRecord`、`MemberAccessTokenRecord` 在建立時確定正式／測試用途，建立後不可變更；`InventoryRecord`、`Product`、`SkuRecord` 受保護，測試行為不得異動，因測試而略過的操作必須留下 log。PetShop 的預約及行事曆／時段占用比照受保護規則。
+
+原則、分類與名詞解釋見 [TiP 設計原則](tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)及[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。情境與 AC 尚未確認；其餘來源判定、傳遞及處理細節仍待展開，未變更既有 `/spec`、`.Abstract` contract 或實作。
 
 ## Milestone 1 - 基礎建設
 
