@@ -6,6 +6,16 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
+## TiP 研究方向：原則確認中
+
+最後記錄：2026-10-16。
+
+以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，尚未排定新的實作 milestone。
+
+已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
+
+原則與名詞解釋見 [TiP 設計原則](tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)。目前先收斂需求原則；來源判定、分類傳遞與處理政策尚待展開，未變更既有 `/spec` 或 `.Abstract` contract。
+
 ## Milestone 1 - 基礎建設
 
 目標：建立可支援模組化商店的共用基礎。
