@@ -2,13 +2,13 @@
 
 更新日期：2026-10-16。
 
-本文件供 AndrewShop 的 TiP 研究與需求討論使用。目前已確認大前提與領域物件分類規則，情境與接受條件（AC）尚未確認。本文件不是已凍結的 `/spec`，也不代表系統已具備所述能力。
+本文件供 AndrewShop 的 TiP 研究與需求討論使用。目前已確認大前提、領域物件分類規則及 [AC-TIP-001](tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014)、[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)，本輪核心接受條件（AC）已全部確認。本文件不是已凍結的 `/spec`，也不代表系統已具備所述能力。
 
 ## 研究目的與範圍
 
 以 AndrewShop PoC / prototype 作為 Testing in Production（TiP）的研究與實驗對象，探索如何在正式環境中辨識測試行為、執行業務流程，並控制其結果。
 
-此方向對齊 [project roadmap](project-roadmap.md)：共用交易流程、DiscountRule、ProductService 與不同業務模組，都需要遵守一致的測試邊界。
+此方向對齊 [project roadmap](../project-roadmap.md)：共用交易流程、DiscountRule、ProductService 與不同業務模組，都需要遵守一致的測試邊界。
 
 本文件中的 TiP，限定為「服務在正式環境執行，測試行為受到明確控制」這個研究範圍。它不是所有 production testing 技術的總稱；以真實交易驗證金流、canary release 或其他可能產生真實商業效果的驗證方式，需另行定義範圍。
 
@@ -49,23 +49,35 @@
 
 ## 已確認的領域物件分類
 
-本階段先收斂領域物件規則。以下分類已於 2026-10-16 確認，決策紀錄見[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)；先前提出的情境表尚未經使用者審閱，不視為已確認的 AC。
+以下分類已於 2026-10-16 確認，決策紀錄見[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。後續案例的逐條確認狀態維護於 [TiP 接受條件](tip-acceptance-criteria.md)；先前未審閱的情境表不自動視為已確認。
 
 ### 第一類：建立時確定用途，建立後不可變更
 
 `Order`、`Member`、`Cart`、`CheckoutTransactionRecord`、`MemberAccessTokenRecord` 在建立時即確定正式／測試用途。不可從正式改為測試，也不可從測試改為正式；不可變的是用途分類，不是物件的所有業務資料或狀態。
 
-`Member` 在建立時標示用途，衍生的 Cart、Checkout 與 Token 跟隨 Member。測試 Token 引發的行為與影響也屬於測試；測試交易產生的 Order 必須標示為 test。實際欄位名稱、關聯與傳遞機制留待設計。
+[AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004) 已確認兩個方向均須拒絕變更；重新讀取後原用途與關聯物件用途均不變，正常記錄拒絕原因。其他合法業務欄位仍依原有規則更新。
+
+[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試 Cart 可正常新增、刪除商品明細並保存結果，Cart 的 test 用途維持不變，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
+
+`Member` 在建立時標示用途，衍生的 Cart、Checkout 與 Token 跟隨 Member。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位名稱、關聯與傳遞機制留待設計。
 
 ### 第二類：受保護，測試行為不得異動
 
 `InventoryRecord`、`Product`、`SkuRecord`，以及擴充模組的預約與行事曆／時段占用，均屬受保護範圍。測試行為不得新增、修改或刪除這些受保護資料；因測試而略過的操作，必須留下 log 說明略過原因。正式行為依既有權限與業務規則處理。
 
+**系統到期整理的責任邊界**：正式會員 A 的預約已逾期，測試會員 B 的查詢可以喚起系統正常清理；不因 B 為 test 而略過真正到期的狀態更新。此處區分 B 的查詢與系統的生命週期整理，不改變受保護物件分類，也不代表任何不帶會員資訊的事件都可異動正式資料。[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012) 已依此修正接受；詳見[系統到期整理決策](decisions/2026-10-16-tip-system-expiration-boundary.md)，PetShop 執行邊界的差距列入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作。
+
 必要的身分、權限與業務檢查仍照常執行；不會造成受保護資料異動的必要流程也照常執行。測試用途不代表無條件成功，僅略過被禁止的異動。例如庫存檢查照常，但不扣庫存，且記錄因 test 而未扣減。Log 格式與保存方式尚未定案。
+
+[AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011) 已確認測試會員不能完成其他會員的 Checkout，即使雙方都是 test 也須拒絕；原 Checkout 與 Cart 保持不變，不建立 Order 或產生商業效果，正常記錄買方不符而不留 test 略過紀錄。
+
+[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 已確認測試改價的案例：必要檢查通過後，略過 Product 更新並留 log；後續讀取與正式交易仍使用原售價。呼叫端如何以程式辨識測試行為及略過結果，另列為[架構待議事項](tip-architecture-notes.md)，不改動此 AC。
+
+[AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006) 已確認測試修改 SKU 規格的案例：必要檢查通過後，略過 SKU 更新並留 log；重新讀取仍為原規格，Product 關聯與庫存資料均不受影響。
 
 ### `.Core` 持久化領域物件完整清單
 
-依 [ShopDatabaseContext](../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類：
+依 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類：
 
 | 領域物件 | 實際型別 | Collection | 已確認分類 |
 |---|---|---|---|
@@ -86,10 +98,27 @@
 
 | 使用者用語 | 現行專案對應 | 已確認規則 |
 |---|---|---|
-| Booking／預約 | `.PetShop.Extension` 的 `PetShopReservationRecord`，collection 為 `petshop_reservations`；專案沿用 `Reservation` 命名。 | 受保護。測試觸發的預約不得新增或異動預約，也不得建立其衍生 Product；略過操作留 log。 |
-| Calendar／行事曆 | 目前沒有獨立 Calendar 型別或 collection；由 Reservation 推導時段、場地及人員的占用與可用性。 | 受保護。測試不得占用、釋放或改變正式時段資源；略過操作留 log。 |
+| Booking／預約 | `.PetShop.Extension` 的 `PetShopReservationRecord`，collection 為 `petshop_reservations`；專案沿用 `Reservation` 命名。 | 受保護。測試預約操作不得新增或異動預約，也不得建立其衍生 Product；略過操作留 log。真正逾期的系統整理依前述責任邊界正常處理。 |
+| Calendar／行事曆 | 目前沒有獨立 Calendar 型別或 collection；由 Reservation 推導時段、場地及人員的占用與可用性。 | 受保護。測試預約操作不得占用、釋放或改變正式時段資源；略過操作留 log。既有 hold 的自然到期仍依正式時間規則判定。 |
 
-對應依據見 [PetShopReservationRecord](../src/AndrewDemo.NetConf2023.PetShop.Extension/Records/PetShopReservationRecord.cs)、[PetShopReservationRepository](../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationRepository.cs) 與 [PetShopAvailabilityService](../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopAvailabilityService.cs)。兩者已納入規則，但不另計為 `.Core` 的持久化物件。
+對應依據見 [PetShopReservationRecord](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Records/PetShopReservationRecord.cs)、[PetShopReservationRepository](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationRepository.cs) 與 [PetShopAvailabilityService](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopAvailabilityService.cs)。兩者已納入規則，但不另計為 `.Core` 的持久化物件。
+
+[AC-TIP-007](tip-acceptance-criteria.md#ac-tip-007) 已確認：測試 `CreateHold` 通過必要檢查後，略過建立 Reservation、時段占用及衍生 Product 並留 log，正式查詢仍顯示可預約。使用者後續已決定不接續該預約的購物車與 Checkout；完整流程邊界見已接受的 [AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)。
+
+## 已確認的略過紀錄與商業統計規則
+
+在 AC-TIP-001 確認時，使用者補充以下要求：
+
+- 因 test 略過扣庫存、扣款或出貨，均須留下可對應該次交易的 log，說明略過的操作及原因。
+- 若正式商業統計是事後查詢產生的報表，查詢時排除測試訂單，不要求為此另留 TiP log；不影響既有一般查詢紀錄。
+- 若由 event 觸發更新正式商業統計，因 test 略過統計更新時，同樣須留下 log。
+- 若系統有商業統計功能或報表，AC 必須驗證測試交易不影響其結果，不能只驗證有 log。不存在的統計功能標示不適用，不因此新增報表，也不能宣稱該功能已驗證通過。
+
+AC-TIP-003 補充：若庫存不足等正常業務檢查已使交易終止，依正常流程記錄失敗原因即可；該案例由 Checkout 物件的 test 標記識別用途，不要求失敗 log 額外帶 test 標記。未走到的扣庫存、扣款或出貨操作，不產生「因 test 略過」紀錄。
+
+[AC-TIP-008](tip-acceptance-criteria.md#ac-tip-008) 確認相同原則適用於預約時段不可用：必要檢查失敗就正常終止，既有預約與占用不變，不新增 Reservation 或 Product，也不將正常失敗記為 test 略過。
+
+[AC-TIP-009](tip-acceptance-criteria.md#ac-tip-009) 已確認正式與測試交易並行時，兩者各自維持用途及處理政策；測試交易不影響正式交易的庫存扣減、付款、履約或商業統計，也不能因並行而漏掉自身的效果控制與略過紀錄。
 
 ## 附加說明：商業效果的解釋範圍
 
@@ -124,14 +153,16 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 使用者已提出的研究情境為：來自 test user、test 信用卡、test API key 或 test endpoint 的行為，產生的 test orders 應不出貨、不扣款、不列入正式商業統計。這些是後續需求展開的輸入，尚未形成完整判定規格。
 
+使用者已補充：測試訂單後續事件與重試仍受 test 限制；每個實際執行邊界都必須能明確確認用途，用途不明或判定矛盾視為 BUG。[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013) 與 [AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014) 的完整案例已與 AC-TIP-015 一併接受。信用卡案例 [AC-TIP-002](tip-acceptance-criteria.md#ac-tip-002) 僅作示意，未實作信用卡支付時不適用（N/A）。
+
 接下來需依大原則逐項釐清：
 
 1. **來源判定**：誰能標記 test、如何驗證來源，以及多種來源混合或判定失敗時如何處理。先前提出的 OR 規則仍是候選方案。
-2. **分類傳遞**：建立時用途不可變及 Member 衍生關係已確認；事件、重試及跨模組如何承接，還有付款階段才辨識出 test 時如何處理，仍待定義。
-3. **效果控制**：庫存、商品、SKU、預約及時段資源的保護政策已確認；略過異動後如何回傳結果或延續流程，以及付款、履約、通知的處理規則仍待定義。
-4. **資料使用**：因測試略過的操作必須留 log 已確認；log 格式、保存方式，以及正式報表、測試分析、稽核、技術監控與成本統計的資料使用細節仍待定義。
+2. **分類傳遞**：建立時用途不可變、Member 衍生關係，以及事件與重試須維持明確用途的方向已確認；具體傳遞機制、跨模組承接方式，以及未來實作付款功能時的來源判定時機，仍待設計。
+3. **效果控制**：庫存、商品、SKU、預約及時段資源的保護政策已確認；AC-TIP-001 已確認測試訂單不扣款、不出貨及相關略過紀錄。其餘操作略過後如何回傳或延續流程，以及付款、履約、通知的整合細節仍待定義。
+4. **資料使用**：略過操作留 log、查詢型報表與事件統計的紀錄區別，以及既有商業統計不受測試影響的驗收要求已確認；log 格式、保存方式及其他資料使用細節仍待定義。
 
-以上待討論項目不影響本版領域分類已確認的狀態，也不代表情境與 AC 已獲接受。
+以上待討論項目不影響已確認的領域分類、AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014 與 AC-TIP-015，也不代表範圍外的其他情境或 AC 已獲接受。鏈路 context 與呼叫端結果識別先保留於 [TiP 架構待議筆記](tip-architecture-notes.md)，本輪核心 AC 已確認，後續統一設計。
 
 ## 文件與實作邊界
 

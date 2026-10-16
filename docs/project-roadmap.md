@@ -6,7 +6,7 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
-## TiP 研究方向：領域物件分類已確認
+## TiP 研究方向：核心接受條件已確認
 
 最後記錄：2026-10-16。
 
@@ -16,7 +16,31 @@
 
 已確認 `.Core` 管理的 8 種持久化領域物件分類：`Order`、`Member`、`Cart`、`CheckoutTransactionRecord`、`MemberAccessTokenRecord` 在建立時確定正式／測試用途，建立後不可變更；`InventoryRecord`、`Product`、`SkuRecord` 受保護，測試行為不得異動，因測試而略過的操作必須留下 log。PetShop 的預約及行事曆／時段占用比照受保護規則。
 
-原則、分類與名詞解釋見 [TiP 設計原則](tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)及[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。情境與 AC 尚未確認；其餘來源判定、傳遞及處理細節仍待展開，未變更既有 `/spec`、`.Abstract` contract 或實作。
+原則、分類與名詞解釋見 [TiP 設計原則](tip/tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](tip/decisions/2026-10-16-tip-no-real-business-effects.md)及[領域物件分類決策](tip/decisions/2026-10-16-tip-domain-object-classification.md)。[AC-TIP-001](tip/tip-acceptance-criteria.md#ac-tip-001) 已確認：測試會員可完成一般商品結帳；略過扣庫存、扣款、出貨必須留 log。查詢型報表排除測試資料不須另留 TiP log，事件觸發的統計更新若因 test 略過則須留 log；若有商業統計功能或報表，AC 必須驗證其結果不受測試交易影響。
+
+[AC-TIP-003](tip/tip-acceptance-criteria.md#ac-tip-003) 已確認：庫存不足時正常終止結帳、保留 test Checkout，不建立訂單；按照正常流程記錄庫存不足及交易終止，未走到的操作不留 test 略過紀錄。
+
+[AC-TIP-004](tip/tip-acceptance-criteria.md#ac-tip-004) 已確認：Order、Member、Cart、Checkout、Token 建立後，正式與 test 用途不得互換；拒絕變更後原用途及關聯物件用途不變，正常記錄拒絕原因。
+
+[AC-TIP-005](tip/tip-acceptance-criteria.md#ac-tip-005) 已確認：測試改價仍執行必要檢查，但略過 Product 寫入並留 log；重新讀取及正式交易仍使用原售價。使用者另要求呼叫端能以程式辨識 test 行為及操作結果，此項列為架構議題，不修改 AC-TIP-005。
+
+[AC-TIP-006](tip/tip-acceptance-criteria.md#ac-tip-006) 已確認：測試修改 SKU 規格仍執行必要檢查，但略過更新並留 log；重新讀取為原規格，Product 關聯與庫存資料均不受影響。
+
+[AC-TIP-007](tip/tip-acceptance-criteria.md#ac-tip-007) 已確認：測試預約通過必要檢查後，不新增 Reservation 或衍生 Product、不占用時段並留 log；正式查詢仍顯示可預約。此案例驗收至 `CreateHold`；使用者後續已決定不接續該預約的購物車與 Checkout，完整邊界見已接受的 AC-TIP-015。
+
+[AC-TIP-008](tip/tip-acceptance-criteria.md#ac-tip-008) 已確認：測試預約遇到已占用時段時，照常回報不可用並終止，不新增預約或商品、不影響既有正式預約及占用；正常記錄失敗，不留 test 略過紀錄。
+
+[AC-TIP-009](tip/tip-acceptance-criteria.md#ac-tip-009) 已確認：正式與測試交易同時結帳，各自建立正確用途的 Order；只有正式交易改變庫存與商業統計，正式流程正常執行，測試流程略過商業效果並留 log。
+
+[AC-TIP-010](tip/tip-acceptance-criteria.md#ac-tip-010) 已確認：測試 Cart 可正常新增、刪除商品明細並保存結果，用途不變；Product、SKU 與庫存不受影響，已執行的 Cart 異動不記成 test 略過。
+
+[AC-TIP-011](tip/tip-acceptance-criteria.md#ac-tip-011) 已確認：測試會員不能完成其他測試會員的 Checkout，買方不符時正常拒絕；原 Checkout、Cart 不變，不建立 Order 或產生商業效果，正常記錄失敗，不留 test 略過紀錄。
+
+[AC-TIP-012](tip/tip-acceptance-criteria.md#ac-tip-012) 已依使用者修正保留並接受：測試會員查詢發現正式預約真正逾期，正常通知系統清理；處理完成後，預約須保存為 `Expired`，預約與 Product 紀錄保留。現行 PetShop 查詢同步寫入，尚缺對應非同步通知與系統處理邊界，已記入[架構變更事項](tip/tip-architecture-notes.md#petshop-expiration-change)，留待實作。決策與查核結果見[系統到期整理決策](tip/decisions/2026-10-16-tip-system-expiration-boundary.md)。
+
+使用者已一次接受最後三條核心案例：[AC-TIP-013](tip/tip-acceptance-criteria.md#ac-tip-013) 的測試訂單後續事件與重試維持 test；[AC-TIP-014](tip/tip-acceptance-criteria.md#ac-tip-014) 要求用途明確，否則為 BUG；[AC-TIP-015](tip/tip-acceptance-criteria.md#ac-tip-015) 不允許測試預約接續 Cart／Checkout。本輪 14 條核心 AC 已全部確認。[AC-TIP-002](tip/tip-acceptance-criteria.md#ac-tip-002) 保留為信用卡示意，未實作信用卡支付時為 N/A。
+
+鏈路 context 與呼叫端結果識別先收錄於 [TiP 架構待議筆記](tip/tip-architecture-notes.md)，後續依使用者要求統一整理架構與實作差距；未變更既有 `/spec`、`.Abstract` contract 或實作。
 
 ## Milestone 1 - 基礎建設
 
