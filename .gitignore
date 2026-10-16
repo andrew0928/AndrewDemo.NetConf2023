@@ -10,6 +10,9 @@
 *.userosscache
 *.sln.docstates
 
+# C# Dev Kit 語言服務快取，可自動重建
+*.lscache
+
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
 
@@ -366,5 +369,9 @@ FodyWeavers.xsd
 .DS_Store
 
 .env
-# git worktrees
+# 本機 Git worktree 工作目錄
 worktree/
+
+# 根目錄目前沒有 npm 專案，忽略工具產生的空 lockfile
+# 若日後加入根目錄 package.json，應移除此規則並追蹤 lockfile
+/package-lock.json
