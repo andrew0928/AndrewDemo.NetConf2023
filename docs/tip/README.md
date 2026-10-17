@@ -6,7 +6,8 @@
 
 | 文件 | 內容 |
 |---|---|
-| [業績與核帳 Schema 檢驗](accounting-schema-review.md) | 時間欄位已追加；Order 有金額明細，Checkout 終態及獨立快照仍不足，額外方案待確認。 |
+| [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
+| [業績與核帳 Schema 檢驗](accounting-schema-review.md) | 時間、State 與獨立交易金額明細已補齊；create 時固定、不含商品資訊快照，執行流程留 Phase 2。 |
 | [Phase 1 定案基準](../../spec/tip-phase1.md) | 正式規格、Abstract 合約、AC 對照、107 項測試證據與 Phase 2 邊界。 |
 | [舊 Checkout 409 與定案決策](../decisions/2026-10-17-tip-phase1-contract-baseline.md) | 缺少 PaymentId 明確回 409、要求重建，不處理相容；付款前移與合約定案。 |
 | [Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md) | 確認 IsTest 與 Checkout.PaymentId 欄位；command 保留明確會員輸入。Checkout 採作用中與封存分區保存，Order 關聯封存交易；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
@@ -47,3 +48,7 @@ Green 階段實測：白名單與 Context 的 21 項案例全部轉綠；全套 
 ## 核帳時間追加
 
 使用者追加 Checkout.ClosedAt（complete／cancel）與 Order.CreatedAt，均保存 UTC，舊資料未知為 null；本次只交付欄位與持久化驗證。用途繼承、時間填值、自動封存與明文 token log 移除留在 Phase 2，查詢功能後續再做。詳見 [追加決策](../decisions/2026-10-17-tip-accounting-timestamps.md) 與 [Schema 檢驗](accounting-schema-review.md)。
+
+## Checkout 固定內容追加
+
+已確認 create 時固定獨立金額與交易明細，終態完整移至 archived_checkout_transactions 並凍結；Schema 已補上 State、TotalPrice、ProductLines／DiscountLines，商品名稱／描述／規格不複製至 Checkout。正式 [生命週期規格](../../spec/tip-checkout-lifecycle.md) 與 [案例](../../spec/testcases/tip-checkout-lifecycle.md) 已同步，服務執行留 Phase 2。

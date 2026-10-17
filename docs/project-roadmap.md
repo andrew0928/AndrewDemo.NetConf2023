@@ -60,7 +60,9 @@ TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指�
 
 2026-10-17 Phase 1 收尾：使用者確認舊 Checkout 缺少 PaymentId 明確回 409 並要求重建，不做向前相容。已實作該分支並同步所有共用呼叫端；補齊標準流程、操作結果、HTTP／log、scope 與 AC 對應案例。全套 107 項測試通過。詳見 [定案決策](decisions/2026-10-17-tip-phase1-contract-baseline.md)。
 
-2026-10-17 核帳需求追加：新增 Checkout.ClosedAt 與 Order.CreatedAt，歷史未知時間為 null；業績／核帳查詢預設依交易／訂單的 IsTest 排除測試資料。時間填值與移除 access token 明文 log 留 Phase 2，查詢功能後續再做。Checkout 終態與獨立金額明細仍有待確認的 schema 缺口；見 [決策](decisions/2026-10-17-tip-accounting-timestamps.md) 與 [檢驗](tip/accounting-schema-review.md)。
+2026-10-17 核帳需求追加：新增 Checkout.ClosedAt 與 Order.CreatedAt，歷史未知時間為 null；業績／核帳查詢預設依交易／訂單的 IsTest 排除測試資料。時間填值與移除 access token 明文 log 留 Phase 2，查詢功能後續再做。Checkout 終態與獨立金額明細後續已確認並補上 schema，create 時固定；見 [決策](decisions/2026-10-17-tip-accounting-timestamps.md) 與 [檢驗](tip/accounting-schema-review.md)。
+
+2026-10-17 Checkout 追加定案：保存 State 與獨立交易金額／明細，create 時固定，complete 沿用且不重算 Cart／現價；Completed／Cancelled 完整搬移至 archived_checkout_transactions 後凍結。Checkout 不保存商品名稱、描述或規格快照。正式 [生命週期規格](../spec/tip-checkout-lifecycle.md) 與案例已同步，執行流程留 Phase 2。
 
 ## Milestone 1 - 基礎建設
 
@@ -859,3 +861,7 @@ API spec draft：
 - `PetShopReservationPurchaseThresholdDiscountRule` 已實作。
 - `spec/testcases/petshop-reservation-purchase-threshold-discount.md` 已固定 testcase。
 - extension tests 已覆蓋無預約、單筆預約、多筆預約、門檻邊界、只有預約與過期預約。
+
+## TiP Phase 2 跨 Session 交接（2026-10-18）
+
+使用者確認以同一台機器、不同 chat session 依序執行 2.1～2.7；canonical 執行與進度入口為 [Phase 2 計畫](../spec/tip-phase2-plan.md)。每階段更新交付證據與剩餘工作；保持 Phase 1 與 Abstract 定案，不將資料模型或舊 Docker image 的可用性當作完整 TiP 驗收。

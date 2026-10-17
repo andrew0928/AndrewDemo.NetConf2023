@@ -17,6 +17,7 @@
 | [Core 物件](tip-core-object-definitions.md) | [物件案例](testcases/tip-core-object-definitions.md) | IsTest、PaymentId、nullable Order 關聯、獨立封存區與舊資料預設值。 |
 | [白名單](tip-test-allowlist.md) | [白名單案例](testcases/tip-test-allowlist.md) | Core 唯讀清單；預設 MemberId 900001、PaymentId 990001；只在建立時分類。 |
 | [Context](tip-context-contracts.md) | [Context 案例](testcases/tip-context-contracts.md) | 獨立 Identity／Transaction、不可變快照、nullable transaction、scoped 邊界。 |
+| [Checkout 生命週期](tip-checkout-lifecycle.md) | [生命週期案例](testcases/tip-checkout-lifecycle.md) | State、create 固定交易金額與明細、終態完整封存與凍結。 |
 | [標準流程](tip-standard-flow.md) | [流程案例](testcases/tip-standard-flow.md) | 註冊／Token／Checkout／Order、原子封存、效果控制、事件、舊交易 409。 |
 | [HTTP 與操作結果](tip-http-and-operation-results.md) | [出口案例](testcases/tip-http-and-operation-results.md) | Endpoint 解析、Items、header、結果代碼、略過明細與 log。 |
 
@@ -88,18 +89,18 @@ dotnet build src/AndrewDemo.NetConf2023.ConsoleUI/AndrewDemo.NetConf2023.Console
 
 本地 Docker 尚未重建此批變更；目前不能用既有 Web UI 驗證完整 TiP。Phase 2 完成後須重建標準環境，依上述流程／出口案例驗證正式與測試交易。
 
-## Phase 2 建議順序
+## Phase 2 執行順序
 
-1. 註冊與 Token 繼承、Core 用途更新保護，建立可重複使用的正式／測試資料。
-2. Checkout 建立分類、Order 繼承與關聯、交易 ID 配發、原子封存、正式扣庫存／test 略過。
-3. Scoped DI、HTTP／CLI 操作範圍、事件獨立 scope 與用途恢復；補齊跨範圍及併發測試。
-4. Product／SKU 受保護寫入、OperationResult 收集、middleware headers／log 與錯誤映射。
-5. CommonStorefront 明確選用測試付款來源與結果呈現，重建本地環境，完成標準流程整合與 UI 驗收。
+依使用者於 2026-10-18 確認，統一採 [Phase 2.1～2.7 執行與跨 Session 交接](tip-phase2-plan.md)：會員／Token、scoped host、Checkout／Order／封存、效果控制、事件、結果／log、UI／整合驗收。該文件取代先前五步建議順序，包含階段依賴、完成條件與最新交付檢查點；不變更本文件凍結的業務合約。
 
 ## 核帳時間追加（2026-10-17）
 
 依使用者明確追加範圍，新增 Core 的 CheckoutTransactionRecord.ClosedAt 與 Order.CreatedAt，均為 nullable UTC 時間；舊資料未知為 null。正式語意與驗收見 [物件規格](tip-core-object-definitions.md)／[物件案例](testcases/tip-core-object-definitions.md)。
 
-業績／核帳查詢預設依各物件 IsTest 排除 test，明確要求時才列出。時間填值、自動封存、用途繼承與明文 access token log 移除留在 Phase 2；查詢功能後續再做。ClosedAt 並未定義交易終態，Checkout 獨立金額明細仍是待確認缺口，詳見 [Schema 檢驗](../docs/tip/accounting-schema-review.md)。此評估建議不自動納入 frozen schema。
+業績／核帳查詢預設依各物件 IsTest 排除 test，明確要求時才列出。時間填值、自動封存、用途繼承與明文 access token log 移除留在 Phase 2；查詢功能後續再做。後續使用者已確認 State 與獨立交易明細，並指定 create 時固定；更新後的 [Schema 檢驗](../docs/tip/accounting-schema-review.md) 與 [正式規格](tip-checkout-lifecycle.md) 已同步。
 
 新增 3 項持久化／資料過濾測試，並擴充舊 BSON 測試的時間 null 斷言；完整服務與查詢驗收仍未交付。前述 107 項為原始 Phase 1 檢查點紀錄。
+
+## 狀態與交易內容追加（2026-10-17）
+
+Core 已新增 CheckoutState、TotalPrice、CheckoutProductLine／CheckoutDiscountLine 與對應集合，Abstract 未變更。Create 時固定金額與交易內容，Completed／Cancelled 原子搬移至 archived_checkout_transactions 後整筆凍結；不另建立 checkout_archived 別名。舊格式缺資料要求重建，不以目前 Cart 追補報價。服務實作、取消入口與查詢交付邊界詳見 [生命週期規格](tip-checkout-lifecycle.md)。

@@ -64,5 +64,5 @@
 
 - 正常 complete：Order.CreatedAt、封存 ClosedAt 與完成回應一致；失敗 rollback 不留下結束時間，履約失敗不改寫成立時間。
 - 作用中檢查失敗或 409：ClosedAt 仍為 null。
-- 未來取消流程依另案確認的終態規格填 ClosedAt；本批不新增 cancel API。
+- 未來取消流程依 [已定案生命週期規格](../tip-checkout-lifecycle.md) 填 ClosedAt；本批不新增 cancel API。
 - 查詢功能交付時驗證預設排除 test、明確列 test、正式 Buyer 的 test Order、不重複加總關聯資料、未知時間與歷史 IsTest 缺欄位。

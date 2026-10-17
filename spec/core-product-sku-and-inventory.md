@@ -77,11 +77,11 @@ checkout 標準正確性要求：
 
 1. 載入 checkout transaction
 2. 驗證 buyer
-3. 載入 cart 與 products
+3. 讀取 create 時固定的交易明細並檢查 products，不從目前 cart 重算
 4. 驗證有 `SkuId` 的商品庫存足夠
 5. 正式交易寫入 inventory 扣減；test 交易略過扣減並記錄實際略過
 6. 建立 order，保存 IsTest 與 CheckoutTransactionId
-7. 保存原 checkout transaction 到封存區
+7. 保存完整 checkout transaction、Completed／ClosedAt 到封存區並凍結
 8. 移除作用中 checkout transaction
 9. commit
 

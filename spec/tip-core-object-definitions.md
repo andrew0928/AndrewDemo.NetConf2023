@@ -21,8 +21,12 @@
 | Order | CheckoutTransactionId | int? | 關聯對應 Checkout；其他來源或沒有可查證歷史紀錄時為 null。 |
 | CheckoutTransactionRecord | ClosedAt | DateTime? | complete 或 cancel 時的 UTC 結束時間；作用中為 null。 |
 | Order | CreatedAt | DateTime? | 訂單成立時的 UTC 時間；新訂單由建立流程明確指定。 |
+| CheckoutTransactionRecord | State | CheckoutState | Created → Completed／Cancelled；Unknown 僅表示舊資料未知。 |
+| CheckoutTransactionRecord | TotalPrice | decimal? | create 時計算並固定；新資料必填，舊資料缺值為 null。 |
+| CheckoutTransactionRecord | ProductLines | List<CheckoutProductLine> | 獨立交易識別、數量、單價與行金額，不含商品資訊快照。 |
+| CheckoutTransactionRecord | DiscountLines | List<CheckoutDiscountLine> | create 時已套用的折扣結果。 |
 
-用途、付款、訂單關聯與 Order.CreatedAt 採 `get; init;`；Checkout.ClosedAt 採 `get; set;`，由服務在結束交易時填入，結束後不得改寫。前述 init 欄位供建立物件及持久化還原使用，一般 C# 呼叫端不能在物件建立後重新指派。此限制不等於資料庫禁止覆寫：建立來源驗證及持久化更新政策由後續服務流程保證。
+用途、付款、訂單關聯與 Order.CreatedAt 採 `get; init;`；Checkout.State／ClosedAt 採 `get; set;`，由服務在結束交易時填入，結束後不得改寫。前述 init 欄位供建立物件及持久化還原使用，一般 C# 呼叫端不能在物件建立後重新指派。此限制不等於資料庫禁止覆寫：建立來源驗證及持久化更新政策由後續服務流程保證。
 
 `Order.Id` 為訂單識別，建構式參數命名為 `orderId`，不自動以該值填入 CheckoutTransactionId。關聯依明確欄位查詢，不要求兩者 ID 相等。不新增 Order.PaymentId。
 
@@ -37,9 +41,9 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 | IShopDatabaseContext 屬性 | Collection | 用途 |
 |---|---|---|
 | CheckoutTransactions | checkout_transactions | 作用中的 Checkout。 |
-| ArchivedCheckoutTransactions | archived_checkout_transactions | 已完成交易的封存紀錄。 |
+| ArchivedCheckoutTransactions | archived_checkout_transactions | Completed／Cancelled 終態的完整、凍結紀錄。 |
 
-封存保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest 與 PaymentId，並保存交易結束時的 ClosedAt。Order.CheckoutTransactionId 對應封存紀錄的 TransactionId。
+封存完整保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest、PaymentId、TotalPrice、ProductLines、DiscountLines，以及終態 State／ClosedAt；不縮減欄位。Order.CheckoutTransactionId 對應封存紀錄的 TransactionId。
 
 這次提供獨立存取入口；CheckoutService 尚未自動搬移紀錄。成功結帳的原子封存、交易 ID 跨區唯一與重複 complete 防護，須在後續流程變更一起完成；不能因為新增 collection 就視為這些保證已成立。原有泛型 ShopDatabase.Create<CheckoutTransactionRecord> 仍指向作用中區，封存須明確使用封存入口。
 
@@ -59,7 +63,7 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 
 ## 2026-10-17 核帳時間補充
 
-依 [追加決策](../docs/decisions/2026-10-17-tip-accounting-timestamps.md)，本次重新開啟的規格範圍只有兩個時間欄位與查詢用途原則。
+依 [追加決策](../docs/decisions/2026-10-17-tip-accounting-timestamps.md)，第一批追加兩個時間欄位與查詢用途原則；後續使用者再確認 State、獨立交易內容與 create 時固定，詳見 [生命週期規格](tip-checkout-lifecycle.md)。
 
 - ClosedAt 表示 complete／cancel 的結束時間；必要檢查失敗、409 要求重建等未結束交易維持 null。尚未提供 cancel 入口，不因新增欄位而新增取消流程。
 - Order.CreatedAt 在建立時確定，與履約完成時間分開；履約失敗或重試不改寫。
@@ -68,4 +72,4 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 - 業績／核帳查詢預設依各物件自己的 IsTest 排除 test，只有明確要求才列 test。不能依 Buyer.IsTest、Token 或當下白名單代替。歷史缺欄位仍依既有 false 政策處理，查詢須驗證原始 BSON 的缺值語意。
 - 本次沒有新增時間索引、查詢服務或結果 DTO；後續查詢須把時間未知的舊資料明確區隔，不能任意歸入日期。
 
-ClosedAt 本身無法區分完成與取消；Checkout 尚未保存獨立金額／明細。完整核帳需求仍有 schema 缺口，見 [檢驗結果](../docs/tip/accounting-schema-review.md)。額外欄位尚未定案，不得以本次兩個欄位交付宣稱核帳需求已完整支援。
+State、獨立金額與明細現已納入 schema，create 時固定、終態完整封存後凍結。完整規則見 [生命週期規格](tip-checkout-lifecycle.md) 與 [測試案例](testcases/tip-checkout-lifecycle.md)；本次沒有實作服務端計價／搬移／凍結保護，不能以欄位交付宣稱已可核帳。

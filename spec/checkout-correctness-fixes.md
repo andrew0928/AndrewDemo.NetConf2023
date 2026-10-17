@@ -23,7 +23,7 @@
 1. 載入 checkout transaction
 2. 驗證 request member 與 transaction buyer 一致
 3. 確認已保存 PaymentId；舊紀錄缺少時回 409，要求重新建立
-4. 載入 cart / buyer / products 並完成必要檢查
+4. 讀取固定 Checkout 明細、buyer／products 並完成必要檢查，不重新計價
 5. 在同一資料庫 transaction 內再次確認 Checkout 可完成，依用途處理庫存、建立 order、保存封存交易並移除作用中紀錄
 6. commit 後執行 order event dispatch
 7. 更新 fulfillment status

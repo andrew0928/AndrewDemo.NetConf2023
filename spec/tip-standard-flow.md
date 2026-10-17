@@ -2,7 +2,7 @@
 
 ## 範圍與責任
 
-本規格與 [物件定義](tip-core-object-definitions.md)、[白名單](tip-test-allowlist.md)、[Context 合約](tip-context-contracts.md)、[HTTP 與結果](tip-http-and-operation-results.md) 共同構成本輪 Phase 1 基準。
+本規格與 [物件定義](tip-core-object-definitions.md)、[白名單](tip-test-allowlist.md)、[Context 合約](tip-context-contracts.md)、[HTTP 與結果](tip-http-and-operation-results.md) 及 [Checkout 生命週期](tip-checkout-lifecycle.md) 共同構成本輪 Phase 1 基準。
 
 適用標準 Core、API、CommonStorefront、CLI。AppleBTS／PetShop 的領域政策與到期整理不納入；因共用 API 合約而必須同步的呼叫參數仍須更新。既有 API 路徑維持。
 
@@ -40,20 +40,20 @@ Create／Complete 均保留明確 RequestMember，Core 不以 ambient identity �
 | true | 否 | true |
 | true | 是 | true |
 
-建立時保存 CartId、MemberId、PaymentId、CreatedAt、IsTest。Cart 不承接會員、不保存 IsTest。Checkout 的 PaymentId、用途與買方建立後固定；白名單或 request 身分變動不得重新分類既有交易。
+建立時從 Cart／商品計價並執行折扣，保存 CartId、MemberId、PaymentId、CreatedAt、IsTest、State=Created，以及固定的 TotalPrice／ProductLines／DiscountLines。Cart 不承接會員、不保存 IsTest。Checkout 的 PaymentId、用途與買方建立後固定；白名單或 request 身分變動不得重新分類既有交易。
 
-Checkout 與 Order 的用途可不同於 Buyer.IsTest。必要檢查與價格／折扣計算照常執行；test 不代表結帳一定成功。
+Checkout 與 Order 的用途可不同於 Buyer.IsTest。Create 照常計算價格／折扣並固定內容；complete 不再重算，必要檢查仍照常執行，test 不代表結帳一定成功。
 
 ## 完成交易與封存
 
 1. 驗證身分並載入作用中的 Checkout；不存在時維持 TransactionNotFound／HTTP 400。
 2. 驗證 RequestMember.Id 與交易 MemberId 相同；不符回 403，不得建立 Order、修改 Cart、封存或產生商業效果。
 3. 交易未保存 PaymentId（欄位缺少或 null）時回 RecreateRequired／HTTP 409，要求重新 create；保留舊紀錄，不補值、不修改用途，也不產生副作用。
-4. 讀取買方、Cart 與商品，驗證必要規則，計算正式金額與折扣。庫存檢查照常；正式交易扣庫存，test 交易略過扣減並記錄結果。
+4. 確認 State=Created 與固定交易內容完整；舊格式缺資料依 409 要求重建。以保存的交易明細與金額完成，不依目前 Cart／現價重算；買方、商品可購買性、SKU 關聯與庫存檢查照常。正式交易扣庫存，test 略過扣減並記錄結果。
 5. 在資料庫 transaction 內再次確認該 Checkout 仍可完成，確保併發 complete 不會重複建立 Order 或執行效果。
-6. 同一 transaction 內完成適用的庫存異動、Order 建立、封存寫入、作用中紀錄移除；任一步失敗全部 rollback。
+6. 同一 transaction 內完成適用的庫存異動、Order 建立、State=Completed／ClosedAt 設定、完整封存寫入、作用中紀錄移除；任一步失敗全部 rollback。
 7. Order.IsTest 承接 Checkout；Order.CheckoutTransactionId 明確填入原 TransactionId，付款來源由封存紀錄取得。其他來源建立的 Order 可為 null 關聯；本輪不新增其他建立入口。
-8. 封存保留原 TransactionId、CartId、MemberId、CreatedAt、PaymentId、IsTest，並保存本次 ClosedAt；同次建立的 Order.CreatedAt 採相同 UTC 業務完成時間。成功後不再以封存紀錄執行 complete。
+8. 封存保留所有原欄位，包含固定金額、明細、用途與付款來源，並保存終態 State 與本次 ClosedAt；同次建立的 Order.CreatedAt 採相同 UTC 業務完成時間。封存整筆凍結，成功後不再以封存紀錄執行 complete。
 9. commit 後才派送訂單事件。Fulfillment 失敗不撤銷已成立的 Order 或封存；沿用既有 FulfillmentStatus 值。資料庫交易不宣稱能回滾外部服務效果。
 
 重複 complete 維持最小規則：作用中區已沒有該交易就回 TransactionNotFound／400，不重送事件，不從封存還原成可完成交易。並行請求最多一個成功，其他請求不得留下部分異動。
@@ -97,4 +97,4 @@ Product、SKU、Inventory 是受保護資料；test 不可新增、修改或刪�
 
 ## 業績／核帳追加原則
 
-依 [時間欄位補充](tip-core-object-definitions.md)，新資料須填入交易結束／訂單建立時間，業績與核帳查詢預設排除各自 IsTest=true 的資料，明確要求才列出 test。查詢功能後續再做；Checkout 終態、獨立金額／明細等 [schema 缺口](../docs/tip/accounting-schema-review.md) 仍待確認，不由 Phase 2 自行擴充。
+依 [時間欄位補充](tip-core-object-definitions.md)，新資料須填入交易結束／訂單建立時間，業績與核帳查詢預設排除各自 IsTest=true 的資料，明確要求才列出 test。查詢功能後續再做；Checkout 終態、獨立金額／明細及 create 時固定已依 [生命週期規格](tip-checkout-lifecycle.md) 定案，取消仍保留原交易內容但不計入成交。

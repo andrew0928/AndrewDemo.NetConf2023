@@ -75,10 +75,36 @@ docker compose -f compose/applebts.site-dev.compose.yaml up --build
 docker compose -f compose/petshop.site-dev.compose.yaml up --build
 ```
 
-若要重置資料庫：
+### Common 本機資料庫
+
+`common.site-dev` 使用 bind mount：
+
+- 本機：`<repo>/.local/data/common-site-dev/shop-database.db`
+- container：`/data/shop-database.db`
+- seed 與 API 共用此目錄；seed 僅在 DB 不存在時初始化，重新 `up` 不會覆寫資料。
+- `.local/` 排除於 Git 與 Docker build context。
+- `down` 或 `down -v` 都不會刪除這份本機資料。
+
+使用 VS Code LiteDB extension 前，先停止 API，避免同時開啟同一份 DB：
 
 ```bash
-docker compose -f compose/common.site-dev.compose.yaml down -v
+docker compose -f compose/common.site-dev.compose.yaml stop common-api
+```
+
+查詢完成後關閉 extension 的 DB，再執行：
+
+```bash
+docker compose -f compose/common.site-dev.compose.yaml start common-api
+```
+
+也可在停止 API 後複製整個資料目錄，查詢副本並恢復網站。
+若需重置 common 資料，先 `down`，將 `.local/data/common-site-dev` 搬到備份位置，再 `up`，由 seed 重新初始化。
+原 named volume 遷移後保留作備份，不再由此 compose 使用。
+`common.api-dev`、其他站點與 `site-prod` 設定維持各自原有的資料存放方式。
+
+其他站點若要重置資料庫：
+
+```bash
 docker compose -f compose/applebts.site-dev.compose.yaml down -v
 docker compose -f compose/petshop.site-dev.compose.yaml down -v
 ```
@@ -317,7 +343,7 @@ common.site-dev
                                                  ^
                                                  | mount: /data
 +------------------+          seed data        +------------------------------+
-| common-seed      | ------------------------> | common-site-dev-data         |
+| common-seed      | ------------------------> | .local/data/common-site-dev   |
 | volume: /data    |                           | file: shop-database.db       |
 +------------------+                           +------------------------------+
 

@@ -368,3 +368,6 @@ FodyWeavers.xsd
 .env
 # git worktrees
 worktree/
+
+# 本機開發資料庫與快照
+/.local/

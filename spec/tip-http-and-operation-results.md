@@ -75,10 +75,11 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
 | Checkout 買方不符 | 403，Rejected | 不修改交易，不輸出他人 transaction headers。 |
 | Checkout 不存在／重複完成 | 400，Rejected | 不從封存重做，不重送事件。 |
 | 舊 Checkout 未保存 PaymentId | 409，Rejected | 保留原紀錄，要求重新 create，不補值。 |
+| 舊 Checkout 未保存 State／固定交易內容 | 409，Rejected | 同樣使用 checkout_recreate_required，要求重新 create，不依現在的 Cart／價格補資料；Phase 2 接入。 |
 | 業務檢查失敗，例如庫存不足 | 沿用既有 400，Rejected | 未到達效果步驟不記錄略過。 |
 | 預期有 context 卻遺失，或 Token／Member 等既定用途矛盾 | 500，Failed，code=execution_context_invalid | 在受保護效果前停止，記錄 Error；不以匿名／false 放行。 |
 
-409 body 固定為：
+缺少 PaymentId 的 409 body 固定為：
 
 ```json
 {
@@ -86,6 +87,8 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
   "message": "Checkout 未保存 PaymentId，請重新建立 Checkout。"
 }
 ```
+
+舊格式缺少 State／固定交易內容的 409 使用相同 code，message 為「Checkout 未保存建立時的狀態、金額或明細，請重新建立 Checkout。」；不得改用舊相容計價。
 
 一般錯誤不在本輪全面改成新 envelope。用途 BUG 的 500 使用 `code` 與可供閱讀的 `message`；對無法信任的用途不得輸出 X-Shop-Behavior 或 transaction headers。建立結果前發生的基礎設施故障不偽造成功／正式分類。
 

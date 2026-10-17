@@ -59,7 +59,10 @@
 
 | 日期 | 決策 |
 |---|---|
-| [2026-10-17](2026-10-17-tip-accounting-timestamps.md) | **TiP 核帳時間欄位**。追加 Checkout.ClosedAt 與 Order.CreatedAt，UTC／舊資料 null；業績及核帳查詢預設排除 test。額外終態與交易金額快照待確認，明文 token log 移除列入 Phase 2。 |
+| [2026-10-18](2026-10-18-tip-phase2-session-handoff.md) | **TiP Phase 2 七階段交接**。同機器不同 chat 依序完成 2.1～2.7，統一範圍、相依與交付證據入口。 |
+| [2026-10-17](2026-10-17-common-local-database-bind-mount.md) | **Common 本機 DB 使用 bind mount**。common site-dev 資料存於 `.local/data/common-site-dev/`；保留既有資料，seed 不覆寫，方便本機查詢驗證。 |
+| [2026-10-17](2026-10-17-checkout-state-and-transaction-details.md) | **Checkout 狀態與獨立交易明細**。保存 State，終態完整移至 archived_checkout_transactions 後凍結；保留金額與交易明細，不保留商品資訊快照。金額／明細已確認在 create 時固定。 |
+| [2026-10-17](2026-10-17-tip-accounting-timestamps.md) | **TiP 核帳時間欄位**。追加 Checkout.ClosedAt 與 Order.CreatedAt，UTC／舊資料 null；業績及核帳查詢預設排除 test。終態與 create 固定交易金額／明細已由後續決策定案，明文 token log 移除列入 Phase 2。 |
 | [2026-10-17](2026-10-17-tip-phase1-contract-baseline.md) | **TiP Phase 1 定案與舊 Checkout 重建**。缺少 PaymentId 回 409／checkout_recreate_required，要求重建且不做相容；標準流程、獨立 Context、操作結果與 HTTP／log 合約定案，完整接入留待 Phase 2。 |
 | [2026-10-17](2026-10-17-tip-allowlist-and-tdd-checkpoint.md) | **TiP 白名單位置與 TDD 紅燈檢查點**。Core 集中唯讀 TestAllowlist，分開查 MemberId／PaymentId；先建立介面與測試，確認可編譯且目標行為失敗後，再檢查並進入實作。 |
 | [2026-10-17](2026-10-17-tip-core-fields-and-explicit-member.md) | **TiP Core 欄位與明確會員輸入**。確認 Member／Checkout／Order.IsTest、Checkout.PaymentId 及從 Member 繼承保存的 Token.IsTest；command 保留 RequestMember，由呼叫端組合。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 PaymentId；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |

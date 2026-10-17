@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Checkouts;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -317,6 +319,13 @@ namespace AndrewDemo.NetConf2023.Core
 
         // 完成或取消時記錄的 UTC 結束時間；作用中或舊資料未知時為 null。
         public DateTime? ClosedAt { get; set; }
+
+        public CheckoutState State { get; set; } = CheckoutState.Unknown;
+
+        // create 時計價並固定；null 代表舊資料沒有金額，不等同免費交易的 0。
+        public decimal? TotalPrice { get; init; }
+        public List<CheckoutProductLine> ProductLines { get; init; } = new();
+        public List<CheckoutDiscountLine> DiscountLines { get; init; } = new();
 
         // 建立時依 Member 與 PaymentId 白名單判定，封存時保留原值。
         public bool IsTest { get; init; }

@@ -261,4 +261,4 @@ Core 白名單位置已定為 `Testing/TestAllowlist.cs`，預設 MemberId 90000
 
 ## 核帳 Schema 補充
 
-上述時間欄位由使用者明確追加，為本次有限範圍的 Phase 1 修訂。結束時間不代表成功狀態；Checkout 尚無獨立金額／明細，不能只靠 CartId 還原歷史成交內容。詳見 [Schema 檢驗](accounting-schema-review.md)；額外終態與快照仍待確認，查詢功能後續再做。
+上述時間欄位由使用者明確追加，為本次有限範圍的 Phase 1 修訂。後續已確認 State、create 時固定的獨立金額／明細，以及終態完整封存後凍結；商品名稱／描述／規格不複製至 Checkout。詳見 [Schema 檢驗](accounting-schema-review.md) 與 [正式規格](../../spec/tip-checkout-lifecycle.md)，查詢功能後續再做。

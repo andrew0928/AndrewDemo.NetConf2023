@@ -74,3 +74,7 @@
 |---|---|---|
 | TC-TIP-FLOW-401 | 透過既有更新／保存入口嘗試將 Member、Token、Checkout、Order 的 IsTest 由 false 改 true，或反向修改 | 拒絕用途變更，記錄原因；重新讀取原值與關聯用途均不變。若入口不接受該欄位，驗證請求無法改寫；不能只驗證 init 語法。 |
 | TC-TIP-FLOW-402 | 同一物件更新其他合法業務欄位 | 依原有規則保存，其既定用途不被重設為預設值。 |
+
+## Create 固定內容補充
+
+2026-10-17 使用者確認金額與明細在 create 時固定。以上交易驗收的價格／數量以保存的 Checkout 為準；complete 只做必要的商品與庫存等檢查，不重讀 Cart 決定交易內容。Create 後修改 Cart／現價／折扣、終態完整搬移與凍結保護的案例見 [生命週期案例](tip-checkout-lifecycle.md)。

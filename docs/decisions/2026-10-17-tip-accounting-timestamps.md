@@ -39,3 +39,7 @@ accepted，2026-10-17；接受範圍為兩個時間欄位、預設排除 test �
 - Phase 2 實作新資料時間填值、原子封存、IsTest 繼承及明文 token log 移除。
 - 確認 Checkout 終態與是否保存獨立金額明細，再決定取消時的快照語意。
 - 後續查詢驗收涵蓋時間邊界、未知歷史時間、預設排除 test、顯式列出 test 與交易／訂單不重複加總。
+
+## 後續定案
+
+前述待確認的 Checkout State 與獨立交易內容已由使用者確認，並指定 create 時固定；見 [後續決策](2026-10-17-checkout-state-and-transaction-details.md)。本文件保留時間欄位初批確認的歷史範圍。
