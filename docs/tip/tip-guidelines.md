@@ -4,11 +4,15 @@
 
 本文件供 AndrewShop 的 TiP 研究與需求討論使用。目前已確認大前提、領域物件分類規則及 [AC-TIP-001](tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014)、[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)，本輪核心接受條件（AC）已全部確認。本文件不是已凍結的 `/spec`，也不代表系統已具備所述能力。
 
+## 最新標準實作範圍
+
+2026-10-17 [範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)：僅 Member、Checkout、Order 保存用途；Token 跟隨 Member，Cart 不承接會員且不標記 test。PaymentId 白名單代表測試卡號，建立 Checkout 時即提供 PaymentId 並固定用途；事件處理器視為 event／async 邊界。AppleBTS／PetShop 暫不納入本輪實作。同日已接受 scoped injection：HTTP、事件與 CLI 以各自執行範圍取得共用 context，CheckoutService 及直接依賴 context 的服務配合採 scoped。
+
 ## 研究目的與範圍
 
 以 AndrewShop PoC / prototype 作為 Testing in Production（TiP）的研究與實驗對象，探索如何在正式環境中辨識測試行為、執行業務流程，並控制其結果。
 
-研究目標為透過 prototype 演練歸納可重用的 TiP 設計 best practice；原則確定後收斂，具體保證機制交由實作端決定。2026-10-17 已確認[研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)：
+研究目標為透過 prototype 演練歸納可重用的 TiP 設計 best practice；原則確定後收斂，具體保證機制交由實作端決定。2026-10-17 已確認[研究範圍與架構規範邊界](../decisions/2026-10-17-tip-contract-and-context-boundaries.md)：
 
 - 最低層系統服務介面將用途不可變物件的 `id + type` 視為 immutable，同一物件身分的用途始終一致；建立權限由應用端決定。
 - 查詢與系統到期整理以 event-driven／task queue 等機制交接，區分兩端責任；用途承接仍遵守 AC-TIP-012／013。
@@ -26,7 +30,7 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 > **服務部署在正式環境，測試行為不應產生真實商業效果。**
 
-這是後續所有 TiP 規則的大前提，使用者已於 2026-10-16 明確確認。決策紀錄見 [TiP 大前提：不產生真實商業效果](decisions/2026-10-16-tip-no-real-business-effects.md)。
+這是後續所有 TiP 規則的大前提，使用者已於 2026-10-16 明確確認。決策紀錄見 [TiP 大前提：不產生真實商業效果](../decisions/2026-10-16-tip-no-real-business-effects.md)。
 
 ### 正式環境與交易性質是兩個不同維度
 
@@ -59,23 +63,23 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 ## 已確認的領域物件分類
 
-以下分類已於 2026-10-16 確認，決策紀錄見[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。後續案例的逐條確認狀態維護於 [TiP 接受條件](tip-acceptance-criteria.md)；先前未審閱的情境表不自動視為已確認。
+以下分類已於 2026-10-16 確認，決策紀錄見[領域物件分類決策](../decisions/2026-10-16-tip-domain-object-classification.md)。後續案例的逐條確認狀態維護於 [TiP 接受條件](tip-acceptance-criteria.md)；先前未審閱的情境表不自動視為已確認。
 
 ### 第一類：建立時確定用途，建立後不可變更
 
-`Order`、`Member`、`Cart`、`CheckoutTransactionRecord`、`MemberAccessTokenRecord` 在建立時即確定正式／測試用途。不可從正式改為測試，也不可從測試改為正式；不可變的是用途分類，不是物件的所有業務資料或狀態。
+`Order`、`Member`、`CheckoutTransactionRecord` 在建立時即確定正式／測試用途。Token 由 Member 解析用途，不保存獨立 test 標記；Cart 排除用途分類。不可從正式改為測試，也不可從測試改為正式；不可變的是用途分類，不是物件的所有業務資料或狀態。
 
 [AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004) 已確認兩個方向均須拒絕變更；重新讀取後原用途與關聯物件用途均不變，正常記錄拒絕原因。其他合法業務欄位仍依原有規則更新。
 
-[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試 Cart 可正常新增、刪除商品明細並保存結果，Cart 的 test 用途維持不變，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
+[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試會員操作 Cart 可正常新增、刪除商品明細並保存結果，Cart 不保存 test 用途且不承接會員，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
 
-`Member` 在建立時標示用途，衍生的 Cart、Checkout 與 Token 跟隨 Member。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位名稱、關聯與傳遞機制留待設計。
+`Member` 在建立時標示用途，Token 跟隨 Member。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位名稱、關聯與傳遞機制留待設計。
 
 ### 第二類：受保護，測試行為不得異動
 
 `InventoryRecord`、`Product`、`SkuRecord`，以及擴充模組的預約與行事曆／時段占用，均屬受保護範圍。測試行為不得新增、修改或刪除這些受保護資料；因測試而略過的操作，必須留下 log 說明略過原因。正式行為依既有權限與業務規則處理。
 
-**系統到期整理的責任邊界**：正式會員 A 的預約已逾期，測試會員 B 的查詢可以喚起系統正常清理；不因 B 為 test 而略過真正到期的狀態更新。此處區分 B 的查詢與系統的生命週期整理，不改變受保護物件分類，也不代表任何不帶會員資訊的事件都可異動正式資料。[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012) 已依此修正接受；詳見[系統到期整理決策](decisions/2026-10-16-tip-system-expiration-boundary.md)，PetShop 執行邊界的差距列入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作。
+**系統到期整理的責任邊界**：正式會員 A 的預約已逾期，測試會員 B 的查詢可以喚起系統正常清理；不因 B 為 test 而略過真正到期的狀態更新。此處區分 B 的查詢與系統的生命週期整理，不改變受保護物件分類，也不代表任何不帶會員資訊的事件都可異動正式資料。[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012) 已依此修正接受；詳見[系統到期整理決策](../decisions/2026-10-16-tip-system-expiration-boundary.md)，PetShop 執行邊界的差距列入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作。
 
 必要的身分、權限與業務檢查仍照常執行；不會造成受保護資料異動的必要流程也照常執行。測試用途不代表無條件成功，僅略過被禁止的異動。例如庫存檢查照常，但不扣庫存，且記錄因 test 而未扣減。Log 格式與保存方式尚未定案。
 
@@ -93,14 +97,14 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 |---|---|---|---|
 | Order | `Order` | `orders` | 第一類：用途不可變 |
 | Member | `Member` | `members` | 第一類：用途不可變 |
-| Cart | `Cart` | `carts` | 第一類：用途不可變 |
+| Cart | `Cart` | `carts` | 排除用途分類，不承接會員、不保存 test 標記 |
 | Checkout | `CheckoutTransactionRecord` | `checkout_transactions` | 第一類：用途不可變 |
-| Token | `MemberAccessTokenRecord` | `member_tokens` | 第一類：用途不可變 |
+| Token | `MemberAccessTokenRecord` | `member_tokens` | 跟隨 Member，不保存獨立 test 標記 |
 | Inventory | `InventoryRecord` | `inventory_records` | 第二類：受保護 |
 | Product | `Product` | `products` | 第二類：受保護 |
 | SKU | `SkuRecord` | `skus` | 第二類：受保護 |
 
-`Product` 的型別雖定義於 `.Abstract`，持久化由 `.Core` 管理，因此列入盤點。`OrderProductLine`、`OrderDiscountLine`、`OrderShopNotes` 與 Cart 的 `LineItem` 是內嵌資料，跟隨所屬 Order／Cart 的用途；Order 中的 Buyer 是 Member 快照，不是額外的 collection。
+`Product` 的型別雖定義於 `.Abstract`，持久化由 `.Core` 管理，因此列入盤點。`OrderProductLine`、`OrderDiscountLine`、`OrderShopNotes` 是內嵌資料，跟隨所屬 Order 的用途；Cart 的 `LineItem` 與 Cart 一樣不標記用途；Order 中的 Buyer 是 Member 快照，不是額外的 collection。
 
 本清單延續「會儲存在資料庫的領域物件」範圍。Checkout command／result、`WaitingRoomTicket`、計算用 context、折扣計算結果與事件訊息不是額外的持久化根物件；其流程或傳遞規則仍需在後續設計處理。
 
@@ -163,16 +167,16 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 使用者已提出的研究情境為：來自 test user、test 信用卡、test API key 或 test endpoint 的行為，產生的 test orders 應不出貨、不扣款、不列入正式商業統計。目前核心 AC 與支撐體系的架構原則已確認；完整來源組合政策及額外功能仍保留後續規格範圍。
 
-使用者已補充：測試訂單後續事件與重試仍受 test 限制；每個實際執行邊界都必須能明確確認用途，用途不明或判定矛盾視為 BUG。[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013) 與 [AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014) 的完整案例已與 AC-TIP-015 一併接受。信用卡案例 [AC-TIP-002](tip-acceptance-criteria.md#ac-tip-002) 僅作示意，未實作信用卡支付時不適用（N/A）。
+使用者已補充：測試訂單後續事件與重試仍受 test 限制；每個實際執行邊界都必須能明確確認用途，用途不明或判定矛盾視為 BUG。[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013) 與 [AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014) 的完整案例已與 AC-TIP-015 一併接受。付款來源案例 [AC-TIP-002](tip-acceptance-criteria.md#ac-tip-002) 已改以 PaymentId 白名單作為 PoC 驗收方向，不要求引入實際信用卡服務。
 
 後續事項依責任與階段分類：
 
-1. **應用規格與額外來源**：最低層介面保證物件 `id + type` 不可變；建立權限由應用端決定，保證機制由實作端決定。兩類 context 提供判定依據，完整用途組合與各操作政策由應用規格定義，須符合已確認 AC；額外來源仍待功能引入時確認，通用 OR 規則尚未定案。
+1. **應用規格與額外來源**：最低層介面保證物件 `id + type` 不可變；建立權限由應用端決定，保證機制由實作端決定。兩類 context 提供判定依據，完整用途組合與各操作政策由應用規格定義，須符合已確認 AC；PaymentId 白名單已納入本輪 Checkout 建立規則；其他來源仍待功能引入時確認，不推導跨所有操作的通用 OR 規則。
 2. **分類傳遞契約**：Member 衍生關係、事件與重試須維持明確用途，以及 AC-TIP-012／013 的責任區分已確認；架構保證 context 正確傳遞，具體承接格式留給後續 contract。
 3. **效果控制與結果契約**：保護政策與必要檢查已確認，應用端各環節依 context 完成效果判定；context 延續至出口，HTTP API 由 middleware 統一表達對外結果。具體結果契約留給規格階段，付款、履約、通知的整合機制屬實作事項。
 4. **資料與紀錄**：Schema 明確定義用途，正常 log 機制依 context 與判定結果記錄；正式商業統計仍依 AC 驗證結果。實體 schema、log 格式與保存方式交由實作設計，不作為本輪研究必須深入的選型議題。
 
-以上事項不阻擋本輪 best practice 與規範層級收斂，也不代表範圍外的其他情境或 AC 已獲接受。已確認規範與後續事項統一維護於 [TiP 架構設計筆記](tip-architecture-notes.md)；現有 14 條核心 AC 的預期結果維持不變。
+以上事項不阻擋本輪 best practice 與規範層級收斂，也不代表範圍外的其他情境或 AC 已獲接受。已確認規範與後續事項統一維護於 [TiP 架構設計筆記](tip-architecture-notes.md)；核心 AC 依最新範圍移除 Cart 標記與會員承接要求，Token 跟隨 Member；其餘商業效果控制及正常檢查原則維持。
 
 ## 文件與實作邊界
 

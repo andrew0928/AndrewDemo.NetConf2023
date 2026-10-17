@@ -2,6 +2,8 @@
 
 本目錄用來記錄已確認或準備採納的重要架構與設計決策，避免討論只留在 chat 中。
 
+各主題的決策（包含 TiP）統一收錄於本目錄；主題文件目錄透過連結引用，並在下方決策索引維護入口。
+
 ## 目的
 
 - 記錄為什麼要做這個決策
@@ -57,7 +59,8 @@
 
 | 日期 | 決策 |
 |---|---|
-| [2026-10-17](../tip/decisions/2026-10-17-tip-contract-and-context-boundaries.md) | **TiP 研究範圍與架構規範邊界**。已確認支撐體系的架構原則：最低層介面保證 `id + type` 不可變，事件／任務交接區分責任，current identity／current transaction 由架構保證傳遞、應用端依據執行政策；HTTP middleware 統一表達出口結果，正常 log 依 context 與判定結果產生，schema 明確定義用途。完整應用政策、具體 contract／實作及額外來源擴充留到後續階段。 |
+| [2026-10-17](2026-10-17-tip-standard-scope-and-context.md) | **TiP 標準實作範圍與 Context 方向**。僅 Member／Checkout／Order 保存用途；Token 跟隨 Member、Cart 排除。PaymentId 白名單代表測試卡，建立 Checkout 時提供並固定用途；事件處理器作為 event／async 邊界；已接受 scoped injection，共用 context 與 CheckoutService 採 scoped，各入口建立獨立執行範圍，middleware 解析細節仍待定案。 |
+| [2026-10-17](2026-10-17-tip-contract-and-context-boundaries.md) | **TiP 研究範圍與架構規範邊界**。已確認支撐體系的架構原則：最低層介面保證 `id + type` 不可變，事件／任務交接區分責任，current identity／current transaction 由架構保證傳遞、應用端依據執行政策；HTTP middleware 統一表達出口結果，正常 log 依 context 與判定結果產生，schema 明確定義用途。完整應用政策、具體 contract／實作及額外來源擴充留到後續階段。 |
 | [2026-03-23](2026-03-23-discount-domain-boundary.md) | **Discount Domain 與 Cart Domain 邊界劃分**。原本折扣 contract 同時包含購物車輸入格式、消費者投影與 shop runtime 感知，職責過重。決策後 discount domain 只保留 `IDiscountRule` 與 `DiscountRecord`，購物車與消費者相關模型改歸 cart domain，discount engine 不再直接依賴 runtime 與 database。 |
 | [2026-03-23](2026-03-23-product-service-boundary-and-order-events.md) | **ProductService 邊界與訂單事件設計**。原本商品流程是靜態資料表導向，controller 直接讀取 Products collection，OrderLineItem 也無法識別實際商品。決策後每個 shop 啟用單一 `IProductService`，product contract 採固定欄位且 `ProductId` 改為 string；訂單 side effect 後續收斂為 `IOrderEventDispatcher`。 |
 | [2026-03-23](2026-03-23-shop-runtime-and-plugin-architecture.md) | **商店啟動組態與插件化架構**（proposed）。原本系統只有單一商店、寫死的折扣邏輯與固定商品模型。決策採用「單一部署單一商店」模式，啟動時依 `SHOP_ID` 載入 `ShopManifest` 與對應模組；折扣引擎改為 instance-based 注入式服務，商品擴充拆為「商品定義」與「購買項目」兩層模型。 |
@@ -94,6 +97,6 @@
 | [2026-04-28](2026-04-28-core-owned-oauth-public-namespace.md) | **Core-owned OAuth Public Namespace**。OAuth canonical public path 改為 `/oauth/*`，但 implementation 仍由標準 `.API` container 擁有；ingress 同時發佈 `/oauth/*` 與 `/api/*` 到同一個 core API container，不新增 `oauth-web` 或把 OAuth authority 合併進 storefront。 |
 | [2026-04-29](2026-04-29-aca-site-prod-one-container-app-topology.md) | **ACA site-prod 一對一 Container App 部署拓撲**。`compose/*.site-prod.compose.yaml` 保留本機 registry image 驗證用途，Azure 實際部署改由 `deploy/aca/*.site-prod.aca.yaml` 表達；每個 site 對應單一 Container App，nginx 為 edge sidecar，seed 改為 initContainer，backend 只透過 loopback 內部存取。 |
 | [2026-04-29](2026-04-29-site-prefixed-container-image-repositories.md) | **Site-prefixed container image repository 命名**。production image repository 一律採 `andrewdemo-shop-{site}-{role}`；common core API 從 `andrewdemo-shop-api` 改為 `andrewdemo-shop-common-api`，部署設定、build script 與 ACA 診斷腳本不再使用舊 repository。 |
-| [2026-10-16](../tip/decisions/2026-10-16-tip-no-real-business-effects.md) | **TiP 大前提：不產生真實商業效果**。確認「服務部署在正式環境，測試行為不應產生真實商業效果」為所有 TiP 規則的大前提；以 AndrewShop 作為研究對象，具體判定規則與實作尚待展開。 |
-| [2026-10-16](../tip/decisions/2026-10-16-tip-system-expiration-boundary.md) | **TiP 系統到期整理的責任邊界**。AC-TIP-012 已修正保留並接受：測試查詢正常通知系統清理真正逾期的正式預約，驗證完成後的持久化結果。PetShop 現行為同步 lazy expiration，事件與系統處理邊界列為架構變更，留待實作。 |
-| [2026-10-16](../tip/decisions/2026-10-16-tip-domain-object-classification.md) | **TiP 領域物件分類與不可變用途**。`.Core` 的 8 種持久化領域物件全數分類：Order、Member、Cart、Checkout、Token 建立時確定用途且不可變更；Inventory、Product、SKU 受保護，預約與行事曆比照辦理。AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015 已接受，涵蓋商業效果隔離、正常失敗、用途不可變、商品改價、SKU 規格、預約建立保護、時段不可用、並行交易隔離、測試購物車正常異動、買方權限檢查及系統到期整理。AC-TIP-013～015 已一併接受：事件與重試維持 test、用途不明視為 BUG、測試預約不接續結帳；AC-TIP-002 僅作信用卡示意，未實作支付時為 N/A。本輪核心 AC 已確認，鏈路 context 與呼叫端結果識別留待後續架構設計。 |
+| [2026-10-16](2026-10-16-tip-no-real-business-effects.md) | **TiP 大前提：不產生真實商業效果**。確認「服務部署在正式環境，測試行為不應產生真實商業效果」為所有 TiP 規則的大前提；以 AndrewShop 作為研究對象，具體判定規則與實作尚待展開。 |
+| [2026-10-16](2026-10-16-tip-system-expiration-boundary.md) | **TiP 系統到期整理的責任邊界**。AC-TIP-012 已修正保留並接受：測試查詢正常通知系統清理真正逾期的正式預約，驗證完成後的持久化結果。PetShop 現行為同步 lazy expiration，事件與系統處理邊界列為架構變更，留待實作。 |
+| [2026-10-16](2026-10-16-tip-domain-object-classification.md) | **TiP 領域物件分類與不可變用途**。`.Core` 的 8 種持久化領域物件全數分類：原確認 Order、Member、Cart、Checkout、Token 建立時確定用途且不可變更；現行標記範圍依 2026-10-17 範圍決策縮為 Member／Checkout／Order，Token 跟隨 Member、Cart 排除；Inventory、Product、SKU 受保護，預約與行事曆比照辦理。AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015 已接受，涵蓋商業效果隔離、正常失敗、用途不可變、商品改價、SKU 規格、預約建立保護、時段不可用、並行交易隔離、測試購物車正常異動、買方權限檢查及系統到期整理。AC-TIP-013～015 已一併接受：事件與重試維持 test、用途不明視為 BUG、測試預約不接續結帳；AC-TIP-002 原為信用卡示意，已依 2026-10-17 範圍決策納入 PaymentId 白名單 PoC；具體 context 與呼叫端結果契約仍待後續定案。 |

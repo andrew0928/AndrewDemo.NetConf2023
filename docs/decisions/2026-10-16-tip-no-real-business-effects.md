@@ -10,7 +10,7 @@ accepted
 
 使用者希望以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），並以 Stripe 作為主要設計參考。討論先收斂大原則，再依原則展開具體規則。
 
-此研究延續 [project roadmap](../../project-roadmap.md) 的模組化方向：共用交易流程、DiscountRule、ProductService 與各業務擴充需要遵守一致的測試邊界。
+此研究延續 [project roadmap](../project-roadmap.md) 的模組化方向：共用交易流程、DiscountRule、ProductService 與各業務擴充需要遵守一致的測試邊界。
 
 ## 決策
 
@@ -18,7 +18,7 @@ accepted
 
 > 服務部署在正式環境，測試行為不應產生真實商業效果。
 
-原則與名詞解釋統一維護於 [TiP 設計原則](../tip-guidelines.md)。測試來源、分類傳遞與各消費端政策，待後續討論展開；先前提出的其他原則及 OR 判定規則，尚未視為已確認。
+原則與名詞解釋統一維護於 [TiP 設計原則](../tip/tip-guidelines.md)。測試來源、分類傳遞與各消費端政策，待後續討論展開；先前提出的其他原則及 OR 判定規則，尚未視為已確認。
 
 ## 影響
 

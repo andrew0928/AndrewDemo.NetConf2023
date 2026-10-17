@@ -4,13 +4,15 @@
 
 accepted
 
-確認日期：2026-10-16。本決策涵蓋領域物件分類與下述行為原則。同日後續已確認 [AC-TIP-001](../tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](../tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](../tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](../tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](../tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](../tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](../tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](../tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](../tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](../tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](../tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](../tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](../tip-acceptance-criteria.md#ac-tip-014) 及 [AC-TIP-015](../tip-acceptance-criteria.md#ac-tip-015)，包含略過紀錄、商業統計、正常失敗紀錄、用途不可變、商品改價、SKU 規格、預約建立保護、時段不可用、並行交易隔離、測試購物車正常異動、買方權限檢查、系統到期整理、事件與重試、用途明確性及測試預約流程終點的驗收要求。本輪 14 條核心 AC 已確認，信用卡 AC-TIP-002 僅作示意；實作尚未開始。
+部分內容已由 [2026-10-17-tip-standard-scope-and-context](2026-10-17-tip-standard-scope-and-context.md) 更新：Cart 排除用途分類，Token 跟隨 Member，PaymentId 白名單納入標準 PoC，並在建立 Checkout 時提供以固定用途。以下保留原確認脈絡，現行範圍以新決策為準。
+
+確認日期：2026-10-16。本決策涵蓋領域物件分類與下述行為原則。同日後續已確認 [AC-TIP-001](../tip/tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](../tip/tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](../tip/tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](../tip/tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](../tip/tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](../tip/tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](../tip/tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](../tip/tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](../tip/tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](../tip/tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](../tip/tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](../tip/tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](../tip/tip-acceptance-criteria.md#ac-tip-014) 及 [AC-TIP-015](../tip/tip-acceptance-criteria.md#ac-tip-015)，包含略過紀錄、商業統計、正常失敗紀錄、用途不可變、商品改價、SKU 規格、預約建立保護、時段不可用、並行交易隔離、測試購物車正常異動、買方權限檢查、系統到期整理、事件與重試、用途明確性及測試預約流程終點的驗收要求。本輪 14 條核心 AC 已確認，信用卡 AC-TIP-002 僅作示意；實作尚未開始。
 
 ## 背景
 
 承接 [TiP 大前提](2026-10-16-tip-no-real-business-effects.md)：服務部署在正式環境，測試行為不應產生真實商業效果。本階段先盤點 `.Core` 會儲存在資料庫的領域物件，確認影響邊界，再展開情境與系統設計。
 
-研究對齊 [project roadmap](../../project-roadmap.md) 的共用交易流程及業務模組化方向；完整清單與程式碼依據維護於 [TiP 設計原則](../tip-guidelines.md)。
+研究對齊 [project roadmap](../project-roadmap.md) 的共用交易流程及業務模組化方向；完整清單與程式碼依據維護於 [TiP 設計原則](../tip/tip-guidelines.md)。
 
 ## 決策
 
@@ -21,14 +23,14 @@ accepted
 5. **AC-TIP-003 的正常失敗紀錄**：測試會員遇到庫存不足時，照常終止結帳、不建立訂單並保留 test Checkout。正常記錄庫存不足及交易終止即可，測試用途由 Checkout 物件的 test 標記識別；未到達的操作不產生「因 test 略過」紀錄。
 6. **AC-TIP-004 的用途不可變驗收**：Order、Member、Cart、Checkout、Token 均須驗證正式轉 test、test 轉正式會被拒絕；重新讀取後原用途及關聯物件用途不變，正常記錄拒絕原因，其他合法業務欄位仍依原規則處理。
 7. **AC-TIP-005 的商品改價保護**：測試改價的必要檢查照常執行，通過後略過 Product 更新並留 log；後續讀取及正式交易仍使用原售價。
-8. **架構議題延後統一整理**：使用者要求測試端能以程式判讀 API／CLI／interface／UI 操作是否為 test behavior，避免將預期的略過誤判為測試失敗。此方向與先前鏈路 context 討論先收錄於[架構待議筆記](../tip-architecture-notes.md)，不改動 AC-TIP-005；具體介面與結果表示方式待 AC 完成後決定。
+8. **架構議題延後統一整理**：使用者要求測試端能以程式判讀 API／CLI／interface／UI 操作是否為 test behavior，避免將預期的略過誤判為測試失敗。此方向與先前鏈路 context 討論先收錄於[架構待議筆記](../tip/tip-architecture-notes.md)，不改動 AC-TIP-005；具體介面與結果表示方式待 AC 完成後決定。
 9. **AC-TIP-006 的 SKU 規格保護**：測試修改 SKU 的必要檢查照常執行，通過後略過更新並留 log；重新讀取仍為原規格，Product 關聯與庫存資料均不受影響。
 10. **AC-TIP-007 的預約建立保護**：測試 `CreateHold` 的必要檢查照常執行，通過後不新增 Reservation 或衍生 Product、不占用時段並留 log；正式查詢仍顯示可預約。後續使用者已決定不接續該預約的購物車與 Checkout，見第 18 點與已接受的 AC-TIP-015。
 11. **AC-TIP-008 的預約正常失敗**：已被占用的時段不可因 test 而放行；照常回報不可用並終止，不新增 Reservation 或 Product，不改變既有正式預約與占用，正常記錄失敗而不留 test 略過紀錄。
 12. **AC-TIP-009 的並行交易隔離**：正式與測試交易同時結帳，均建立正確用途的 Order；只有正式交易影響庫存及商業統計。正式流程不得被測試模式影響，測試流程仍須控制商業效果並留略過紀錄。
 13. **AC-TIP-010 的測試購物車正常異動**：測試 Cart 可正常新增、刪除商品明細並保存結果，用途全程維持 test，Product、SKU 與庫存不受影響。沿用正常操作紀錄規則，不將已執行的 Cart 異動記成 test 略過。
 14. **AC-TIP-011 的買方權限檢查**：測試會員不能完成另一位測試會員的 Checkout，沿用 `BuyerMismatch` 與 HTTP `403 Forbidden`；原 Checkout、Cart 保持不變，不建立 Order 或產生商業效果。正常記錄買方不符、交易遭拒，未走到的操作不記成 test 略過。
-15. **AC-TIP-012 的系統到期整理**：使用者要求修正保留本案例並接受：測試查詢可以通知系統，正常處理真正逾期的正式預約；清理完成後驗證 `Expired` 已持久化，保留預約與商品。此項補充第 1、2 點的行為歸屬，不改變物件分類；詳見[系統到期整理決策](2026-10-16-tip-system-expiration-boundary.md)。PetShop 現行執行邊界的差距已記入[架構變更事項](../tip-architecture-notes.md#petshop-expiration-change)，留待實作。
+15. **AC-TIP-012 的系統到期整理**：使用者要求修正保留本案例並接受：測試查詢可以通知系統，正常處理真正逾期的正式預約；清理完成後驗證 `Expired` 已持久化，保留預約與商品。此項補充第 1、2 點的行為歸屬，不改變物件分類；詳見[系統到期整理決策](2026-10-16-tip-system-expiration-boundary.md)。PetShop 現行執行邊界的差距已記入[架構變更事項](../tip/tip-architecture-notes.md#petshop-expiration-change)，留待實作。
 
 核對 `.Core` 管理的 8 種持久化根物件，第一類 5 種、第二類 3 種，全數完成分類。內嵌的明細與附加資料跟隨所屬物件用途，不另外形成一類。
 

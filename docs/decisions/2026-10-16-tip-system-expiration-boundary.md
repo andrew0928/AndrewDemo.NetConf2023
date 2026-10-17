@@ -4,7 +4,7 @@
 
 accepted
 
-確認日期：2026-10-16。使用者要求依「系統應正常處理真正逾期的預約」方向修正並保留 [AC-TIP-012](../tip-acceptance-criteria.md#ac-tip-012)，修訂版已接受。現行 PetShop 不符合的執行邊界已列入[架構變更事項](../tip-architecture-notes.md#petshop-expiration-change)，留待實作；事件、排程、執行身分與 context 的具體設計尚未定案。
+確認日期：2026-10-16。使用者要求依「系統應正常處理真正逾期的預約」方向修正並保留 [AC-TIP-012](../tip/tip-acceptance-criteria.md#ac-tip-012)，修訂版已接受。現行 PetShop 不符合的執行邊界已列入[架構變更事項](../tip/tip-architecture-notes.md#petshop-expiration-change)，留待實作；事件、排程、執行身分與 context 的具體設計尚未定案。
 
 ## 背景
 
@@ -16,11 +16,11 @@ AC-TIP-012 原草案將 test Member 查詢引發的預約過期更新，也視�
 
 2026-10-16 靜態檢查 source code、既有規格與測試內容，未執行 runtime 測試：
 
-1. [ProductsController](../../../src/AndrewDemo.NetConf2023.API/Controllers/ProductsController.cs) 依 product ID 呼叫查詢，未傳入查詢者的 Member／Token。
-2. [PetShopProductService](../../../src/AndrewDemo.NetConf2023.PetShop.Extension/Products/PetShopProductService.cs) 將 Product 與 `TimeProvider` 的當下時間交給 `ApplyReservationProductPolicy`。
-3. [PetShopReservationService](../../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationService.cs) 判斷 `Holding` 且 `HoldExpiresAt <= evaluatedAt`，同步呼叫 `ExpireHold`。
-4. `ExpireHold` 改寫 `Status = Expired`、`UpdatedAt`，再由 [PetShopReservationRepository](../../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationRepository.cs) 直接 `Reservations.Update`。Reservation 與 Product 均保留，沒有刪除紀錄。
-5. 這條路徑沒有過期事件、queue 或獨立 worker。現有 [PetShopOrderEventDispatcher](../../../src/AndrewDemo.NetConf2023.PetShop.Extension/Reservations/PetShopOrderEventDispatcher.cs) 處理訂單事件，直接同步呼叫 `ConfirmFromOrder`；不是查詢發出的過期清理事件。
+1. [ProductsController](../../src/AndrewDemo.NetConf2023.API/Controllers/ProductsController.cs) 依 product ID 呼叫查詢，未傳入查詢者的 Member／Token。
+2. [PetShopProductService](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Products/PetShopProductService.cs) 將 Product 與 `TimeProvider` 的當下時間交給 `ApplyReservationProductPolicy`。
+3. [PetShopReservationService](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationService.cs) 判斷 `Holding` 且 `HoldExpiresAt <= evaluatedAt`，同步呼叫 `ExpireHold`。
+4. `ExpireHold` 改寫 `Status = Expired`、`UpdatedAt`，再由 [PetShopReservationRepository](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Services/PetShopReservationRepository.cs) 直接 `Reservations.Update`。Reservation 與 Product 均保留，沒有刪除紀錄。
+5. 這條路徑沒有過期事件、queue 或獨立 worker。現有 [PetShopOrderEventDispatcher](../../src/AndrewDemo.NetConf2023.PetShop.Extension/Reservations/PetShopOrderEventDispatcher.cs) 處理訂單事件，直接同步呼叫 `ConfirmFromOrder`；不是查詢發出的過期清理事件。
 6. 時段占用判定直接使用 `HoldExpiresAt`；已逾期的 `Holding` 不占位，不必等待狀態寫回 `Expired`。
 
 因此，目前符合「查詢觸發到期整理、更新不依賴查詢者身分」的部分語意，但尚未具備使用者描述的非同步系統工作邊界，也未實作 TiP 模式判定。
@@ -50,5 +50,5 @@ AC-TIP-012 原草案將 test Member 查詢引發的預約過期更新，也視�
 ## 後續工作
 
 - AC-TIP-012 已修訂並接受；後續實作須同時驗證通知正常發出與系統清理完成的持久化結果。
-- 依 [PetShop 架構變更事項](../tip-architecture-notes.md#petshop-expiration-change) 補上事件判定、系統執行身分、context 邊界及處理完成的觀察方式。
+- 依 [PetShop 架構變更事項](../tip/tip-architecture-notes.md#petshop-expiration-change) 補上事件判定、系統執行身分、context 邊界及處理完成的觀察方式。
 - 設計時區分「通知需要重新檢查」與「直接要求改成某狀態」，並確認處理當下仍符合到期條件；此為待評估設計，尚未凍結 contract。

@@ -1,8 +1,8 @@
 # TiP 接受條件確認紀錄
 
-更新日期：2026-10-16。
+更新日期：2026-10-17。
 
-本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；正式 `/spec` 與 contract 的整理仍待後續階段。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。AC-TIP-002 為信用卡支付示意，未實作該功能時不適用（N/A），不列入目前必要驗收。
+本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；正式 `/spec` 與 contract 的整理仍待後續階段。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。2026-10-17 依[最新範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)，Cart 排除標記與會員承接，Token 用途由 Member 決定；AC-TIP-002 改以 PaymentId 白名單作為標準 PoC 驗收方向。PetShop 案例保留，暫不納入本輪實作。
 
 AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正常處理真正逾期的正式預約。PetShop 現行結構的差距記入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作處理。
 
@@ -28,7 +28,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 | 項目 | 驗收條件 |
 |---|---|
-| 用途傳遞 | Token、Cart、Checkout 建立時即為 test。 |
+| 用途傳遞 | Token 解析為 test Member；Checkout 建立時為 test。Cart 不保存用途、不承接會員。 |
 | 業務檢查 | 身分、權限、商品及庫存檢查照常執行。 |
 | 計算結果 | 數量為 2，訂單總額為 200 元。 |
 | 訂單 | 成功建立一筆 test Order。 |
@@ -46,13 +46,28 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ## AC-TIP-002
 
-**正式會員使用測試信用卡（示意）**
+**正式會員使用 PaymentId 白名單中的測試卡號**
 
-狀態：illustrative（示意）。適用範圍於 2026-10-16 由使用者確認；沒有實作信用卡支付時，本案例不適用（N/A），不要求為了驗收而增加信用卡支付功能，也不計為測試通過。
+狀態：範圍與建立時判定原則已接受（2026-10-17），具體 request／設定欄位及正式 testcase 待 Phase 1 整理。取代原「未實作信用卡時為 N/A」的示意定位；不要求新增真實信用卡服務。
 
-示意情境：正式 Member 使用系統可辨識的 test 信用卡付款。若未來支援此來源，相關交易結果應屬 test，不產生真實扣款、扣庫存、出貨或正式商業統計；實際略過的商業操作依既有 TiP 規則留 log。
+### Given／前提
 
-此案例用於說明會員以外也可能有測試來源。來源驗證、判定時機，以及與既有 Cart／Checkout 不可變用途的相容規則，留待實際引入信用卡支付時確認；本示意不覆寫目前已確認的 Member 衍生規則，也不允許既有物件變更用途。
+- 正式 Member 使用有效 Token，Token 用途跟隨 Member。
+- 預先設定測試 PaymentId 白名單，選用其中一個 PaymentId。
+- Cart 不標記用途、不承接會員；商品與庫存等條件符合正常結帳要求。
+
+### When／操作
+
+建立 Checkout 時提供該 PaymentId，建立後完成交易。
+
+### Then／預期結果
+
+- Member 維持正式身分；Checkout 建立時固定為 test，後續 Order 承接 test 用途。
+- 正常執行身分、買方及業務檢查；不產生真實扣款、扣庫存、出貨或正式商業統計效果，實際因 test 略過的操作留 log。
+- Token 仍代表正式 Member，Cart 無用途變更；本案例不以更改會員用途達成測試交易。
+- 既有 Checkout／Order 不因重試或白名單調整重新分類。
+
+此規則限於本輪標準 Checkout 建立流程；其他付款來源與所有操作的通用組合政策仍未定案。未接入真實金流不構成真實支付隔離已驗證的證據。
 
 ## AC-TIP-003
 
@@ -62,7 +77,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ### Given／前提
 
-- Member、Token、Cart、Checkout 均為 test。
+- Member 與 Checkout 為 test，Token 跟隨 Member；Cart 不保存用途。
 - 商品單價 100 元，可用庫存只有 1 件，購買數量為 2 件。
 - 身分、權限及其他業務條件均符合。
 - 觀察期間沒有其他交易影響庫存或商業統計。
@@ -94,7 +109,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ### Given／前提
 
-分別準備正式與 test 的 Order、Member、Cart、Checkout、Token。每一種物件都必須驗證以下兩個方向。
+分別準備正式與 test 的 Order、Member、Checkout。這三種標記物件都必須驗證以下兩個方向；Token 的用途解析始終跟隨 Member，Cart 不列入本案例。
 
 ### When／操作
 
@@ -238,7 +253,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 - 同一商品單價 100 元，庫存 10 件，沒有折扣。
 - 正式會員 A 購買 3 件；測試會員 B 購買 2 件。
-- 各自使用自己的 Token、Cart、Checkout，用途分類正確。
+- 各自使用有效 Token、不同 Cart 及自己的 Checkout；Token 跟隨 Member，Checkout 用途正確，Cart 無用途分類。
 - 兩筆交易均符合成功條件，沒有其他交易干擾。
 
 ### When／操作
@@ -261,13 +276,13 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ## AC-TIP-010
 
-**測試購物車可正常新增、刪除商品**
+**測試會員操作購物車，可正常新增、刪除商品**
 
 狀態：accepted。確認日期：2026-10-16。
 
 ### Given／前提
 
-- Member、Token、Cart 均為 test，Cart 目前為空。
+- Member 為 test，Token 跟隨 Member；Cart 目前為空，不保存用途、不承接會員。
 - 商品有效，售價 100 元、庫存 10 件。
 - 身分、權限及其他業務條件均符合。
 
@@ -280,13 +295,13 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 | 項目 | 驗收條件 |
 |---|---|
-| 新增結果 | 實際保存到 test Cart；重新讀取可看到該明細，數量為 2。 |
+| 新增結果 | 實際保存到 Cart；重新讀取可看到該明細，數量為 2。 |
 | 刪除結果 | 實際保存刪除結果；重新讀取時 Cart 為空。 |
-| 用途分類 | 同一個 Cart 全程維持 test，沒有變更用途。 |
+| 範圍 | Cart 全程不保存用途、不承接會員；交易用途到建立 Checkout 時判定。 |
 | 受保護資料 | Product、SKU 不變，庫存仍為 10。 |
 | Log | 沿用正常操作紀錄規則，不將已實際執行的 Cart 異動記成「因 test 略過」。 |
 
-本案例確認測試物件的業務內容可以正常異動；不可變的是用途標記。
+本案例確認 Cart 排除用途分類後，測試會員的購物車操作仍正常保存；不因身分為 test 略過 Cart 寫入。
 
 ## AC-TIP-011
 
@@ -297,7 +312,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 ### Given／前提
 
 - A、B 是不同的 test Member，各有自己的 test Token。
-- B 已建立自己的 test Cart 與 Checkout。
+- B 已使用一個 Cart 建立自己的 test Checkout；Cart 本身不保存用途或會員綁定。
 - 商品、庫存及其他結帳條件均符合。
 
 ### When／操作
@@ -309,7 +324,7 @@ A 使用自己的有效 Token，嘗試完成 B 的 Checkout。
 | 項目 | 驗收條件 |
 |---|---|
 | 權限檢查 | 正常拒絕，回傳既有的 `BuyerMismatch`；HTTP API 對應 `403 Forbidden`。 |
-| Checkout／Cart | B 的資料保留，內容、歸屬與 test 用途不變。 |
+| Checkout／Cart | Checkout 內容、買方與 test 用途不變；所引用的 Cart 內容保留，Cart 無用途或會員綁定。 |
 | 訂單 | 不建立任何 Order，包括 test Order。 |
 | 商業效果 | 不扣庫存、不扣款、不出貨、不觸發訂單完成事件；既有商業統計不變。 |
 | Log | 正常記錄買方不符、交易遭拒；未走到的操作不留下「因 test 略過」紀錄。 |
@@ -422,7 +437,7 @@ AC-TIP-012 的系統到期整理有明確的執行責任，不屬於用途遺失
 - 不建立 Reservation 或衍生 Product，不占用正式時段資源。
 - 此預約流程到此停止，不把未建立的預約商品加入 Cart，不為該預約建立 Checkout 或 Order，包括 test Order。
 - 不以臨時或虛構商品接續結帳，也不將略過結果當作已建立可購買的預約。
-- 既有 Cart 內容與用途不變；同一測試會員仍可依 AC-TIP-001、AC-TIP-010 操作一般商品。
+- 既有 Cart 內容不變，Cart 本身不保存用途；同一測試會員仍可依 AC-TIP-001、AC-TIP-010 操作一般商品。
 - 保留 AC-TIP-007 的略過預約建立與衍生 Product 紀錄；未走到的扣庫存、扣款、出貨不產生 test 略過 log。
 
 回應如何讓 API／CLI／UI 辨識「測試預約未建立、流程不接續」，沿用既有架構待議事項，不在本 AC 指定 response header、result code 或畫面。

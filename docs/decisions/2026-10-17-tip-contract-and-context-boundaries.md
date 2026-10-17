@@ -4,6 +4,8 @@
 
 accepted
 
+部分內容已由 [2026-10-17-tip-standard-scope-and-context](2026-10-17-tip-standard-scope-and-context.md) 更新：Cart 排除用途分類，Token 跟隨 Member，PaymentId 白名單納入標準 PoC，並在建立 Checkout 時提供以固定用途。以下保留原確認脈絡，現行範圍以新決策為準。
+
 確認日期：2026-10-17。使用者已確認支撐 TiP 體系的設計涵蓋完成；接受範圍為研究深度、規範邊界、current identity／current transaction 兩類 context，以及架構傳遞資訊、應用執行政策的責任分工。完整應用政策矩陣與具體 contract／實作仍待後續階段處理，不阻擋本輪原則收斂。
 
 **重大決策；影響 .Core。** 後續落入正式介面與資料定義時涉及 **回頭修正 Phase 1；影響 .Abstract / spec**。本次只記錄於 `/docs`，不代表已重新開啟 Phase 1，也未變更既有 contract 或實作。
@@ -12,7 +14,7 @@ accepted
 
 使用者以 AndrewShop prototype 演練 TiP，目的是歸納可重用的設計 best practice。前一輪將需求與 14 條核心 AC 整理成八項架構議題，其中部分已深入保證機制、儲存方式與基礎設施選擇。
 
-使用者確認：研究應在原則確定後停止深入，將具體機制交由實作端決定。本決策對齊 [project roadmap](../../project-roadmap.md)，承接既有物件分類與 AC，不重新決定已接受的預期行為。
+使用者確認：研究應在原則確定後停止深入，將具體機制交由實作端決定。本決策對齊 [project roadmap](../project-roadmap.md)，承接既有物件分類與 AC，不重新決定已接受的預期行為。
 
 ## 決策
 
