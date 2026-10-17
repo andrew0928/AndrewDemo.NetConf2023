@@ -6,7 +6,8 @@
 
 | 文件 | 內容 |
 |---|---|
-| [標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md) | 最新範圍：Member／Checkout／Order 標記，Token 跟隨 Member，Cart 排除；PaymentId 白名單在建立 Checkout 時判定用途，事件處理器為 event／async 邊界；已接受 scoped injection。 |
+| [Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md) | 確認 IsTest 與 Checkout.PaymentId 欄位；command 保留明確會員輸入。Checkout 採作用中與封存分區保存，Order 關聯封存交易；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
+| [標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md) | 最新範圍：Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；PaymentId 白名單在建立 Checkout 時判定用途，事件處理器為 event／async 邊界；已接受 scoped injection，IdentityContext／TransactionContext 各自獨立，scope 依執行情境決定。 |
 | [TiP 設計原則](tip-guidelines.md) | 大前提、領域物件分類、略過紀錄與商業統計規則。 |
 | [TiP 接受條件](tip-acceptance-criteria.md) | 逐條確認的 AC 與驗收結果要求。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。 |
 | [TiP 架構設計筆記](tip-architecture-notes.md) | 已確認的 context、效果控制與責任分工，以及後續應用規格、contract／實作及擴充事項。 |

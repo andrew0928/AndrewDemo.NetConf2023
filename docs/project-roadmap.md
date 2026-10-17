@@ -14,13 +14,13 @@
 
 已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
 
-已確認 `.Core` 管理的 8 種持久化領域物件範圍，2026-10-17 縮小直接標記對象為 `Order`、`Member`、`CheckoutTransactionRecord`，建立時確定正式／測試用途且不可變更；Token 跟隨 Member，Cart 不承接會員且不標記用途；`InventoryRecord`、`Product`、`SkuRecord` 受保護，測試行為不得異動，因測試而略過的操作必須留下 log。PetShop 的預約及行事曆／時段占用比照受保護規則。
+已確認 `.Core` 管理的 8 種持久化領域物件範圍，2026-10-17 縮小直接標記對象為 `Order`、`Member`、`CheckoutTransactionRecord`，建立時確定正式／測試用途且不可變更；Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 不承接會員且不標記用途；`InventoryRecord`、`Product`、`SkuRecord` 受保護，測試行為不得異動，因測試而略過的操作必須留下 log。PetShop 的預約及行事曆／時段占用比照受保護規則。
 
 原則、分類與名詞解釋見 [TiP 設計原則](tip/tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)及[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。[AC-TIP-001](tip/tip-acceptance-criteria.md#ac-tip-001) 已確認：測試會員可完成一般商品結帳；略過扣庫存、扣款、出貨必須留 log。查詢型報表排除測試資料不須另留 TiP log，事件觸發的統計更新若因 test 略過則須留 log；若有商業統計功能或報表，AC 必須驗證其結果不受測試交易影響。
 
 [AC-TIP-003](tip/tip-acceptance-criteria.md#ac-tip-003) 已確認：庫存不足時正常終止結帳、保留 test Checkout，不建立訂單；按照正常流程記錄庫存不足及交易終止，未走到的操作不留 test 略過紀錄。
 
-[AC-TIP-004](tip/tip-acceptance-criteria.md#ac-tip-004) 已確認：Order、Member、Checkout 建立後，正式與 test 用途不得互換；Token 跟隨 Member，Cart 排除標記；拒絕變更後原用途及關聯物件用途不變，正常記錄拒絕原因。
+[AC-TIP-004](tip/tip-acceptance-criteria.md#ac-tip-004) 已確認：Order、Member、Checkout、Token 建立後，正式與 test 用途不得互換；Token.IsTest 由 Member.IsTest 繼承，Cart 排除標記；拒絕變更後原用途及關聯物件用途不變，正常記錄拒絕原因。
 
 [AC-TIP-005](tip/tip-acceptance-criteria.md#ac-tip-005) 已確認：測試改價仍執行必要檢查，但略過 Product 寫入並留 log；重新讀取及正式交易仍使用原售價。使用者另要求呼叫端能以程式辨識 test 行為及操作結果，此項列為架構議題，不修改 AC-TIP-005。
 
@@ -48,7 +48,11 @@ Context 已進一步區分為 **current identity**（目前執行身分及其用
 
 決策見 [TiP 研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)；[TiP 架構設計筆記](tip/tip-architecture-notes.md) 區分已確認規範與後續事項。未變更既有 `/spec`、`.Abstract` contract 或實作。
 
-2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：共用 context 與 CheckoutService 採 scoped，HTTP request、事件處理與 CLI 操作各自建立執行範圍。HTTP Items 與 Core 使用同一份 context；middleware 解析交易／訂單 ID 的具體策略仍待定案。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
+2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，CheckoutService 採 scoped；兩者可在單次 HTTP 操作中共用 request scope，其他執行範圍依事件／CLI 等處理邊界決定。HTTP Items 與 Core 對各種 context 使用相同資料；middleware 解析交易／訂單 ID 的具體策略仍待定案。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
+
+2026-10-17 Core 欄位已確認：新增 Member／Checkout／Order.IsTest、Checkout.PaymentId 及建立時從 Member 繼承的 Token.IsTest。Create／Complete command 保留明確 RequestMember，API／CLI 自行組合；PaymentId 移至 create，complete 使用保存值。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 Order.PaymentId；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料 IsTest = false；無交易時不給交易 header，物件中的交易為 null。詳見 [Core 欄位決策](decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
+
+TiP Phase 1 已於 2026-10-17 由使用者啟動，目前先盤點 `.Abstract` 受影響的 interface。使用者最後指定先開始變更 code，再同步正式 spec 與 testcases；本輪不以先凍結 spec 作為開工前置條件。最小共用 contract 隨本輪變更具體化；具體介面提案見 [架構設計筆記](tip/tip-architecture-notes.md#phase1-interface-proposal)，尚未凍結或開始 Phase 2 實作。
 
 ## Milestone 1 - 基礎建設
 

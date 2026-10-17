@@ -2,7 +2,7 @@
 
 更新日期：2026-10-17。
 
-本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；正式 `/spec` 與 contract 的整理仍待後續階段。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。2026-10-17 依[最新範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)，Cart 排除標記與會員承接，Token 用途由 Member 決定；AC-TIP-002 改以 PaymentId 白名單作為標準 PoC 驗收方向。PetShop 案例保留，暫不納入本輪實作。
+本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；正式 `/spec` 與 contract 的整理仍待後續階段。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。2026-10-17 依[最新範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)，Cart 排除標記與會員承接，Token.IsTest 建立時由 Member.IsTest 繼承保存；AC-TIP-002 改以 PaymentId 白名單作為標準 PoC 驗收方向。PetShop 案例保留，暫不納入本輪實作。
 
 AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正常處理真正逾期的正式預約。PetShop 現行結構的差距記入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作處理。
 
@@ -14,7 +14,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ### Given／前提
 
-- Member 建立時已標示為 test，使用其有效 Token。
+- 註冊 Member 時，其 ID 命中預先指定的 MemberId 白名單，自動設定 IsTest = true，使用其有效 Token。
 - 商品售價 100 元，對應 SKU 可用庫存為 10。
 - 購買 2 件，沒有折扣；其他權限與業務條件均符合。
 - 觀察期間沒有其他交易異動這筆庫存或待比對的商業統計。
@@ -28,10 +28,11 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 | 項目 | 驗收條件 |
 |---|---|
-| 用途傳遞 | Token 解析為 test Member；Checkout 建立時為 test。Cart 不保存用途、不承接會員。 |
+| 用途傳遞 | Token.IsTest 建立時從 test Member 繼承保存；Checkout 建立時為 test。Cart 不保存用途、不承接會員。 |
 | 業務檢查 | 身分、權限、商品及庫存檢查照常執行。 |
 | 計算結果 | 數量為 2，訂單總額為 200 元。 |
 | 訂單 | 成功建立一筆 test Order。 |
+| 交易封存 | 依 2026-10-17 補充決策，Checkout 從作用中區移至封存區；保留原交易 ID、IsTest 與 PaymentId，Order 可循關聯查回。 |
 | 庫存 | 可用庫存仍為 10；過程中也沒有先扣減再補回。 |
 | 商品資料 | Product 與 SKU 均未異動。 |
 | 扣庫存紀錄 | 留下「因 test 略過扣庫存」的 log，能對應到這次交易。 |
@@ -48,7 +49,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 **正式會員使用 PaymentId 白名單中的測試卡號**
 
-狀態：範圍與建立時判定原則已接受（2026-10-17），具體 request／設定欄位及正式 testcase 待 Phase 1 整理。取代原「未實作信用卡時為 N/A」的示意定位；不要求新增真實信用卡服務。
+狀態：範圍與建立時判定原則已接受（2026-10-17），白名單已確認預設於 code 或 database，PaymentId 僅為數值，create 當下查清單；正式 testcase 隨 code 變更同步整理。取代原「未實作信用卡時為 N/A」的示意定位；不要求新增真實信用卡服務。
 
 ### Given／前提
 
@@ -109,7 +110,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ### Given／前提
 
-分別準備正式與 test 的 Order、Member、Checkout。這三種標記物件都必須驗證以下兩個方向；Token 的用途解析始終跟隨 Member，Cart 不列入本案例。
+分別準備正式與 test 的 Order、Member、Checkout、Token。這四種標記物件都必須驗證以下兩個方向；Token.IsTest 建立時由 Member.IsTest 繼承保存，且維持一致。Cart 不列入本案例。
 
 ### When／操作
 

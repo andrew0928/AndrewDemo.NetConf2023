@@ -2,31 +2,89 @@
 
 更新日期：2026-10-17。
 
-本文件收錄已確認規範、標準實作範圍及 context 實作評估。2026-10-17 最新決策縮小為 Member／Checkout／Order 標記，Token 跟隨 Member，Cart 排除；建立 Checkout 時提供 PaymentId 並固定用途。同日已確認採用 scoped injection；其餘標示為建議的實作細節及具體 contract 尚未凍結，也未修改既有 `/spec` 與 `.Abstract`。
+本文件收錄已確認規範、標準實作範圍及 context 實作評估。2026-10-17 最新決策確認 Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；建立 Checkout 時提供 PaymentId 並固定用途。同日已確認採用 scoped injection；其餘標示為建議的實作細節及具體 contract 尚未凍結，也未修改既有 `/spec` 與 `.Abstract`。
+
+<a id="phase1-interface-proposal"></a>
+
+## Phase 1 Interface 建議（Context 分離已確認，簽章待定）
+
+2026-10-17 使用者啟動 Phase 1，要求先列出 `.Abstract` 受影響的 interface。使用者已確認 IdentityContext 與 TransactionContext 各自獨立建模，其有效範圍可能不同；建議第一版提供兩個獨立讀取介面，並補齊既有事件介面的執行邊界契約。具體名稱、簽章與 models 於實作時具體化，再同步 spec；無交易時以 null 表示。
+
+| Interface | 建議變更 | 責任與影響 |
+|---|---|---|
+| `IIdentityContext`（暫名） | 新增 | 提供目前執行身分的唯讀資訊，包含主體種類、必要 ID 與用途；可獨立存在於沒有交易的操作。 |
+| `ITransactionContext`（暫名） | 新增 | 提供目前處理的 Checkout／Order 之 ID 與用途；綁定、恢復與有效範圍獨立於 identity，一般操作可沒有目前交易。 |
+| `IOrderEventDispatcher` | 補齊行為契約，保留兩個 `Dispatch` 簽章 | 每次處理事件使用獨立 scope，從事件的 OrderId 恢復 Order 用途，原 HTTP request 結束後仍可處理；既有事件已有 OrderId，第一版可由資料庫恢復用途。同步方法亦可表達這個邊界。 |
+| `IProductService` | 保留簽章 | 維持商品查詢責任；本次標準商品查詢沒有新增 context 參數的需求。 |
+| `IDiscountRule` | 保留簽章 | 維持 CartContext 輸入與折扣計算，TiP 結帳仍執行正常計算。 |
+| `IShopManifestResolver` | 保留簽章 | 維持 shop 啟動設定解析，執行用途屬於每次操作的 context。 |
+
+兩個 context 分開注入，服務依所需資訊選擇依賴；初始化及綁定由 Core 提供受控操作。操作結果彙整另依本次操作範圍設計，不把結果當成合併 identity／transaction 的理由。具體讀取方式、models 與結果契約待下一步設計。
+
+目前 `CheckoutService`、Member、CheckoutTransactionRecord、Order 與 `IShopDatabaseContext` 均在 Core。其用途欄位、PaymentId、資料保護與 DI 改動仍需納入 Phase 1 規格，但不因本次 TiP 自動搬入 Abstract 或各新增一個公開 interface。商品／SKU 維護與白名單判定第一版可採 Core concrete service，若形成跨模組擴充需求再評估公開 contract。
+
+<a id="core-field-definition"></a>
+
+## Core 欄位定義（已確認部分）
+
+依據：[Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
+
+| 模型／欄位 | 狀態與規則 |
+|---|---|
+| Member.IsTest | 已確認，bool，註冊時依 MemberId 白名單自動指定，建立後不可變。 |
+| CheckoutTransactionRecord.IsTest | 已確認，bool，建立時固定交易用途。 |
+| CheckoutTransactionRecord.PaymentId | 已確認，int，create 時提供並保存供 complete 使用。 |
+| Order.IsTest | 已確認，bool，承接 Checkout 用途。 |
+| MemberAccessTokenRecord.IsTest | 已確認，bool，建立時從 Member.IsTest 複製並保存，用途不可變且保持一致。 |
+| Order.PaymentId | 不新增；透過關聯的封存 Checkout 取得付款來源。 |
+| Order.CheckoutTransactionId | 已確認新增 int?；Checkout 建立的 Order 填入交易 ID，其他來源為 null。 |
+| CheckoutCreateCommand.PaymentId | 已確認新增。 |
+| CheckoutCompleteCommand.PaymentId | 已確認移除，從保存的 Checkout 取得。 |
+| Create／Complete command.RequestMember | 保留必填，由 API／CLI 明確組合，不以注入 IdentityContext 取代。 |
+| CheckoutCompleteResult.PaymentId | 保留，改以 Checkout 保存值回傳。 |
+
+Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付款來源時，Buyer.IsTest 可為 false、Order.IsTest 為 true。Cart／明細與 Product／SKU／Inventory 不新增用途欄位。FulfillmentStatus 暫維持現有值，操作略過結果另行定義。
+
+已確認作用中的 Checkout 與封存交易紀錄分區保存，Order 可透過關聯查回封存的 CheckoutTransactionRecord；封存保留原交易 ID、IsTest 與 PaymentId。現行程式成功後直接刪除 Checkout，仍須改版達成此方向。
+
+實作建議為同一 shop database 的不同 collection，將 Order 建立、依用途處理庫存、封存及移除作用中紀錄一起提交或回滾。Complete 僅處理作用中紀錄；成立前失敗保留作用中 Checkout，成立後 fulfillment 失敗保留 Order 與封存紀錄。Order 透過 nullable CheckoutTransactionId 關聯；collection 名稱、時間欄位及重複 complete 回覆於實作時具體化；須避免交易 ID 因移出作用中區而被重用。
 
 <a id="standard-context-evaluation"></a>
 
 ## 標準 Context 實作評估（Scoped injection 已接受）
 
-依據：[標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md)。使用者已接受 scoped injection 與相應服務生命週期調整；名稱、accessor 契約、endpoint metadata 與 body 解析策略仍為實作建議。
+依據：[標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md)。使用者已接受 scoped injection，以及 identity／transaction 分開建模、依執行情境決定 scope。名稱、accessor 契約、endpoint metadata 與 body 解析策略仍為實作建議。
 
-### 共用 scoped context 已接受；Middleware 解析細節待定
+### 獨立 Context 與 Scoped injection 已接受；Middleware 解析細節於實作具體化
 
-`HttpContext.Items` 是單次 HTTP request 的資料容器。建議 middleware 解析入口，把關鍵 ID 與已解析的用途摘要存入一個具型別的 context；Items 指向這份 context，Core 透過輕量 accessor 讀取同一份資料。避免 Items 與 Core 各維護一套可變用途。Token 可沿用既有 request key，解析為 Member 後才形成可信 identity；token 的存在本身不代表驗證成功。
+`HttpContext.Items` 是單次 HTTP request 的資料容器。建議 middleware 分別解析 identity 與 transaction，把關鍵 ID 與用途摘要交給各自 context；Items 與 Core 對同一種 context 使用同一份資料，避免重複維護用途。兩個 context 的初始化與綁定時機各自獨立。Token 可沿用既有 request key；驗證 Token 並解析其 Member，確認兩者 IsTest 一致後形成可信 identity。API 以此組合 command 的 RequestMember，底層 command 保留明確會員輸入。
 
 | 做法 | 適用性與取捨 |
 |---|---|
 | Core 直接讀 IHttpContextAccessor／Items | HTTP 端修改最少，但 ConsoleUI 與事件端無法自然使用；不建議作為共用 Core 契約。 |
-| Scoped context，HTTP Items 引用同一份資料 | 已接受。HTTP 每個 request、事件每次處理、CLI 每次操作建立明確範圍，使用共用 scoped context。 |
+| 分開的 scoped context，HTTP Items 各自引用對應資料 | 已接受。兩者獨立建模，依執行情境決定 DI scope；在單次 HTTP 操作中可共用 request scope，事件處理建立新 scope。 |
 | AsyncLocal ambient context | 可支援深層同步／await 呼叫，但事件交接仍需明確建立與還原範圍；本輪優先採 scoped，避免引入不必要的隱式傳遞。 |
 
-context 的語意最少包括：
+兩個 context 及操作結果的語意分別為：
 
 - Identity：執行主體種類、MemberId（會員身分時）、由 Member 決定的用途；事件端可為系統身分。
 - Transaction：種類（Checkout 或 Order）、ID、從持久化物件取得的用途；一般 request 可沒有 transaction。
 - Result：實際操作結果與已發生的略過紀錄摘要，供出口表達；知道 test 不等於所有操作都被略過。
 
-只保存 ID 也能在使用時查詢，但建議保存已解析的用途快照，因為成功 Checkout 會刪除 CheckoutTransactionRecord。出口仍須保有原交易 ID／用途及結果，而事件端改由持久化的 Order 恢復交易用途。
+只保存 ID 也能在使用時查詢，但建議保存已解析的用途快照。依已確認方向，成功 Checkout 將由作用中區移至封存區；快照讓本次操作的出口不必重新查詢不同儲存區，仍能取得原交易 ID／用途及結果。事件端則由持久化的 Order 恢復交易用途。
+
+### Context 有效範圍與 DI Scope
+
+兩個 context 沒有固定的一對一或父子關係：
+
+- 商品查詢可只有 identity；建立 Checkout 時先有 identity，建立成功後才綁定 transaction。
+- 同一執行身分可處理多筆交易，每筆交易有自己的處理範圍。
+- 同一筆交易交給事件處理器後，交易用途延續，執行身分可改為系統。
+- 交易跨 request／事件延續時，每次從持久化資料恢復 context；不保持同一個 DI instance 跨 request 存活。
+
+獨立建模不要求每次都建立兩個 DI scope。第一版的單筆 HTTP 操作可在 request scope 中提供兩個獨立 context；遇到批次、巢狀交易處理或事件邊界，再依實際需求建立隔離的操作 scope。具體批次與巢狀 API 不納入本輪新增功能。
+
+.NET 內建 DI scope 沒有自動的父子繼承關係；新交易處理 scope 不會自動取得外層 identity。需要延續身分時明確傳入不可變的身分資料／快照，在新 scope 初始化；事件改由系統執行時則建立系統 identity。新 scope 的服務也須在該 scope 內解析，避免沿用外層已捕捉 context 的服務。處理多筆交易時，不讓並行操作共用可變 transaction 綁定。
 
 ### Middleware 依 endpoint 明確解析
 
@@ -57,7 +115,7 @@ context 的語意最少包括：
 | test | 否 | test |
 | test | 是 | test |
 
-建議 PaymentId 隨 Checkout 保存，complete 移除重複輸入並讀取已保存值；CommonStorefront 的 PaymentId 產生移至 create 前，ConsoleUI 亦同步。此介面調整為建議，待正式 contract 落定。白名單用於建立時分類；已建立 Checkout 與後續 Order／事件不因白名單變更而換用途。
+已確認 PaymentId 隨 Checkout 保存，complete 移除重複輸入並讀取已保存值；CommonStorefront 的 PaymentId 產生移至 create 前，ConsoleUI 亦同步。Create／Complete command 保留 RequestMember，由呼叫端明確組合；不以注入 IdentityContext 取代必填輸入。MemberId／PaymentId 白名單可預先定義於 code 或 database，第一版採 code 內集中定義。Member 註冊時依 ID 是否命中自動設定 IsTest；PaymentId 僅為數值，不建立付款物件，Checkout create 當下查清單。白名單用於建立時分類；已建立 Checkout 與後續 Order／事件不因白名單變更而換用途。
 
 ### 事件處理器建立自己的範圍
 
@@ -69,10 +127,11 @@ context 的語意最少包括：
 
 目前程式仍將 API 的 CheckoutService 註冊為 singleton；已接受的改版方向為 scoped injection，CheckoutService 與直接依賴 scoped context 的服務須配合改為 scoped。HTTP 在 request scope 內解析服務；事件每次處理與 CLI 每次操作建立並釋放獨立 scope。Singleton dispatcher 若保留為交接入口，應透過 scope factory 在新 scope 內解析 handler，不直接捕捉 scoped context／handler。其餘不依賴 context 的服務不必一律更換 lifetime。此處為已接受的設計，尚未修改程式註冊。
 
-HTTP 出口 middleware 須在 response 開始前輸出用途與結果。若採 header，建議事先註冊 `OnStarting`，在送出前讀取最終 context；不要等 `await next()` 結束後才假設 header 仍可修改。事件／CLI 使用相同結果語意，不依賴 HTTP response。
+無目前交易時，不輸出交易相關 header；物件中的 transaction context 為 null，identity 仍可存在。HTTP 出口 middleware 須在 response 開始前輸出適用的用途與結果。若採 header，建議事先註冊 `OnStarting`，在送出前讀取最終 context；不要等 `await next()` 結束後才假設 header 仍可修改。事件／CLI 使用相同結果語意，不依賴 HTTP response。
 
 ### 技術依據
 
+- [Dependency injection guidelines](https://learn.microsoft.com/dotnet/core/extensions/dependency-injection-guidelines)：內建 DI scopes 不具有自動父子繼承關係。
 - [ASP.NET Core HttpContext](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/use-http-context?view=aspnetcore-10.0)：Items 的 request 範圍、body buffering 與 HttpContext 跨背景工作限制。
 - [ASP.NET Core Routing](https://learn.microsoft.com/en-us/aspnet/core/fundamentals/routing?view=aspnetcore-10.0)：routing 後讀取 endpoint 與 metadata。
 - [ASP.NET Core Filters](https://learn.microsoft.com/en-us/aspnet/core/mvc/controllers/filters?view=aspnetcore-10.0)：action filter 可存取已完成 model binding 的參數。
@@ -124,7 +183,7 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 
 使用者在接受 [AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 時指出：要求改價為 80 元、讀回卻仍是 100 元，可能讓原本預期資料被修改的測試失敗。因此，修改價格的 API／CLI／interface／UI 等入口，需要提供明確且能由系統判讀的方式，讓測試端辨識這是 test behavior。
 
-2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。具體 header、result code 與回傳格式尚未定案；這項需求不改變 AC-TIP-005 中「價格保持原值、略過更新留 log」的預期結果。
+2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。無交易時不給交易相關 header、物件中的 transaction 為 null；其餘 header 名稱、result code 與回傳格式於實作時具體化；這項需求不改變 AC-TIP-005 中「價格保持原值、略過更新留 log」的預期結果。
 
 商業效果仍在各操作發生前受到控制；出口依 context 與已完成的判定結果產生一致表達。測試會員操作 Cart 可實際寫入，Cart 本身不標記用途；test 行為對 Product 的更新被略過、test Checkout 可因庫存不足失敗，因此對外結果需承接實際操作結果。具體資訊格式留給後續 contract。
 
@@ -170,6 +229,12 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 使用者已決定：測試 `CreateHold` 略過 Reservation／Product 建立後，不繼續該筆預約的 Cart／Checkout。[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015) 完整案例已接受。
 
 後續實作須讓預約入口及呼叫端辨識「已驗證但因 test 未建立預約」，正常停止此流程，不將未建立的預約當成可購買商品。具體 response header、result code 與 UI 呈現沿用已確認的出口表達原則，留給正式 contract 與實作；不引入臨時 Product 或另一套虛擬預約交易來接續結帳。
+
+## 開工前最後確認
+
+2026-10-17 已確認 MemberId／PaymentId 白名單、Order.CheckoutTransactionId nullable 關聯、無交易時省略交易 header／物件為 null，以及既有資料一律 IsTest = false。舊資料不因白名單重新分類；缺少歷史 Checkout 的 Order 不捏造封存紀錄。
+
+使用者指定先開始變更 code，再落入 `/spec` 與 `/spec/testcases`，本輪不以先凍結 spec 作為前置條件。既有設計方向不變，具體介面成員與格式由實作收斂並同步文件。
 
 ## 本輪收斂後保留的事項
 

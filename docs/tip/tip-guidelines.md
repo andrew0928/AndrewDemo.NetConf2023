@@ -6,7 +6,7 @@
 
 ## 最新標準實作範圍
 
-2026-10-17 [範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)：僅 Member、Checkout、Order 保存用途；Token 跟隨 Member，Cart 不承接會員且不標記 test。PaymentId 白名單代表測試卡號，建立 Checkout 時即提供 PaymentId 並固定用途；事件處理器視為 event／async 邊界。AppleBTS／PetShop 暫不納入本輪實作。同日已接受 scoped injection：HTTP、事件與 CLI 以各自執行範圍取得共用 context，CheckoutService 及直接依賴 context 的服務配合採 scoped。
+2026-10-17 [範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)：Member、Checkout、Order 保存用途；Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 不承接會員且不標記 test。PaymentId 白名單代表測試卡號，建立 Checkout 時即提供 PaymentId 並固定用途；事件處理器視為 event／async 邊界。AppleBTS／PetShop 暫不納入本輪實作。同日已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，scope 依 HTTP、事件與 CLI 的執行情境決定，兩者可在單次 HTTP 操作共用 request scope；CheckoutService 及直接依賴 context 的服務配合採 scoped。
 
 ## 研究目的與範圍
 
@@ -67,13 +67,13 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 ### 第一類：建立時確定用途，建立後不可變更
 
-`Order`、`Member`、`CheckoutTransactionRecord` 在建立時即確定正式／測試用途。Token 由 Member 解析用途，不保存獨立 test 標記；Cart 排除用途分類。不可從正式改為測試，也不可從測試改為正式；不可變的是用途分類，不是物件的所有業務資料或狀態。
+`Order`、`Member`、`CheckoutTransactionRecord` 在建立時即確定正式／測試用途。MemberAccessTokenRecord.IsTest 建立時由 Member.IsTest 複製保存，同樣維持用途不可變；Cart 排除用途分類。不可從正式改為測試，也不可從測試改為正式；不可變的是用途分類，不是物件的所有業務資料或狀態。
 
 [AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004) 已確認兩個方向均須拒絕變更；重新讀取後原用途與關聯物件用途均不變，正常記錄拒絕原因。其他合法業務欄位仍依原有規則更新。
 
 [AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試會員操作 Cart 可正常新增、刪除商品明細並保存結果，Cart 不保存 test 用途且不承接會員，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
 
-`Member` 在建立時標示用途，Token 跟隨 Member。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位名稱、關聯與傳遞機制留待設計。
+`Member` 註冊時依預先指定的 MemberId 白名單自動標示用途，命中為 true、未命中為 false；Token.IsTest 在簽發時由 Member.IsTest 繼承保存。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位名稱、關聯與傳遞機制留待設計。
 
 ### 第二類：受保護，測試行為不得異動
 
@@ -91,7 +91,7 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 ### `.Core` 持久化領域物件完整清單
 
-依 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類：
+依目前 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類。新設計已確認 Checkout 的作用中與封存紀錄分區保存，封存延續同一交易的 ID、用途與付款來源，不新增用途分類；封存區尚未實作，第一版採同資料庫不同 collection，詳見 [Core 欄位決策](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。下表的 collection 為現行實作：
 
 | 領域物件 | 實際型別 | Collection | 已確認分類 |
 |---|---|---|---|
@@ -99,7 +99,7 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 | Member | `Member` | `members` | 第一類：用途不可變 |
 | Cart | `Cart` | `carts` | 排除用途分類，不承接會員、不保存 test 標記 |
 | Checkout | `CheckoutTransactionRecord` | `checkout_transactions` | 第一類：用途不可變 |
-| Token | `MemberAccessTokenRecord` | `member_tokens` | 跟隨 Member，不保存獨立 test 標記 |
+| Token | `MemberAccessTokenRecord` | `member_tokens` | 第一類：IsTest 建立時繼承 Member，保存後用途不可變 |
 | Inventory | `InventoryRecord` | `inventory_records` | 第二類：受保護 |
 | Product | `Product` | `products` | 第二類：受保護 |
 | SKU | `SkuRecord` | `skus` | 第二類：受保護 |
@@ -180,6 +180,6 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 ## 文件與實作邊界
 
-本版已收斂大原則、領域物件分類及架構規範。待使用者開啟正式規格階段，再將可驗收的規則寫入 `/spec` 與 `/spec/testcases`；若涉及共享 contract，再依 Phase 1 流程處理 `.Abstract`。
+本版已收斂大原則、領域物件分類及架構規範。2026-10-17 使用者最後確認：既有資料 IsTest 一律為 false；Order 新增 nullable CheckoutTransactionId；無交易不給交易 header，物件中的交易為 null。白名單可定義於 code 或 database，第一版採 code 內集中定義 MemberId／PaymentId 清單。使用者指定先開始變更 code，再同步 `/spec` 與 `/spec/testcases`；本輪共享 contract 隨實作具體化。
 
 本版不決定 API、資料欄位名稱與結構、儲存隔離方式或付款實作，也不以現有 PoC 尚未連接實際金流，作為「測試已成功隔離真實扣款」的驗證證據。盤點完整代表需求分類涵蓋現有物件，不代表現行實作已符合 TiP 規則。
