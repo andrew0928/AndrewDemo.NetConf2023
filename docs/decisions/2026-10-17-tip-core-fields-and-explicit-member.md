@@ -6,7 +6,7 @@ accepted
 
 確認日期：2026-10-17。已確認欄位、command 邊界、Checkout 分區封存、nullable Order 關聯、MemberId／PaymentId 白名單、無交易的表示方式與既有資料用途。剩餘命名及機制細節於實作時具體化，不再作為開始改 code 的前置議題。
 
-**重大決策；影響 .Core。回頭修正 Phase 1；影響 .Abstract / spec。** 本次更新設計文件，尚未修改正式 spec 或程式碼。
+**重大決策；影響 .Core。回頭修正 Phase 1；影響 .Abstract / spec。** 設計確認後已開始物件定義實作，交付範圍見下方進度。
 
 ## 背景
 
@@ -28,7 +28,7 @@ Phase 1 已啟動，使用者確認 Core 欄位提案，並修正 Token 的保�
 
 12. 新增 `Order.CheckoutTransactionId: int?`，透過 Checkout 建立時填入對應交易 ID；其他來源建立的 Order 為 null。既有 Order 若無可查證的封存紀錄，不因兩者 ID 相同就捏造關聯。
 13. 無目前交易時不輸出交易相關 HTTP header；以物件表達時，交易 context 為 null。這不代表 identity 也不存在；預期有交易卻遺失用途的錯誤仍依用途明確原則處理。
-14. 使用者指定本輪先開始變更 code，再同步落入 `/spec` 與 `/spec/testcases`。這是本次 TiP 的交付順序調整，不以先凍結 spec 阻擋開工；後續仍須保持 source、contract、spec 與 testcase 一致。本次 commit 僅保存設計文件。
+14. 使用者指定本輪先開始變更 code，再同步落入 `/spec` 與 `/spec/testcases`。這是本次 TiP 的交付順序調整，不以先凍結 spec 阻擋開工；後續仍須保持 source、contract、spec 與 testcase 一致。首次確認時的 commit 僅保存設計文件；後續實作進度另外記錄於下方。
 
 ## Order／Checkout 關聯查核與封存方向
 
@@ -41,7 +41,7 @@ Phase 1 已啟動，使用者確認 Core 欄位提案，並修正 Token 的保�
 
 ### 實作安排
 
-- 第一版採同一個 shop database 的不同 collection 區分作用中與封存紀錄；不必為領域分區另建資料庫。Collection 名稱與存取 API 於實作時具體化。
+- 第一版採同一個 shop database 的不同 collection 區分作用中與封存紀錄；不必為領域分區另建資料庫。物件定義階段已具體化為 ArchivedCheckoutTransactions／archived_checkout_transactions。
 - 建立 Order、依用途處理庫存、寫入封存紀錄及移除作用中紀錄，放在同一個資料庫 transaction 中提交或回滾。結帳成立前的檢查失敗保留作用中 Checkout，不產生成功封存紀錄；成立後的 fulfillment 失敗不撤銷 Order 或封存紀錄。
 - Complete 僅處理作用中 Checkout；封存紀錄不可再次完成。須在交易內確認其仍可完成，防止重複或併發請求再次產生效果；重複請求的具體回覆於實作時定義並同步 spec／testcase。
 - Order 以 nullable CheckoutTransactionId 明確關聯，不依賴 Order.Id 與交易 ID 相等。交易 ID 必須跨作用中區、封存區維持唯一，不能因移出作用中區而被重用。
@@ -62,7 +62,17 @@ Phase 1 已啟動，使用者確認 Core 欄位提案，並修正 Token 的保�
 - 完成後永久刪除 Checkout：無法保留可供 Order 查回的交易紀錄，改採分區封存。
 - 作用中與已完成 Checkout 混放並用狀態區分：使用者選擇另設區域保存封存紀錄。
 
+## 物件定義實作進度（2026-10-17）
+
+已新增四種持久化物件的 IsTest、Checkout.PaymentId、nullable Order.CheckoutTransactionId，採 init 存取；新增 ArchivedCheckoutTransactions，canonical collection 為 archived_checkout_transactions。Order 建構式參數改稱 orderId，關聯須明確填入。
+
+已同步 [物件規格](../../spec/tip-core-object-definitions.md) 與 [測試案例](../../spec/testcases/tip-core-object-definitions.md)。本批只修改物件與儲存入口；白名單、Token／Order 繼承、command 搬移、自動封存與 context 等流程尚待後續交付。
+
 ## 後續工作
 
 - 依已確認方向開始變更 contract、Core 與標準 host，再同步正式 spec 與 testcase。
 - 補齊白名單註冊、Checkout 建立、無交易表示、舊資料 false、nullable 關聯、原子性、重複完成及交易 ID 唯一性的驗證。
+
+## Phase 1 收尾補充
+
+付款輸入搬移與白名單／Context 基礎實作已交付；舊 Checkout 缺少 PaymentId 依使用者確認回 409、要求重建、不補值。完整規格與後續實作邊界見 [定案決策](2026-10-17-tip-phase1-contract-baseline.md)。上述「本批」為物件定義初批的歷史範圍。

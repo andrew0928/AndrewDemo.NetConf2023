@@ -1,4 +1,4 @@
-﻿using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Http;
@@ -35,9 +35,9 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <remarks>
         /// 結帳交易的流程是：
-        /// 1. 建立交易，須提供交易的消費者 ID，以及要結帳的購物車 ID。
-        /// 2. 進行付款。付款由外部系統進行，這裡只需要提供付款的交易 ID。
-        /// 3. 完成交易。完成交易時，會將購物車內容轉換成訂單，並且清空購物車。
+        /// 1. 建立交易，提供購物車 ID 與 PaymentId，會員由 API 驗證後明確傳入。
+        /// 2. 交易保存 PaymentId；此 PoC 不代表已接入真實金流。
+        /// 3. 完成交易時，使用保存的 PaymentId，將購物車內容轉換成訂單。
         /// </remarks>
         /// <param name="request"></param>
         /// <returns></returns>
@@ -56,6 +56,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             var result = _checkoutService.Create(new CheckoutCreateCommand
             {
                 CartId = request.CartId,
+                PaymentId = request.PaymentId,
                 RequestMember = member
             });
 
@@ -78,7 +79,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <remarks>
         /// 完成結帳時，會將購物車內容轉換成訂單。
-        /// 呼叫這 API 時，必須提供付款的交易 ID，會同時完成交易的第二 及第三步驟。
+        /// 呼叫時提供 TransactionId；付款來源使用 create 時保存的 PaymentId。
         /// 成功後會建立訂單，並且回傳交易的內容 (包含訂單)。
         /// </remarks>
         /// <param name="request"></param>
@@ -86,6 +87,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [HttpPost("complete", Name = "CompleteCheckout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<ActionResult<CheckoutCompleteResponse>> CompleteAsync(
             //[FromHeader(Name = "Authorization")] string token,
             [FromBody] CheckoutCompleteRequest request)
@@ -99,7 +101,6 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             var result = await _checkoutService.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = request.TransactionId,
-                PaymentId = request.PaymentId,
                 Satisfaction = request.Satisfaction,
                 ShopComments = request.ShopComments,
                 RequestMember = member
@@ -110,6 +111,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 if (result.Status == CheckoutCompleteStatus.BuyerMismatch)
                 {
                     return Forbid();
+                }
+
+                if (result.Status == CheckoutCompleteStatus.RecreateRequired)
+                {
+                    return Conflict(new { code = "checkout_recreate_required", message = result.ErrorMessage });
                 }
 
                 return BadRequest(result.ErrorMessage);
@@ -156,6 +162,9 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// 
             /// </summary>
             public int CartId { get; set; }
+
+            /// <summary>建立時指定並保存的付款來源代碼。</summary>
+            public required int PaymentId { get; set; }
             //public string AccessToken { get; set; }
         }
 
@@ -192,11 +201,6 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// </summary>
             public int TransactionId { get; set; }
             //public string AccessToken { get; set; }
-
-            /// <summary>
-            /// 指定該交易的支付代碼, 由外部支付系統提供
-            /// </summary>
-            public int PaymentId { get; set; }
 
             /// <summary>
             /// 消費者對這次購物的滿意度評分。`null` 代表沒有提供或沒有判讀結果。

@@ -55,13 +55,12 @@ public sealed class CheckoutModel : AuthenticatedPageModel
 
         try
         {
-            var createResult = await _coreApiClient.CreateCheckoutAsync(AccessToken, CurrentCartId.Value, cancellationToken);
             var paymentId = Random.Shared.Next(100000, 999999);
+            var createResult = await _coreApiClient.CreateCheckoutAsync(AccessToken, CurrentCartId.Value, paymentId, cancellationToken);
 
             await _coreApiClient.CompleteCheckoutAsync(AccessToken, new CompleteCheckoutRequestDto
             {
                 TransactionId = createResult.TransactionId,
-                PaymentId = paymentId,
                 Satisfaction = null,
                 ShopComments = null
             }, cancellationToken);

@@ -1,5 +1,8 @@
 # Checkout Service Phase 2 搬移規格
 
+
+> 本文保留 2026-03-24「先搬移」階段的範圍。2026-10-17 起，付款輸入、用途與封存以 [TiP 標準流程](tip-standard-flow.md) 為準；下文的「不改變合約／不新增付款欄位」不限制本次 TiP 改版。
+
 ## 狀態
 
 - phase: 2
@@ -8,7 +11,7 @@
 
 ## 後續補充
 
-- checkout correctness 修正另見 [checkout-correctness-fixes.md](/Users/andrew/code-work/andrewshop.apidemo/spec/checkout-correctness-fixes.md)
+- checkout correctness 修正另見 [checkout-correctness-fixes.md](checkout-correctness-fixes.md)
 
 ## 範圍
 

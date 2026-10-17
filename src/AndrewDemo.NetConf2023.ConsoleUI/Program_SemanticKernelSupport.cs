@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core;
@@ -350,11 +350,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         // Cart_Checkout
         [KernelFunction, Description("購買目前購物車內的商品清單，提供支付代碼，完成結帳程序，傳回訂單內容")]
         public static Order? ShopFunction_Checkout(
-            [Description("支付代碼，此代碼代表客戶已經在外部系統完成付款")] int paymentId)
+            [Description("建立 Checkout 時指定的付款來源代碼")] int paymentId)
         {
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
-                int checkoutId = CreateCheckoutTransaction(_cartId, token);
-                var response = CompleteCheckoutTransactionAsync(checkoutId, paymentId);
+                int checkoutId = CreateCheckoutTransaction(_cartId, token, paymentId);
+                var response = CompleteCheckoutTransactionAsync(checkoutId);
             while (!response.Wait(1000))
             {
                 InfoOutput("waiting for payment...");

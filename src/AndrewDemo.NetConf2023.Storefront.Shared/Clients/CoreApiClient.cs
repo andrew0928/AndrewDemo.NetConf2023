@@ -119,10 +119,10 @@ public sealed class CoreApiClient
             ?? new CartEstimateResponseDto();
     }
 
-    public async Task<CheckoutCreateResponseDto> CreateCheckoutAsync(string accessToken, int cartId, CancellationToken cancellationToken)
+    public async Task<CheckoutCreateResponseDto> CreateCheckoutAsync(string accessToken, int cartId, int paymentId, CancellationToken cancellationToken)
     {
         using var request = CreateAuthorizedRequest(HttpMethod.Post, "/api/checkout/create", accessToken);
-        request.Content = JsonContent.Create(new CreateCheckoutRequestDto { CartId = cartId });
+        request.Content = JsonContent.Create(new CreateCheckoutRequestDto { CartId = cartId, PaymentId = paymentId });
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);

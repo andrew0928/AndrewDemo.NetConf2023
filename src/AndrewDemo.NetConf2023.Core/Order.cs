@@ -15,6 +15,12 @@ namespace AndrewDemo.NetConf2023.Core
         [BsonId]
         public int Id { get; private set; }
 
+        // 由 Checkout 建立時承接其用途，與 Buyer 的會員用途分開保存。
+        public bool IsTest { get; init; }
+
+        // 對應封存的 Checkout；其他來源或缺少歷史交易紀錄時為 null。
+        public int? CheckoutTransactionId { get; init; }
+
         public Member Buyer { get; set; } = null!;
 
         public List<OrderProductLine> ProductLines { get; set; } = new List<OrderProductLine>();
@@ -27,12 +33,12 @@ namespace AndrewDemo.NetConf2023.Core
 
         public OrderShopNotes? ShopNotes { get; set; }
 
-        public Order(int transactionId)
+        public Order(int orderId)
         {
-            Id = transactionId;
+            Id = orderId;
         }
 
-        // parameterless constructor required by LiteDB
+        // LiteDB 還原資料時需要無參數建構式。
         private Order()
         {
         }

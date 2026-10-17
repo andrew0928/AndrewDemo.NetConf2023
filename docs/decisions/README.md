@@ -59,8 +59,10 @@
 
 | 日期 | 決策 |
 |---|---|
+| [2026-10-17](2026-10-17-tip-phase1-contract-baseline.md) | **TiP Phase 1 定案與舊 Checkout 重建**。缺少 PaymentId 回 409／checkout_recreate_required，要求重建且不做相容；標準流程、獨立 Context、操作結果與 HTTP／log 合約定案，完整接入留待 Phase 2。 |
+| [2026-10-17](2026-10-17-tip-allowlist-and-tdd-checkpoint.md) | **TiP 白名單位置與 TDD 紅燈檢查點**。Core 集中唯讀 TestAllowlist，分開查 MemberId／PaymentId；先建立介面與測試，確認可編譯且目標行為失敗後，再檢查並進入實作。 |
 | [2026-10-17](2026-10-17-tip-core-fields-and-explicit-member.md) | **TiP Core 欄位與明確會員輸入**。確認 Member／Checkout／Order.IsTest、Checkout.PaymentId 及從 Member 繼承保存的 Token.IsTest；command 保留 RequestMember，由呼叫端組合。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 PaymentId；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
-| [2026-10-17](2026-10-17-tip-standard-scope-and-context.md) | **TiP 標準實作範圍與 Context 方向**。Member／Checkout／Order 保存用途；Token 後續改為建立時繼承保存 IsTest，Cart 排除。PaymentId 白名單代表測試卡，建立 Checkout 時提供並固定用途；事件處理器作為 event／async 邊界；已接受 scoped injection，IdentityContext／TransactionContext 獨立建模、CheckoutService 採 scoped，scope 依執行情境決定，middleware 解析細節仍待定案。 |
+| [2026-10-17](2026-10-17-tip-standard-scope-and-context.md) | **TiP 標準實作範圍與 Context 方向**。Member／Checkout／Order 保存用途；Token 後續改為建立時繼承保存 IsTest，Cart 排除。PaymentId 白名單代表測試卡，建立 Checkout 時提供並固定用途；事件處理器作為 event／async 邊界；已接受 scoped injection，IdentityContext／TransactionContext 獨立建模、CheckoutService 採 scoped，scope 依執行情境決定，middleware 解析規則後續已納入 TiP Phase 1 定案。 |
 | [2026-10-17](2026-10-17-tip-contract-and-context-boundaries.md) | **TiP 研究範圍與架構規範邊界**。已確認支撐體系的架構原則：最低層介面保證 `id + type` 不可變，事件／任務交接區分責任，current identity／current transaction 由架構保證傳遞、應用端依據執行政策；HTTP middleware 統一表達出口結果，正常 log 依 context 與判定結果產生，schema 明確定義用途。完整應用政策、具體 contract／實作及額外來源擴充留到後續階段。 |
 | [2026-03-23](2026-03-23-discount-domain-boundary.md) | **Discount Domain 與 Cart Domain 邊界劃分**。原本折扣 contract 同時包含購物車輸入格式、消費者投影與 shop runtime 感知，職責過重。決策後 discount domain 只保留 `IDiscountRule` 與 `DiscountRecord`，購物車與消費者相關模型改歸 cart domain，discount engine 不再直接依賴 runtime 與 database。 |
 | [2026-03-23](2026-03-23-product-service-boundary-and-order-events.md) | **ProductService 邊界與訂單事件設計**。原本商品流程是靜態資料表導向，controller 直接讀取 Products collection，OrderLineItem 也無法識別實際商品。決策後每個 shop 啟用單一 `IProductService`，product contract 採固定欄位且 `ProductId` 改為 string；訂單 side effect 後續收斂為 `IOrderEventDispatcher`。 |

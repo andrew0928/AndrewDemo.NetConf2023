@@ -47,7 +47,8 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
             {
                 CartId = cart.Id,
                 MemberId = command.RequestMember.Id,
-                CreatedAt = transactionStartAt
+                CreatedAt = transactionStartAt,
+                PaymentId = command.PaymentId
             };
 
             _database.CheckoutTransactions.Insert(transaction);
@@ -67,17 +68,26 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
             var ticket = new WaitingRoomTicket(_timeProvider);
             await ticket.WaitUntilCanRunAsync();
 
-            var transaction = _database.CheckoutTransactions.FindById(command.TransactionId);
-            if (transaction == null)
+            // 先檢查儲存欄位，避免舊資料的 null 在反序列化為 int 時失敗。
+            var storedTransaction = _database.Database.GetCollection("checkout_transactions").FindById(command.TransactionId);
+            if (storedTransaction == null)
             {
                 return CheckoutCompleteResult.CreateTransactionNotFound("Transaction not found");
             }
 
-            if (transaction.MemberId != command.RequestMember.Id)
+            if (storedTransaction[nameof(CheckoutTransactionRecord.MemberId)].AsInt32 != command.RequestMember.Id)
             {
                 return CheckoutCompleteResult.CreateBuyerMismatch("Transaction buyer mismatch");
             }
 
+            // 舊紀錄未保存 PaymentId 時，明確要求重建；不能把 int 預設值當成付款來源。
+            if (!storedTransaction.ContainsKey(nameof(CheckoutTransactionRecord.PaymentId)) ||
+                storedTransaction[nameof(CheckoutTransactionRecord.PaymentId)].IsNull)
+            {
+                return CheckoutCompleteResult.CreateRecreateRequired("Checkout 未保存 PaymentId，請重新建立 Checkout。");
+            }
+
+            var transaction = _database.Database.Mapper.ToObject<CheckoutTransactionRecord>(storedTransaction);
             var cart = _database.Carts.FindById(transaction.CartId);
             if (cart == null)
             {
@@ -205,7 +215,7 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
 
             return CheckoutCompleteResult.CreateSucceeded(
                 command.TransactionId,
-                command.PaymentId,
+                transaction.PaymentId,
                 completedAt,
                 command.RequestMember.Id,
                 command.RequestMember.Name,

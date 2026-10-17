@@ -3,6 +3,10 @@ using System.Collections.Generic;
 
 namespace AndrewDemo.NetConf2023.Abstract.Orders
 {
+    /// <summary>
+    /// 訂單事件的執行邊界。處理端須建立自己的 scope，依 OrderId 恢復交易用途，
+    /// 不依賴原 HTTP request 存活；同步 Dispatch 亦遵守此規則。
+    /// </summary>
     public interface IOrderEventDispatcher
     {
         void Dispatch(OrderCompletedEvent orderEvent);

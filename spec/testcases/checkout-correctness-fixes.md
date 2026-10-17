@@ -26,12 +26,15 @@
 - And: transaction 仍存在
 - And: order 不存在
 
-### TC-CK-FIX-003 成功建立 order 後才刪除 transaction
+### TC-CK-FIX-003 成功建立 order 並封存後才移除作用中 transaction
 
 - Given: checkout transaction、cart、buyer、products 都存在
 - When: 呼叫 `CheckoutService.CompleteAsync(...)`
-- Then: order 先被建立
-- And: transaction 最終被刪除
+- Then: order、適用庫存異動、封存及作用中紀錄移除一併提交
+- And: Order.CheckoutTransactionId 對應封存原交易 ID
+- And: 任一步失敗全部 rollback，不留下部分資料
+
+2026-10-17 TiP 補充；整合驗證見 [TC-TIP-FLOW-201／206／207](tip-standard-flow.md)，完整封存仍待 Phase 2。
 
 ## API Boundary
 

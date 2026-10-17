@@ -6,11 +6,11 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
-## TiP 研究方向：核心接受條件與架構原則已確認
+## TiP：Phase 1 規格與合約已定案
 
 最後記錄：2026-10-17。
 
-以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，尚未排定新的實作 milestone。
+以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，標準實作已完成 [Phase 1 定案基準](../spec/tip-phase1.md)，Phase 2 接入 Core 與 host。
 
 已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
 
@@ -44,15 +44,21 @@
 
 Context 已進一步區分為 **current identity**（目前執行身分及其用途）與 **current transaction**（目前處理交易及其用途）。架構負責資訊正確傳遞，應用端依 context 執行業務政策：改價等操作可依身分判定，交易衍生操作另須保留交易用途；跨事件／async 邊界仍須遵守 AC-TIP-012／013 的責任區分。
 
-使用者已確認支撐 TiP 體系的架構原則涵蓋完成，本輪在 best practice 與規範層級收斂。完整用途組合政策留給應用規格，具體欄位、結果代碼及傳遞機制留給正式 contract／實作，PaymentId 白名單已納入標準 PoC，其他額外付款來源留待功能擴充；這些事項尚未定案，不阻擋本輪原則確認，也不代表採用通用 OR 規則。
+使用者已確認支撐 TiP 體系的架構原則涵蓋完成，本輪在 best practice 與規範層級收斂。完整用途組合政策留給應用規格，具體欄位、結果代碼及傳遞機制留給正式 contract／實作，PaymentId 白名單已納入標準 PoC，其他額外付款來源留待功能擴充；標準流程部分已於後續 Phase 1 定案；其他來源維持擴充範圍，不採用跨所有操作的通用 OR 規則。
 
-決策見 [TiP 研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)；[TiP 架構設計筆記](tip/tip-architecture-notes.md) 區分已確認規範與後續事項。未變更既有 `/spec`、`.Abstract` contract 或實作。
+決策見 [TiP 研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)；[TiP 架構設計筆記](tip/tip-architecture-notes.md) 區分已確認規範與後續事項。原研究階段未改程式；後續 TiP Phase 1 已同步 `/spec`、`.Abstract` 與 Core 基礎實作。
 
-2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，CheckoutService 採 scoped；兩者可在單次 HTTP 操作中共用 request scope，其他執行範圍依事件／CLI 等處理邊界決定。HTTP Items 與 Core 對各種 context 使用相同資料；middleware 解析交易／訂單 ID 的具體策略仍待定案。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
+2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，CheckoutService 採 scoped；兩者可在單次 HTTP 操作中共用 request scope，其他執行範圍依事件／CLI 等處理邊界決定。HTTP Items 與 Core 對各種 context 使用相同資料；middleware 以 endpoint metadata 明確指定交易／訂單 ID 來源，解析規則已納入 [HTTP 合約](../spec/tip-http-and-operation-results.md)。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
 
 2026-10-17 Core 欄位已確認：新增 Member／Checkout／Order.IsTest、Checkout.PaymentId 及建立時從 Member 繼承的 Token.IsTest。Create／Complete command 保留明確 RequestMember，API／CLI 自行組合；PaymentId 移至 create，complete 使用保存值。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 Order.PaymentId；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料 IsTest = false；無交易時不給交易 header，物件中的交易為 null。詳見 [Core 欄位決策](decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
 
-TiP Phase 1 已於 2026-10-17 由使用者啟動，目前先盤點 `.Abstract` 受影響的 interface。使用者最後指定先開始變更 code，再同步正式 spec 與 testcases；本輪不以先凍結 spec 作為開工前置條件。最小共用 contract 隨本輪變更具體化；具體介面提案見 [架構設計筆記](tip/tip-architecture-notes.md#phase1-interface-proposal)，尚未凍結或開始 Phase 2 實作。
+TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指定先開始變更 code，再同步正式 spec 與 testcases；本輪不以先凍結 spec 作為開工前置條件。最小共用 contract 已具體化並定案；規格、案例與交付證據見 [Phase 1 基準](../spec/tip-phase1.md)。Phase 2 的用途傳遞與效果控制尚未交付。
+
+2026-10-17 已開始 TiP Core 物件定義：新增四種物件的 IsTest、Checkout.PaymentId、Order.CheckoutTransactionId（nullable），以及 ArchivedCheckoutTransactions 封存入口；同步 [物件規格](../spec/tip-core-object-definitions.md) 與 [測試案例](../spec/testcases/tip-core-object-definitions.md)。初批僅交付欄位；後續已完成 command 付款前移、白名單查詢與 Context 基礎行為，封存編排留待 Phase 2。
+
+2026-10-17 TiP 進入 TDD 紅燈檢查點：新增 Core TestAllowlist 與 Abstract 的獨立 Context 介面，紅燈階段先保留 Core 骨架，確認 21 項新增案例預期失敗、75 項既有測試通過。使用者確認後已補上白名單查詢及 Context 初始化／綁定／清除，host 與 DI 整合留待後續。詳見 [決策](decisions/2026-10-17-tip-allowlist-and-tdd-checkpoint.md)。
+
+2026-10-17 Phase 1 收尾：使用者確認舊 Checkout 缺少 PaymentId 明確回 409 並要求重建，不做向前相容。已實作該分支並同步所有共用呼叫端；補齊標準流程、操作結果、HTTP／log、scope 與 AC 對應案例。全套 107 項測試通過。詳見 [定案決策](decisions/2026-10-17-tip-phase1-contract-baseline.md)。
 
 ## Milestone 1 - 基礎建設
 

@@ -74,3 +74,7 @@
 - Given: 兩個 checkout 同時競爭同一個 `SkuId`
 - When: `.Core` 在 transaction 內讀取與更新 inventory
 - Then: 不應同時成功扣減超過可用庫存
+
+## TiP 補充（2026-10-17）
+
+既有成功扣庫存案例以正式交易為前提；成功後還須驗證原交易封存與 Order.CheckoutTransactionId。Test 交易照常檢查庫存但不扣減。新增封存與用途整合驗收見 [TC-TIP-FLOW-201～207](tip-standard-flow.md)，由 TiP Phase 2 完成。

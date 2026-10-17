@@ -31,6 +31,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = service.Create(new CheckoutCreateCommand
             {
                 CartId = cart.Id,
+                PaymentId = 9527,
                 RequestMember = member
             });
 
@@ -42,6 +43,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.NotNull(transaction);
             Assert.Equal(cart.Id, transaction!.CartId);
             Assert.Equal(member.Id, transaction.MemberId);
+            Assert.Equal(9527, transaction.PaymentId);
         }
 
         [Fact]
@@ -64,7 +66,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -73,7 +76,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 Satisfaction = 9,
                 ShopComments = "checkout ok",
                 RequestMember = member
@@ -114,7 +116,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -123,7 +126,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 Satisfaction = null,
                 ShopComments = null,
                 RequestMember = member
@@ -154,7 +156,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -163,7 +166,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 RequestMember = member
             });
 
@@ -193,7 +195,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = buyer.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -202,7 +205,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 RequestMember = otherMember
             });
 
@@ -224,7 +226,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -233,7 +236,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 RequestMember = member
             });
 
@@ -257,7 +259,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -266,7 +269,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 RequestMember = member
             });
 
@@ -296,7 +298,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             {
                 CartId = cart.Id,
                 MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.UtcNow,
+                PaymentId = 9527
             };
             Context.CheckoutTransactions.Insert(transaction);
 
@@ -305,7 +308,6 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
-                PaymentId = 9527,
                 RequestMember = member
             });
 
@@ -313,6 +315,69 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.NotNull(result.OrderDetail);
             Assert.Equal(50m, result.OrderDetail!.TotalPrice);
             Assert.Empty(result.OrderDetail.DiscountLines);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task CompleteAsync_WhenStoredPaymentIsMissing_RequiresRecreationWithoutEffects(bool hasNullPayment)
+        {
+            var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 100m, 10);
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts(productId, 2, FixedUtcNow);
+            Context.Carts.Insert(cart);
+            var document = new LiteDB.BsonDocument
+            {
+                ["_id"] = 42,
+                ["CartId"] = cart.Id,
+                ["MemberId"] = member.Id,
+                ["CreatedAt"] = FixedUtcNow
+            };
+            if (hasNullPayment) document["PaymentId"] = LiteDB.BsonValue.Null;
+            Context.Database.GetCollection("checkout_transactions").Insert(document);
+
+            var result = await CreateCheckoutService().CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = 42,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.RecreateRequired, result.Status);
+            Assert.Null(Context.ArchivedCheckoutTransactions.FindById(42));
+            Assert.Empty(Context.Orders.FindAll());
+            Assert.Equal(10, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
+            Assert.Single(Context.Carts.FindById(cart.Id).LineItems);
+            var stored = Context.Database.GetCollection("checkout_transactions").FindById(42);
+            Assert.NotNull(stored);
+            Assert.Equal(hasNullPayment, stored.ContainsKey("PaymentId"));
+            if (hasNullPayment) Assert.True(stored["PaymentId"].IsNull);
+        }
+
+        [Fact]
+        public async Task CreateAndComplete_WithExplicitZeroPayment_PreservesItAsProvidedValue()
+        {
+            var productId = TestDataFactory.CreateProduct(Context, 100m);
+            var (member, _) = TestDataFactory.RegisterMember(Context);
+            var cart = new Cart();
+            cart.AddProducts(productId, 1, FixedUtcNow);
+            Context.Carts.Insert(cart);
+            var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            {
+                CartId = cart.Id,
+                PaymentId = 0,
+                RequestMember = member
+            });
+
+            var result = await service.CompleteAsync(new CheckoutCompleteCommand
+            {
+                TransactionId = created.TransactionId,
+                RequestMember = member
+            });
+
+            Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
+            Assert.Equal(0, result.PaymentId);
         }
 
         private CheckoutService CreateCheckoutService(params IDiscountRule[] rules)

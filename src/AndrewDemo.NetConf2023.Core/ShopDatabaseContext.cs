@@ -18,6 +18,7 @@ namespace AndrewDemo.NetConf2023.Core
         ILiteCollection<Order> Orders { get; }
         ILiteCollection<MemberAccessTokenRecord> MemberTokens { get; }
         ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions { get; }
+        ILiteCollection<CheckoutTransactionRecord> ArchivedCheckoutTransactions { get; }
     }
 
     public sealed class ShopDatabaseContext : IShopDatabaseContext
@@ -31,6 +32,7 @@ namespace AndrewDemo.NetConf2023.Core
         private readonly ILiteCollection<Order> _orders;
         private readonly ILiteCollection<MemberAccessTokenRecord> _memberTokens;
         private readonly ILiteCollection<CheckoutTransactionRecord> _checkoutTransactions;
+        private readonly ILiteCollection<CheckoutTransactionRecord> _archivedCheckoutTransactions;
         private bool _disposed;
 
         public ShopDatabaseContext(ShopDatabaseOptions? options = null)
@@ -47,6 +49,7 @@ namespace AndrewDemo.NetConf2023.Core
             _orders = _database.GetCollection<Order>("orders");
             _memberTokens = _database.GetCollection<MemberAccessTokenRecord>("member_tokens");
             _checkoutTransactions = _database.GetCollection<CheckoutTransactionRecord>("checkout_transactions");
+            _archivedCheckoutTransactions = _database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions");
 
             EnsureIndexes(_database);
         }
@@ -128,6 +131,15 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 ThrowIfDisposed();
                 return _checkoutTransactions;
+            }
+        }
+
+        public ILiteCollection<CheckoutTransactionRecord> ArchivedCheckoutTransactions
+        {
+            get
+            {
+                ThrowIfDisposed();
+                return _archivedCheckoutTransactions;
             }
         }
 
@@ -291,6 +303,8 @@ namespace AndrewDemo.NetConf2023.Core
         public string Token { get; set; } = string.Empty;
         public DateTime Expire { get; set; }
         public int MemberId { get; set; }
+        // 簽發時由 Member.IsTest 複製；舊資料缺少欄位時為 false。
+        public bool IsTest { get; init; }
     }
 
     public class CheckoutTransactionRecord
@@ -300,5 +314,11 @@ namespace AndrewDemo.NetConf2023.Core
         public int CartId { get; set; }
         public int MemberId { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // 建立時依 Member 與 PaymentId 白名單判定，封存時保留原值。
+        public bool IsTest { get; init; }
+
+        // 建立 Checkout 時指定，完成交易及封存後沿用同一付款來源。
+        public int PaymentId { get; init; }
     }
 }

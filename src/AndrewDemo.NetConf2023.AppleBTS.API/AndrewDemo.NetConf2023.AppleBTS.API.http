@@ -56,7 +56,8 @@ Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "cartId": {{cartId}}
+  "cartId": {{cartId}},
+  "paymentId": 10001
 }
 
 ### 完成結帳
@@ -66,7 +67,6 @@ Content-Type: application/json
 
 {
   "transactionId": {{transactionId}},
-  "paymentId": 10001,
   "satisfaction": 10,
   "shopComments": "Apple BTS local smoke"
 }

@@ -10,6 +10,8 @@ accepted
 
 同日使用者已明確啟動 TiP Phase 1，允許依本次範圍整理正式規格、testcases 與必要的 `.Abstract` contract。目前先列出受影響 interface 供討論；identity／transaction 分離方向已接受，具體介面名稱、簽章與 models 尚未定案，也尚未修改 contract。
 
+後續進度：已建立 IIdentityContext／ITransactionContext 與快照 models，Core 實作已在紅燈檢查確認後補上白名單查詢及 Context 快照保存／清除，詳見 [Context 合約](../../spec/tip-context-contracts.md) 及 [TDD 決策](2026-10-17-tip-allowlist-and-tdd-checkpoint.md)。前述未修改 contract 為初次設計確認時的狀態。
+
 ## 背景
 
 標準實作落差分析指出資料用途、Cart 會員承接、context、庫存控制及事件用途等缺口。使用者希望縮小第一版實作，沿用既有 Checkout 主流程與事件處理器；AppleBTS／PetShop 暫不納入本次實作。

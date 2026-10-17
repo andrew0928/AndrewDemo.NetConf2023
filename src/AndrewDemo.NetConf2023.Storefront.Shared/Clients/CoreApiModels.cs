@@ -137,13 +137,13 @@ public sealed class AddCartItemRequestDto
 public sealed class CreateCheckoutRequestDto
 {
     public int CartId { get; set; }
+
+    public required int PaymentId { get; set; }
 }
 
 public sealed class CompleteCheckoutRequestDto
 {
     public int TransactionId { get; set; }
-
-    public int PaymentId { get; set; }
 
     public int? Satisfaction { get; set; }
 

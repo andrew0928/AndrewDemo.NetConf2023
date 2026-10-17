@@ -1,11 +1,13 @@
 # TiP 研究文件
 
-本目錄集中收錄 AndrewShop 的 Testing in Production（TiP）說明、接受條件與架構設計筆記；相關決策統一收錄於 `docs/decisions`，由下方索引連結。文件供需求討論與確認使用，尚未代表正式規格已凍結或系統已完成實作。
+本目錄集中收錄 AndrewShop 的 Testing in Production（TiP）說明、接受條件與架構設計筆記；相關決策統一收錄於 `docs/decisions`，由下方索引連結。文件供需求討論與確認使用。標準實作的 [Phase 1 規格與合約](../../spec/tip-phase1.md) 已定案；完整 TiP 流程仍待 Phase 2 實作。
 
 ## 文件索引
 
 | 文件 | 內容 |
 |---|---|
+| [Phase 1 定案基準](../../spec/tip-phase1.md) | 正式規格、Abstract 合約、AC 對照、107 項測試證據與 Phase 2 邊界。 |
+| [舊 Checkout 409 與定案決策](../decisions/2026-10-17-tip-phase1-contract-baseline.md) | 缺少 PaymentId 明確回 409、要求重建，不處理相容；付款前移與合約定案。 |
 | [Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md) | 確認 IsTest 與 Checkout.PaymentId 欄位；command 保留明確會員輸入。Checkout 採作用中與封存分區保存，Order 關聯封存交易；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
 | [標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md) | 最新範圍：Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；PaymentId 白名單在建立 Checkout 時判定用途，事件處理器為 event／async 邊界；已接受 scoped injection，IdentityContext／TransactionContext 各自獨立，scope 依執行情境決定。 |
 | [TiP 設計原則](tip-guidelines.md) | 大前提、領域物件分類、略過紀錄與商業統計規則。 |
@@ -18,9 +20,25 @@
 
 ## 維護方式
 
-原研究的 14 條核心 AC 與架構原則已確認。2026-10-17 縮小標準實作範圍，相關 AC 已移除 Cart 標記與會員承接要求；AC-TIP-002 改以 PaymentId 白名單作為 PoC 驗收方向。AppleBTS／PetShop 暫不納入本輪實作，既有案例保留。原則與範圍確認不代表正式規格已凍結或系統已實作。
+原研究的 14 條核心 AC 與架構原則已確認。2026-10-17 縮小標準實作範圍，相關 AC 已移除 Cart 標記與會員承接要求；AC-TIP-002 改以 PaymentId 白名單作為 PoC 驗收方向。AppleBTS／PetShop 暫不納入本輪實作，既有案例保留。正式規格已整理於 Phase 1 基準；接受條件的確認不表示完整流程已實作。
 
 - TiP 說明、接受條件與架構設計筆記以本目錄為 canonical 位置，不保留舊路徑副本。
 - TiP 決策統一收錄於 `docs/decisions`，沿用[共用決策文件規範](../decisions/README.md)，並同步維護該處的決策索引。
 - 跨主題的 [project roadmap](../project-roadmap.md) 留在原位置，以連結指向本目錄。
-- 本輪以可重用規範為範圍收斂；完整應用政策矩陣、具體 contract／實作與額外來源擴充保留到對應階段，不自動視為已接受。
+- 標準流程的用途政策與具體 contract 已納入 Phase 1；其他來源與擴充模組政策留待各自規格階段。
+
+## Core 物件定義交付
+
+2026-10-17 已新增用途與付款欄位、nullable Order 關聯及封存 collection。正式 [物件規格](../../spec/tip-core-object-definitions.md) 與 [測試案例](../../spec/testcases/tip-core-object-definitions.md) 已同步；白名單查詢、Context 基礎行為與 command 付款前移亦已完成；用途繼承、自動封存及 host 流程仍待 Phase 2。
+
+## TDD 紅燈檢查點
+
+已建立 [TestAllowlist 規格](../../spec/tip-test-allowlist.md)、[獨立 Context 合約](../../spec/tip-context-contracts.md) 與對應行為測試。Core 查詢、context 初始化／綁定曾保留未實作骨架；紅燈檢查已確認，使用者後續授權補上白名單查詢與 Context 基礎實作。
+
+紅燈階段實測：完整 solution 編譯成功（0 errors、5 個既有 warnings）；全套 96 項測試中，75 項既有測試通過，21 項新增案例因預期的 NotImplementedException 失敗，0 skipped。此為補上實作前的紅燈結果。
+
+Green 階段實測：白名單與 Context 的 21 項案例全部轉綠；全套 96 項測試通過，0 failed、0 skipped。完整 solution 編譯成功（0 errors、5 個既有 warnings）。會員註冊、Checkout 與 host 的接入仍為後續工作。
+
+## Phase 1 完成
+
+已補齊標準流程、HTTP／結果、不可變用途與整合測試案例；Abstract 操作結果模型與 Checkout command 已同步。全套 107 項測試通過。規格與合約依 [Phase 1 基準](../../spec/tip-phase1.md) 定案，下一階段接入 Core／host，尚未完成 Web UI 的 TiP 驗收。

@@ -2,7 +2,7 @@
 
 更新日期：2026-10-17。
 
-本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；正式 `/spec` 與 contract 的整理仍待後續階段。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。2026-10-17 依[最新範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)，Cart 排除標記與會員承接，Token.IsTest 建立時由 Member.IsTest 繼承保存；AC-TIP-002 改以 PaymentId 白名單作為標準 PoC 驗收方向。PetShop 案例保留，暫不納入本輪實作。
+本文件記錄依 [TiP 設計原則](tip-guidelines.md) 逐條確認的接受條件。`accepted` 代表使用者接受需求，不代表已實作或測試通過；標準實作的正式規格、contract 與 AC 對照已整理於 [Phase 1 基準](../../spec/tip-phase1.md)，整合驗收留待 Phase 2。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。本輪 14 條核心 AC 已全部確認。2026-10-17 依[最新範圍決策](../decisions/2026-10-17-tip-standard-scope-and-context.md)，Cart 排除標記與會員承接，Token.IsTest 建立時由 Member.IsTest 繼承保存；AC-TIP-002 改以 PaymentId 白名單作為標準 PoC 驗收方向。PetShop 案例保留，暫不納入本輪實作。
 
 AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正常處理真正逾期的正式預約。PetShop 現行結構的差距記入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作處理。
 
@@ -49,7 +49,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 **正式會員使用 PaymentId 白名單中的測試卡號**
 
-狀態：範圍與建立時判定原則已接受（2026-10-17），白名單已確認預設於 code 或 database，PaymentId 僅為數值，create 當下查清單；正式 testcase 隨 code 變更同步整理。取代原「未實作信用卡時為 N/A」的示意定位；不要求新增真實信用卡服務。
+狀態：範圍與建立時判定原則已接受（2026-10-17），白名單已確認預設於 code 或 database，PaymentId 僅為數值，create 當下查清單；正式 testcase 已納入 [標準流程案例](../../spec/testcases/tip-standard-flow.md)。取代原「未實作信用卡時為 N/A」的示意定位；不要求新增真實信用卡服務。
 
 ### Given／前提
 
@@ -416,7 +416,7 @@ A 使用自己的有效 Token，嘗試完成 B 的 Checkout。
 - 不得靠默認正式、任意選擇用途或將不明用途當作「因 test 略過」來讓驗收通過。
 - 若在錯誤注入中刻意製造上述異常，應回報系統錯誤並阻止用途不明的操作產生商業效果；即使成功阻止副作用，也不能把用途不明當成正常狀態。
 
-AC-TIP-012 的系統到期整理有明確的執行責任，不屬於用途遺失。此案例驗證可判定性與一致性；context、來源組合、錯誤代碼及診斷格式留待架構設計。
+AC-TIP-012 的系統到期整理有明確的執行責任，不屬於用途遺失。此案例驗證可判定性與一致性；標準流程的 context、用途來源、錯誤代碼與 log 規則見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)。
 
 ## AC-TIP-015
 

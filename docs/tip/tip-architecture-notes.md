@@ -2,32 +2,32 @@
 
 更新日期：2026-10-17。
 
-本文件收錄已確認規範、標準實作範圍及 context 實作評估。2026-10-17 最新決策確認 Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；建立 Checkout 時提供 PaymentId 並固定用途。同日已確認採用 scoped injection；其餘標示為建議的實作細節及具體 contract 尚未凍結，也未修改既有 `/spec` 與 `.Abstract`。
+本文件收錄已確認規範、標準實作範圍及 context 實作評估。2026-10-17 最新決策確認 Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；建立 Checkout 時提供 PaymentId 並固定用途。同日已確認採用 scoped injection；標準流程的具體 contract 已整理為 [Phase 1 定案基準](../../spec/tip-phase1.md)。Context／結果模型、Core 欄位、白名單與付款前移已交付；host、封存與效果控制留待 Phase 2。下列研究筆記以正式規格為準。
 
 <a id="phase1-interface-proposal"></a>
 
-## Phase 1 Interface 建議（Context 分離已確認，簽章待定）
+## Phase 1 Interface（已定案）
 
-2026-10-17 使用者啟動 Phase 1，要求先列出 `.Abstract` 受影響的 interface。使用者已確認 IdentityContext 與 TransactionContext 各自獨立建模，其有效範圍可能不同；建議第一版提供兩個獨立讀取介面，並補齊既有事件介面的執行邊界契約。具體名稱、簽章與 models 於實作時具體化，再同步 spec；無交易時以 null 表示。
+2026-10-17 使用者啟動 Phase 1，要求先列出 `.Abstract` 受影響的 interface。使用者已確認 IdentityContext 與 TransactionContext 各自獨立建模，其有效範圍可能不同；建議第一版提供兩個獨立讀取介面，並補齊既有事件介面的執行邊界契約。已具體化為 [Context 合約](../../spec/tip-context-contracts.md)：IIdentityContext.Current 回傳 IdentitySnapshot，ITransactionContext.Current 回傳 nullable TransactionSnapshot；Core 初始化、綁定與清除已實作，host 與 DI 接入仍待後續。
 
-| Interface | 建議變更 | 責任與影響 |
+| Interface | 變更 | 責任與影響 |
 |---|---|---|
-| `IIdentityContext`（暫名） | 新增 | 提供目前執行身分的唯讀資訊，包含主體種類、必要 ID 與用途；可獨立存在於沒有交易的操作。 |
-| `ITransactionContext`（暫名） | 新增 | 提供目前處理的 Checkout／Order 之 ID 與用途；綁定、恢復與有效範圍獨立於 identity，一般操作可沒有目前交易。 |
+| `IIdentityContext` | 新增 | 提供目前執行身分的唯讀資訊，包含主體種類、必要 ID 與用途；可獨立存在於沒有交易的操作。 |
+| `ITransactionContext` | 新增 | 提供目前處理的 Checkout／Order 之 ID 與用途；綁定、恢復與有效範圍獨立於 identity，一般操作可沒有目前交易。 |
 | `IOrderEventDispatcher` | 補齊行為契約，保留兩個 `Dispatch` 簽章 | 每次處理事件使用獨立 scope，從事件的 OrderId 恢復 Order 用途，原 HTTP request 結束後仍可處理；既有事件已有 OrderId，第一版可由資料庫恢復用途。同步方法亦可表達這個邊界。 |
 | `IProductService` | 保留簽章 | 維持商品查詢責任；本次標準商品查詢沒有新增 context 參數的需求。 |
 | `IDiscountRule` | 保留簽章 | 維持 CartContext 輸入與折扣計算，TiP 結帳仍執行正常計算。 |
 | `IShopManifestResolver` | 保留簽章 | 維持 shop 啟動設定解析，執行用途屬於每次操作的 context。 |
 
-兩個 context 分開注入，服務依所需資訊選擇依賴；初始化及綁定由 Core 提供受控操作。操作結果彙整另依本次操作範圍設計，不把結果當成合併 identity／transaction 的理由。具體讀取方式、models 與結果契約待下一步設計。
+兩個 context 分開注入，服務依所需資訊選擇依賴；初始化及綁定由 Core 提供受控操作。操作結果彙整另依本次操作範圍設計，不把結果當成合併 identity／transaction 的理由。讀取介面與 models 已建立，另新增 Abstract 的 OperationResult／OperationOutcome／SkippedEffect；HTTP 出口與操作結果已依 [正式合約](../../spec/tip-http-and-operation-results.md) 定案，接入留待 Phase 2。
 
-目前 `CheckoutService`、Member、CheckoutTransactionRecord、Order 與 `IShopDatabaseContext` 均在 Core。其用途欄位、PaymentId、資料保護與 DI 改動仍需納入 Phase 1 規格，但不因本次 TiP 自動搬入 Abstract 或各新增一個公開 interface。商品／SKU 維護與白名單判定第一版可採 Core concrete service，若形成跨模組擴充需求再評估公開 contract。
+目前 `CheckoutService`、Member、CheckoutTransactionRecord、Order 與 `IShopDatabaseContext` 均在 Core。其用途欄位、PaymentId、資料保護與 DI 規則已納入 Phase 1 規格，但不因本次 TiP 自動搬入 Abstract 或各新增一個公開 interface。商品／SKU 維護與白名單判定第一版可採 Core concrete service，若形成跨模組擴充需求再評估公開 contract。
 
 <a id="core-field-definition"></a>
 
-## Core 欄位定義（已確認部分）
+## Core 欄位定義（已實作欄位與儲存入口）
 
-依據：[Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
+依據：[Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。目前四種物件的 IsTest、Checkout.PaymentId、Order.CheckoutTransactionId 與封存 collection 已實作，詳見 [物件規格](../../spec/tip-core-object-definitions.md)。Command 付款前移與舊紀錄 409 已接入服務；用途繼承、自動封存與 scoped host 接入留待 Phase 2。
 
 | 模型／欄位 | 狀態與規則 |
 |---|---|
@@ -43,19 +43,19 @@
 | Create／Complete command.RequestMember | 保留必填，由 API／CLI 明確組合，不以注入 IdentityContext 取代。 |
 | CheckoutCompleteResult.PaymentId | 保留，改以 Checkout 保存值回傳。 |
 
-Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付款來源時，Buyer.IsTest 可為 false、Order.IsTest 為 true。Cart／明細與 Product／SKU／Inventory 不新增用途欄位。FulfillmentStatus 暫維持現有值，操作略過結果另行定義。
+Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付款來源時，Buyer.IsTest 可為 false、Order.IsTest 為 true。Cart／明細與 Product／SKU／Inventory 不新增用途欄位。FulfillmentStatus 暫維持現有值，操作略過結果由 OperationResult／SkippedEffect 表達。
 
 已確認作用中的 Checkout 與封存交易紀錄分區保存，Order 可透過關聯查回封存的 CheckoutTransactionRecord；封存保留原交易 ID、IsTest 與 PaymentId。現行程式成功後直接刪除 Checkout，仍須改版達成此方向。
 
-實作建議為同一 shop database 的不同 collection，將 Order 建立、依用途處理庫存、封存及移除作用中紀錄一起提交或回滾。Complete 僅處理作用中紀錄；成立前失敗保留作用中 Checkout，成立後 fulfillment 失敗保留 Order 與封存紀錄。Order 透過 nullable CheckoutTransactionId 關聯；collection 名稱、時間欄位及重複 complete 回覆於實作時具體化；須避免交易 ID 因移出作用中區而被重用。
+實作建議為同一 shop database 的不同 collection，將 Order 建立、依用途處理庫存、封存及移除作用中紀錄一起提交或回滾。Complete 僅處理作用中紀錄；成立前失敗保留作用中 Checkout，成立後 fulfillment 失敗保留 Order 與封存紀錄。Order 透過 nullable CheckoutTransactionId 關聯；封存入口已定義為 ArchivedCheckoutTransactions／archived_checkout_transactions，保留原 CreatedAt，重複 complete 維持 TransactionNotFound／400；須避免交易 ID 因移出作用中區而被重用。
 
 <a id="standard-context-evaluation"></a>
 
 ## 標準 Context 實作評估（Scoped injection 已接受）
 
-依據：[標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md)。使用者已接受 scoped injection，以及 identity／transaction 分開建模、依執行情境決定 scope。名稱、accessor 契約、endpoint metadata 與 body 解析策略仍為實作建議。
+依據：[標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md)。使用者已接受 scoped injection，以及 identity／transaction 分開建模、依執行情境決定 scope。名稱、讀取契約、endpoint metadata 與 body 解析規則見 [Context](../../spec/tip-context-contracts.md) 與 [HTTP 合約](../../spec/tip-http-and-operation-results.md)。
 
-### 獨立 Context 與 Scoped injection 已接受；Middleware 解析細節於實作具體化
+### 獨立 Context、Scoped injection 與 Middleware 規則已定案
 
 `HttpContext.Items` 是單次 HTTP request 的資料容器。建議 middleware 分別解析 identity 與 transaction，把關鍵 ID 與用途摘要交給各自 context；Items 與 Core 對同一種 context 使用同一份資料，避免重複維護用途。兩個 context 的初始化與綁定時機各自獨立。Token 可沿用既有 request key；驗證 Token 並解析其 Member，確認兩者 IsTest 一致後形成可信 identity。API 以此組合 command 的 RequestMember，底層 command 保留明確會員輸入。
 
@@ -163,7 +163,7 @@ Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付�
 | current identity | 目前以什麼身分執行，以及該身分／憑證的 test 標記；涵蓋 Member、API access token 或系統排程工作身分。 |
 | current transaction | 目前替哪筆交易執行，以及該交易的用途；須涵蓋其後續事件與重試。 |
 
-改價等操作可依 current identity 判定，不必擴大交易定義來涵蓋所有操作。此處只確定兩類語意，尚未指定類別、欄位或傳遞技術。依 AC-TIP-013，正式系統身分處理 test 訂單仍受 test 限制，因此 `currentuser.isTest` 不能作為所有操作唯一的判斷依據。
+改價等操作可依 current identity 判定，不必擴大交易定義來涵蓋所有操作。具體型別與欄位已納入 Context 合約。依 AC-TIP-013，正式系統身分處理 test 訂單仍受 test 限制，因此 `currentuser.isTest` 不能作為所有操作唯一的判斷依據。
 
 身分與交易是不同維度，值不同不自動等同用途矛盾；各自不明、遺失或與其已確定用途矛盾仍屬 AC-TIP-014 的 BUG。不涉及交易的操作，須與交易執行途中遺失 context 區分。AC-TIP-012 的系統工作交接依兩端各自責任建立執行範圍，不能以清空資訊代替責任判定。本輪已確定 Checkout 建立時的 Member／PaymentId 組合，其他完整用途組合政策仍列為後續應用規格，不自動採用跨所有操作的通用 OR 規則。
 
@@ -175,26 +175,26 @@ Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付�
 - 各商業操作依一致的判定控制效果；測試身分仍須通過必要權限與業務檢查。
 - 架構提供標準存取與傳遞管道，確保 context 資訊正確；應用端確保每個相關環節依 context 執行業務政策，在效果發生前判定。
 
-最低層介面的用途不可變契約提供 context 的判定依據。跨責任邊界的具體承接格式留給後續 contract，實際執行時必須能確認用途，用途遺失或判定矛盾屬於 BUG。本輪已確認 PaymentId 白名單代表測試卡號，建立 Checkout 時即提供並固定用途；AC-TIP-002 改為此 PoC 驗收方向，不要求引入真實金流。其他來源組合仍待後續規格。
+最低層介面的用途不可變契約提供 context 的判定依據。標準訂單事件由 OrderId 恢復持久化用途，實際執行時必須能確認用途，用途遺失或判定矛盾屬於 BUG。本輪已確認 PaymentId 白名單代表測試卡號，建立 Checkout 時即提供並固定用途；AC-TIP-002 改為此 PoC 驗收方向，不要求引入真實金流。其他來源組合仍待後續規格。
 
-AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持測試用途，且用途必須明確，用途不明屬於 BUG；具體 context 型別與錯誤處理機制尚未定案。
+AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持測試用途，且用途必須明確，用途不明屬於 BUG；具體 context 型別與用途 BUG 的 500／execution_context_invalid 已納入正式規格。
 
 ## 呼叫端可用程式辨識 test 行為與結果
 
 使用者在接受 [AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 時指出：要求改價為 80 元、讀回卻仍是 100 元，可能讓原本預期資料被修改的測試失敗。因此，修改價格的 API／CLI／interface／UI 等入口，需要提供明確且能由系統判讀的方式，讓測試端辨識這是 test behavior。
 
-2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。無交易時不給交易相關 header、物件中的 transaction 為 null；其餘 header 名稱、result code 與回傳格式於實作時具體化；這項需求不改變 AC-TIP-005 中「價格保持原值、略過更新留 log」的預期結果。
+2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。無交易時不給交易相關 header、物件中的 transaction 為 null；header 名稱、result code 與回傳格式見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)；這項需求不改變 AC-TIP-005 中「價格保持原值、略過更新留 log」的預期結果。
 
-商業效果仍在各操作發生前受到控制；出口依 context 與已完成的判定結果產生一致表達。測試會員操作 Cart 可實際寫入，Cart 本身不標記用途；test 行為對 Product 的更新被略過、test Checkout 可因庫存不足失敗，因此對外結果需承接實際操作結果。具體資訊格式留給後續 contract。
+商業效果仍在各操作發生前受到控制；出口依 context 與已完成的判定結果產生一致表達。測試會員操作 Cart 可實際寫入，Cart 本身不標記用途；test 行為對 Product 的更新被略過、test Checkout 可因庫存不足失敗，因此對外結果需承接實際操作結果。具體資訊格式已納入 OperationResult 與 HTTP 合約。
 
-後續正式 contract 須具體化：
+本次正式 contract 已具體化：
 
 - 呼叫端如何識別此次操作的正式／測試性質。
 - 如何表達操作實際結果，例如已套用、因 test 略過，或正常業務檢查失敗；僅知道 test 不代表操作一定成功。
 - 不同入口如何提供一致的可判讀語意，以及如何對應到操作或交易紀錄。
 - 測試端如何依結果驗證預期行為，避免把正常的 test 略過誤判為一般更新失敗。
 
-上述結果分類是待整理的設計方向，不代表已決定正式 enum、HTTP status、header 名稱或回傳格式。
+正式 enum、HTTP status、header 與結果格式以 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md) 為準；Outcome 與用途分開，略過明細只記錄實際到達且未執行的效果。
 
 ## 系統到期整理與測試來源的邊界
 
@@ -238,10 +238,10 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 
 ## 本輪收斂後保留的事項
 
-本輪在 best practice 與規範層級已無阻擋收斂的架構議題。以下尚未定案事項保留到對應階段，不表示已完成規格或實作：
+標準實作的 Phase 1 已完成。以下區分 Phase 2 實作與範圍外議題：
 
-- **應用規格**：完整 identity／transaction 用途組合與各操作政策，須遵循既有不可變契約、大前提及 AC；未接受的組合不自動視為允許。
-- **正式 contract 與實作**：Context 型別、傳遞格式、header／result code、schema／log 欄位、queue／worker 與完成觀察機制。
+- **已定案政策**：標準流程的 identity／transaction 用途來源與四種會員／付款組合已落入 spec；範圍外來源仍須另定規格。
+- **Phase 2 實作**：依定案 Context、HTTP／結果、schema／log 規則接入 Core 與 host；本輪不要求 queue／worker。PetShop 的到期交接另案處理。
 - **未來功能擴充**：真實信用卡等額外來源的驗證及用途相容規則；AC-TIP-002 已以 PaymentId 白名單納入標準 PoC。
 
 ## 與 AC 的關係
@@ -249,6 +249,10 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 - [AC-TIP-001](tip-acceptance-criteria.md#ac-tip-001)：正常完成測試交易，控制並記錄略過的商業效果。
 - [AC-TIP-003](tip-acceptance-criteria.md#ac-tip-003)：正常驗證失敗，沿用一般失敗紀錄，Checkout 自身保留 test 用途。
 - [AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004)：已有物件用途不可變，context 設計不能默默改寫用途。
-- [AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)：資料不異動的結果已接受；如何讓呼叫端辨識原因，列入後續架構設計。
+- [AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)：資料不異動的結果已接受；呼叫端依 OperationResult 與 HTTP 合約辨識原因。
 - [AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012)：測試查詢允許通知系統執行正常到期整理；PetShop 的事件與系統執行邊界列為待實作變更。
 - [AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014)、[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)：完整案例已一併接受，分別約束事件與重試、用途明確性及測試預約流程邊界。
+
+## TDD 進度
+
+Core 白名單位置已定為 `Testing/TestAllowlist.cs`，預設 MemberId 900001、PaymentId 990001，清單建立後唯讀。紅燈階段確認 21 項新測試因 NotImplementedException 失敗；使用者確認後已補上白名單查詢與 Context 保存／綁定／清除，測試沿用原有行為斷言；參見 [白名單規格](../../spec/tip-test-allowlist.md) 與 [Context 合約](../../spec/tip-context-contracts.md)。後續 Phase 1 收尾已修改 Checkout command，付款前移並補舊交易 409；host 與 DI 接入仍留待 Phase 2。

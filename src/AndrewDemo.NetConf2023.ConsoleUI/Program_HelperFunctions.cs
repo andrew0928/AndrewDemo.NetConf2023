@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -119,7 +119,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             return token;
         }
 
-        private static int CreateCheckoutTransaction(int cartId, string token)
+        private static int CreateCheckoutTransaction(int cartId, string token, int paymentId)
         {
             var cart = Database.Carts.FindById(cartId) ?? throw new ArgumentOutOfRangeException(nameof(cartId));
             if (!cart.LineItems.Any()) throw new InvalidOperationException("cart is empty");
@@ -128,6 +128,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             var result = BuildCheckoutService().Create(new CheckoutCreateCommand
             {
                 CartId = cart.Id,
+                PaymentId = paymentId,
                 RequestMember = member
             });
 
@@ -139,13 +140,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             return result.TransactionId;
         }
 
-        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int paymentId, int? satisfaction = null, string? comments = null)
+        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int? satisfaction = null, string? comments = null)
         {
             var member = RequireCurrentMember();
             var result = await BuildCheckoutService().CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transactionId,
-                PaymentId = paymentId,
                 Satisfaction = satisfaction,
                 ShopComments = comments,
                 RequestMember = member
