@@ -139,7 +139,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 | 正式交易 | 正式交易讀取此商品時，仍使用原售價，不受這次測試影響。 |
 | Log | 留下「因 test 略過商品售價更新」，能識別目標商品及原本要求的變更。 |
 
-使用者補充的 API／CLI／interface／UI 結果識別需求，另記於 [TiP 架構待議筆記](tip-architecture-notes.md)，不改動本 AC 的驗收條件。
+使用者補充的 API／CLI／interface／UI 結果識別需求，另記於 [TiP 架構設計筆記](tip-architecture-notes.md)，不改動本 AC 的驗收條件。
 
 ## AC-TIP-006
 

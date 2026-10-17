@@ -6,9 +6,9 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
-## TiP 研究方向：核心接受條件已確認
+## TiP 研究方向：核心接受條件與架構原則已確認
 
-最後記錄：2026-10-16。
+最後記錄：2026-10-17。
 
 以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，尚未排定新的實作 milestone。
 
@@ -40,7 +40,13 @@
 
 使用者已一次接受最後三條核心案例：[AC-TIP-013](tip/tip-acceptance-criteria.md#ac-tip-013) 的測試訂單後續事件與重試維持 test；[AC-TIP-014](tip/tip-acceptance-criteria.md#ac-tip-014) 要求用途明確，否則為 BUG；[AC-TIP-015](tip/tip-acceptance-criteria.md#ac-tip-015) 不允許測試預約接續 Cart／Checkout。本輪 14 條核心 AC 已全部確認。[AC-TIP-002](tip/tip-acceptance-criteria.md#ac-tip-002) 保留為信用卡示意，未實作信用卡支付時為 N/A。
 
-鏈路 context 與呼叫端結果識別先收錄於 [TiP 架構待議筆記](tip/tip-architecture-notes.md)，後續依使用者要求統一整理架構與實作差距；未變更既有 `/spec`、`.Abstract` contract 或實作。
+研究目標進一步確認為：透過 prototype 演練歸納可重用的 TiP best practice，原則確定後，具體保證機制交由實作端決定。已確認最低層系統服務介面將用途不可變物件的 `id + type` 視為 immutable、以事件／任務交接隔離查詢與系統工作、context 延續至出口並由 HTTP middleware 統一轉成對外結果、沿用正常 log 機制，以及在 database schema 明確定義用途。
+
+Context 已進一步區分為 **current identity**（目前執行身分及其用途）與 **current transaction**（目前處理交易及其用途）。架構負責資訊正確傳遞，應用端依 context 執行業務政策：改價等操作可依身分判定，交易衍生操作另須保留交易用途；跨事件／async 邊界仍須遵守 AC-TIP-012／013 的責任區分。
+
+使用者已確認支撐 TiP 體系的架構原則涵蓋完成，本輪在 best practice 與規範層級收斂。完整用途組合政策留給應用規格，具體欄位、結果代碼及傳遞機制留給正式 contract／實作，額外付款來源留待功能擴充；這些事項尚未定案，不阻擋本輪原則確認，也不代表採用通用 OR 規則。
+
+決策見 [TiP 研究範圍與架構規範邊界](tip/decisions/2026-10-17-tip-contract-and-context-boundaries.md)；[TiP 架構設計筆記](tip/tip-architecture-notes.md) 區分已確認規範與後續事項。未變更既有 `/spec`、`.Abstract` contract 或實作。
 
 ## Milestone 1 - 基礎建設
 

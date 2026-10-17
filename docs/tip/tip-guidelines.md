@@ -1,12 +1,22 @@
 # TiP 設計原則
 
-更新日期：2026-10-16。
+更新日期：2026-10-17。
 
 本文件供 AndrewShop 的 TiP 研究與需求討論使用。目前已確認大前提、領域物件分類規則及 [AC-TIP-001](tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014)、[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)，本輪核心接受條件（AC）已全部確認。本文件不是已凍結的 `/spec`，也不代表系統已具備所述能力。
 
 ## 研究目的與範圍
 
 以 AndrewShop PoC / prototype 作為 Testing in Production（TiP）的研究與實驗對象，探索如何在正式環境中辨識測試行為、執行業務流程，並控制其結果。
+
+研究目標為透過 prototype 演練歸納可重用的 TiP 設計 best practice；原則確定後收斂，具體保證機制交由實作端決定。2026-10-17 已確認[研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)：
+
+- 最低層系統服務介面將用途不可變物件的 `id + type` 視為 immutable，同一物件身分的用途始終一致；建立權限由應用端決定。
+- 查詢與系統到期整理以 event-driven／task queue 等機制交接，區分兩端責任；用途承接仍遵守 AC-TIP-012／013。
+- Context 延續到出口，再以明確的 header／result code 等對外契約傳遞；HTTP API 由 middleware 統一處理出口表達。
+- 沿用正常 log 機制，由 context 與判定結果決定對應紀錄內容。
+- 在 database schema 明確定義各類物件的正式／測試用途及適用規則，資料使用依此處理；既有受保護物件分類不變。
+
+Context 已區分為 current identity（目前執行身分及其用途）與 current transaction（目前處理交易及其用途）。架構保證資訊正確傳遞，應用端各環節依 context 執行政策，在商業效果發生前完成判定；改價等操作可依身分判定，交易用途則須在後續處理中保留。使用者已確認支撐 TiP 體系的設計涵蓋完成，本輪原則收斂；完整應用政策矩陣與具體 contract／實作留待後續階段，詳見[架構設計筆記](tip-architecture-notes.md)。上述規範尚未寫入正式 `/spec` 或 `.Abstract`。
 
 此方向對齊 [project roadmap](../project-roadmap.md)：共用交易流程、DiscountRule、ProductService 與不同業務模組，都需要遵守一致的測試邊界。
 
@@ -149,23 +159,23 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 本研究借用模式識別、資料邊界與副作用隔離的設計思路。尚未決定採用 Stripe 金流、複製其 sandbox 架構，或將 `livemode` 作為 AndrewShop 的正式欄位名稱。
 
-## 待展開的具體規則
+## 原則收斂與後續規格範圍
 
-使用者已提出的研究情境為：來自 test user、test 信用卡、test API key 或 test endpoint 的行為，產生的 test orders 應不出貨、不扣款、不列入正式商業統計。這些是後續需求展開的輸入，尚未形成完整判定規格。
+使用者已提出的研究情境為：來自 test user、test 信用卡、test API key 或 test endpoint 的行為，產生的 test orders 應不出貨、不扣款、不列入正式商業統計。目前核心 AC 與支撐體系的架構原則已確認；完整來源組合政策及額外功能仍保留後續規格範圍。
 
 使用者已補充：測試訂單後續事件與重試仍受 test 限制；每個實際執行邊界都必須能明確確認用途，用途不明或判定矛盾視為 BUG。[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013) 與 [AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014) 的完整案例已與 AC-TIP-015 一併接受。信用卡案例 [AC-TIP-002](tip-acceptance-criteria.md#ac-tip-002) 僅作示意，未實作信用卡支付時不適用（N/A）。
 
-接下來需依大原則逐項釐清：
+後續事項依責任與階段分類：
 
-1. **來源判定**：誰能標記 test、如何驗證來源，以及多種來源混合或判定失敗時如何處理。先前提出的 OR 規則仍是候選方案。
-2. **分類傳遞**：建立時用途不可變、Member 衍生關係，以及事件與重試須維持明確用途的方向已確認；具體傳遞機制、跨模組承接方式，以及未來實作付款功能時的來源判定時機，仍待設計。
-3. **效果控制**：庫存、商品、SKU、預約及時段資源的保護政策已確認；AC-TIP-001 已確認測試訂單不扣款、不出貨及相關略過紀錄。其餘操作略過後如何回傳或延續流程，以及付款、履約、通知的整合細節仍待定義。
-4. **資料使用**：略過操作留 log、查詢型報表與事件統計的紀錄區別，以及既有商業統計不受測試影響的驗收要求已確認；log 格式、保存方式及其他資料使用細節仍待定義。
+1. **應用規格與額外來源**：最低層介面保證物件 `id + type` 不可變；建立權限由應用端決定，保證機制由實作端決定。兩類 context 提供判定依據，完整用途組合與各操作政策由應用規格定義，須符合已確認 AC；額外來源仍待功能引入時確認，通用 OR 規則尚未定案。
+2. **分類傳遞契約**：Member 衍生關係、事件與重試須維持明確用途，以及 AC-TIP-012／013 的責任區分已確認；架構保證 context 正確傳遞，具體承接格式留給後續 contract。
+3. **效果控制與結果契約**：保護政策與必要檢查已確認，應用端各環節依 context 完成效果判定；context 延續至出口，HTTP API 由 middleware 統一表達對外結果。具體結果契約留給規格階段，付款、履約、通知的整合機制屬實作事項。
+4. **資料與紀錄**：Schema 明確定義用途，正常 log 機制依 context 與判定結果記錄；正式商業統計仍依 AC 驗證結果。實體 schema、log 格式與保存方式交由實作設計，不作為本輪研究必須深入的選型議題。
 
-以上待討論項目不影響已確認的領域分類、AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014 與 AC-TIP-015，也不代表範圍外的其他情境或 AC 已獲接受。鏈路 context 與呼叫端結果識別先保留於 [TiP 架構待議筆記](tip-architecture-notes.md)，本輪核心 AC 已確認，後續統一設計。
+以上事項不阻擋本輪 best practice 與規範層級收斂，也不代表範圍外的其他情境或 AC 已獲接受。已確認規範與後續事項統一維護於 [TiP 架構設計筆記](tip-architecture-notes.md)；現有 14 條核心 AC 的預期結果維持不變。
 
 ## 文件與實作邊界
 
-本版整理大原則、領域物件分類、定義及參考依據。後續需求收斂後，再將可驗收的規則寫入 `/spec` 與 `/spec/testcases`；若涉及共享 contract，再依 Phase 1 流程處理 `.Abstract`。
+本版已收斂大原則、領域物件分類及架構規範。待使用者開啟正式規格階段，再將可驗收的規則寫入 `/spec` 與 `/spec/testcases`；若涉及共享 contract，再依 Phase 1 流程處理 `.Abstract`。
 
 本版不決定 API、資料欄位名稱與結構、儲存隔離方式或付款實作，也不以現有 PoC 尚未連接實際金流，作為「測試已成功隔離真實扣款」的驗證證據。盤點完整代表需求分類涵蓋現有物件，不代表現行實作已符合 TiP 規則。

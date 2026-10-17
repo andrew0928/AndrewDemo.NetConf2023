@@ -57,6 +57,7 @@
 
 | 日期 | 決策 |
 |---|---|
+| [2026-10-17](../tip/decisions/2026-10-17-tip-contract-and-context-boundaries.md) | **TiP 研究範圍與架構規範邊界**。已確認支撐體系的架構原則：最低層介面保證 `id + type` 不可變，事件／任務交接區分責任，current identity／current transaction 由架構保證傳遞、應用端依據執行政策；HTTP middleware 統一表達出口結果，正常 log 依 context 與判定結果產生，schema 明確定義用途。完整應用政策、具體 contract／實作及額外來源擴充留到後續階段。 |
 | [2026-03-23](2026-03-23-discount-domain-boundary.md) | **Discount Domain 與 Cart Domain 邊界劃分**。原本折扣 contract 同時包含購物車輸入格式、消費者投影與 shop runtime 感知，職責過重。決策後 discount domain 只保留 `IDiscountRule` 與 `DiscountRecord`，購物車與消費者相關模型改歸 cart domain，discount engine 不再直接依賴 runtime 與 database。 |
 | [2026-03-23](2026-03-23-product-service-boundary-and-order-events.md) | **ProductService 邊界與訂單事件設計**。原本商品流程是靜態資料表導向，controller 直接讀取 Products collection，OrderLineItem 也無法識別實際商品。決策後每個 shop 啟用單一 `IProductService`，product contract 採固定欄位且 `ProductId` 改為 string；訂單 side effect 後續收斂為 `IOrderEventDispatcher`。 |
 | [2026-03-23](2026-03-23-shop-runtime-and-plugin-architecture.md) | **商店啟動組態與插件化架構**（proposed）。原本系統只有單一商店、寫死的折扣邏輯與固定商品模型。決策採用「單一部署單一商店」模式，啟動時依 `SHOP_ID` 載入 `ShopManifest` 與對應模組；折扣引擎改為 instance-based 注入式服務，商品擴充拆為「商品定義」與「購買項目」兩層模型。 |
