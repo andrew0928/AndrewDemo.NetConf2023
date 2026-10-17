@@ -53,7 +53,7 @@ Checkout 與 Order 的用途可不同於 Buyer.IsTest。必要檢查與價格／
 5. 在資料庫 transaction 內再次確認該 Checkout 仍可完成，確保併發 complete 不會重複建立 Order 或執行效果。
 6. 同一 transaction 內完成適用的庫存異動、Order 建立、封存寫入、作用中紀錄移除；任一步失敗全部 rollback。
 7. Order.IsTest 承接 Checkout；Order.CheckoutTransactionId 明確填入原 TransactionId，付款來源由封存紀錄取得。其他來源建立的 Order 可為 null 關聯；本輪不新增其他建立入口。
-8. 封存保留原 TransactionId、CartId、MemberId、CreatedAt、PaymentId、IsTest。成功後不再以封存紀錄執行 complete。
+8. 封存保留原 TransactionId、CartId、MemberId、CreatedAt、PaymentId、IsTest，並保存本次 ClosedAt；同次建立的 Order.CreatedAt 採相同 UTC 業務完成時間。成功後不再以封存紀錄執行 complete。
 9. commit 後才派送訂單事件。Fulfillment 失敗不撤銷已成立的 Order 或封存；沿用既有 FulfillmentStatus 值。資料庫交易不宣稱能回滾外部服務效果。
 
 重複 complete 維持最小規則：作用中區已沒有該交易就回 TransactionNotFound／400，不重送事件，不從封存還原成可完成交易。並行請求最多一個成功，其他請求不得留下部分異動。
@@ -94,3 +94,7 @@ Product、SKU、Inventory 是受保護資料；test 不可新增、修改或刪�
 ## 已建立物件的更新
 
 一般更新入口不得接受用途重新分類；Member、Token、Checkout、Order 已有的 IsTest 在正式轉 test 與 test 轉正式兩個方向均不可覆寫。Checkout.PaymentId 與買方亦不得在完成時替換。Core 的持久化流程須保留原值或拒絕不符的更新，不能只依賴 C# init 限制；不為驗收新增公開用途修改 API。
+
+## 業績／核帳追加原則
+
+依 [時間欄位補充](tip-core-object-definitions.md)，新資料須填入交易結束／訂單建立時間，業績與核帳查詢預設排除各自 IsTest=true 的資料，明確要求才列出 test。查詢功能後續再做；Checkout 終態、獨立金額／明細等 [schema 缺口](../docs/tip/accounting-schema-review.md) 仍待確認，不由 Phase 2 自行擴充。

@@ -24,3 +24,10 @@
 ## 已有模型驗證
 
 `OperationResultContractTests` 覆蓋 TC-015 與 TC-016，共 4 筆。Controller 的舊交易 409 mapping 另有 `CheckoutContractTests`；HTTP server／middleware、headers、log 與事件範圍仍待 Phase 2 驗證。
+
+## TC-TIP-HTTP-017 移除 access token 明文 log（Phase 2）
+
+- Given：使用可辨識的測試 token 完成 OAuth 登入、token exchange、受驗證 API request 及失敗路徑。
+- When：擷取各路徑的應用 log。
+- Then：任何訊息、結構化屬性或例外輸出均不包含完整 access token；保留不依賴秘密的診斷資訊。
+- 範圍包含 API Program middleware、LoginController 的登入及 token 回應輸出；本次僅追加案例，尚未修改程式。

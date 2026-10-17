@@ -34,5 +34,35 @@
 
 - Given：直接寫入缺少新增欄位的原始 BSON 文件；舊 Order.Id 與作用中 Checkout.TransactionId 恰好相同。
 - When：以新模型讀取 Member、Token、Checkout、Order 與 Buyer 快照。
-- Then：所有 IsTest 為 false，Order.CheckoutTransactionId 為 null，封存區仍為空。
+- Then：所有 IsTest 為 false，Order.CheckoutTransactionId、Order.CreatedAt、Checkout.ClosedAt 為 null，封存區仍為空。
 - 對應：`LegacyDocuments_DefaultToRegularPurposeWithoutInventingOrderRelationship`。
+
+## TC-TIP-MODEL-005 核帳時間與訂單快照可持久化
+
+- Given：直接保存具有 CreatedAt／ClosedAt 的封存 Checkout，以及有 CreatedAt、明確關聯、金額與商品／折扣明細的 Order。
+- When：透過 LiteDB 重新讀取，將時間換算為 UTC 比較。
+- Then：起訖時間與 Order 建立時間正確；即使 Cart 不存在，Order 仍有原金額及明細。
+- 對應：`AccountingTimestamps_RoundTripWithoutDependingOnCurrentCart`。
+- 邊界：只驗證儲存結構，不代表 Checkout 有獨立金額快照或服務已填入時間。
+
+## TC-TIP-MODEL-006 作用中交易沒有結束時間
+
+- Given：新 Checkout 未設定 ClosedAt。
+- When：保存後重新讀取。
+- Then：ClosedAt=null，不自動使用現在時間。
+- 對應：`ActiveCheckout_HasNoClosingTimestamp`。
+
+## TC-TIP-MODEL-007 用途欄位可作為 DB 排除條件
+
+- Given：同一正式 Buyer 的兩筆 Order，正式金額 100、test 金額 900。
+- When：直接以保存的 Order.IsTest=false 查詢。
+- Then：僅回傳正式 Order、金額 100；全部資料仍保存兩筆。
+- 對應：`StoredPurpose_CanExcludeTestOrdersForTheSameRegularBuyer`。
+- 邊界：驗證顯式保存用途的資料；後續查詢服務的預設過濾與舊 BSON 缺欄位語意仍待驗收。
+
+## Phase 2／後續查詢驗收要求
+
+- 正常 complete：Order.CreatedAt、封存 ClosedAt 與完成回應一致；失敗 rollback 不留下結束時間，履約失敗不改寫成立時間。
+- 作用中檢查失敗或 409：ClosedAt 仍為 null。
+- 未來取消流程依另案確認的終態規格填 ClosedAt；本批不新增 cancel API。
+- 查詢功能交付時驗證預設排除 test、明確列 test、正式 Buyer 的 test Order、不重複加總關聯資料、未知時間與歷史 IsTest 缺欄位。

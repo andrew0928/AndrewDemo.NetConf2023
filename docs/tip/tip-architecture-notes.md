@@ -37,6 +37,8 @@
 | Order.IsTest | 已確認，bool，承接 Checkout 用途。 |
 | MemberAccessTokenRecord.IsTest | 已確認，bool，建立時從 Member.IsTest 複製並保存，用途不可變且保持一致。 |
 | Order.PaymentId | 不新增；透過關聯的封存 Checkout 取得付款來源。 |
+| CheckoutTransactionRecord.ClosedAt | 追加 nullable UTC 結束時間，complete／cancel 使用；填值流程留 Phase 2。 |
+| Order.CreatedAt | 追加 nullable UTC 建立時間，舊資料未知為 null。 |
 | Order.CheckoutTransactionId | 已確認新增 int?；Checkout 建立的 Order 填入交易 ID，其他來源為 null。 |
 | CheckoutCreateCommand.PaymentId | 已確認新增。 |
 | CheckoutCompleteCommand.PaymentId | 已確認移除，從保存的 Checkout 取得。 |
@@ -256,3 +258,7 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 ## TDD 進度
 
 Core 白名單位置已定為 `Testing/TestAllowlist.cs`，預設 MemberId 900001、PaymentId 990001，清單建立後唯讀。紅燈階段確認 21 項新測試因 NotImplementedException 失敗；使用者確認後已補上白名單查詢與 Context 保存／綁定／清除，測試沿用原有行為斷言；參見 [白名單規格](../../spec/tip-test-allowlist.md) 與 [Context 合約](../../spec/tip-context-contracts.md)。後續 Phase 1 收尾已修改 Checkout command，付款前移並補舊交易 409；host 與 DI 接入仍留待 Phase 2。
+
+## 核帳 Schema 補充
+
+上述時間欄位由使用者明確追加，為本次有限範圍的 Phase 1 修訂。結束時間不代表成功狀態；Checkout 尚無獨立金額／明細，不能只靠 CartId 還原歷史成交內容。詳見 [Schema 檢驗](accounting-schema-review.md)；額外終態與快照仍待確認，查詢功能後續再做。

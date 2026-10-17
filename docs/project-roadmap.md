@@ -60,6 +60,8 @@ TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指�
 
 2026-10-17 Phase 1 收尾：使用者確認舊 Checkout 缺少 PaymentId 明確回 409 並要求重建，不做向前相容。已實作該分支並同步所有共用呼叫端；補齊標準流程、操作結果、HTTP／log、scope 與 AC 對應案例。全套 107 項測試通過。詳見 [定案決策](decisions/2026-10-17-tip-phase1-contract-baseline.md)。
 
+2026-10-17 核帳需求追加：新增 Checkout.ClosedAt 與 Order.CreatedAt，歷史未知時間為 null；業績／核帳查詢預設依交易／訂單的 IsTest 排除測試資料。時間填值與移除 access token 明文 log 留 Phase 2，查詢功能後續再做。Checkout 終態與獨立金額明細仍有待確認的 schema 缺口；見 [決策](decisions/2026-10-17-tip-accounting-timestamps.md) 與 [檢驗](tip/accounting-schema-review.md)。
+
 ## Milestone 1 - 基礎建設
 
 目標：建立可支援模組化商店的共用基礎。

@@ -94,6 +94,74 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
     }
 
     [Fact]
+    public void AccountingTimestamps_RoundTripWithoutDependingOnCurrentCart()
+    {
+        var closedAt = FixedUtcNow.AddMinutes(5);
+        var checkout = new CheckoutTransactionRecord
+        {
+            TransactionId = 17,
+            CartId = 23,
+            MemberId = 31,
+            CreatedAt = FixedUtcNow,
+            ClosedAt = closedAt,
+            PaymentId = 9527
+        };
+        Context.ArchivedCheckoutTransactions.Insert(checkout);
+        Context.Orders.Insert(new Order(42)
+        {
+            Buyer = new Member { Id = 31, Name = "buyer" },
+            CheckoutTransactionId = checkout.TransactionId,
+            CreatedAt = closedAt,
+            TotalPrice = 180m,
+            ProductLines = [new Order.OrderProductLine
+            {
+                ProductId = "product-1", ProductName = "商品快照",
+                UnitPrice = 100m, Quantity = 2, LineAmount = 200m
+            }],
+            DiscountLines = [new Order.OrderDiscountLine
+            {
+                RuleId = "discount-1", Name = "折扣快照", Amount = -20m
+            }]
+        });
+
+        var order = Context.Orders.FindById(42);
+        var archived = Context.ArchivedCheckoutTransactions.FindById(order.CheckoutTransactionId!.Value);
+        Assert.Equal(closedAt, order.CreatedAt!.Value.ToUniversalTime());
+        Assert.Equal(closedAt, archived.ClosedAt!.Value.ToUniversalTime());
+        Assert.Equal(FixedUtcNow, archived.CreatedAt.ToUniversalTime());
+        Assert.Null(Context.Carts.FindById(checkout.CartId));
+        Assert.Equal(180m, order.TotalPrice);
+        Assert.Equal(200m, Assert.Single(order.ProductLines).LineAmount);
+        Assert.Equal(-20m, Assert.Single(order.DiscountLines).Amount);
+    }
+
+    [Fact]
+    public void ActiveCheckout_HasNoClosingTimestamp()
+    {
+        var checkout = new CheckoutTransactionRecord
+        {
+            CartId = 23, MemberId = 31, CreatedAt = FixedUtcNow, PaymentId = 9527
+        };
+        Context.CheckoutTransactions.Insert(checkout);
+
+        Assert.Null(Context.CheckoutTransactions.FindById(checkout.TransactionId).ClosedAt);
+    }
+
+    [Fact]
+    public void StoredPurpose_CanExcludeTestOrdersForTheSameRegularBuyer()
+    {
+        var buyer = new Member { Id = 31, Name = "regular-buyer", IsTest = false };
+        Context.Orders.Insert(new Order(41) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 100m });
+        Context.Orders.Insert(new Order(42) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 900m, IsTest = true });
+
+        // 驗證儲存欄位可作為過濾條件；查詢服務與預設政策留在 Phase 2。
+        var regularOrders = Context.Orders.Find(order => order.IsTest == false).ToList();
+        Assert.Equal(41, Assert.Single(regularOrders).Id);
+        Assert.Equal(100m, regularOrders.Sum(order => order.TotalPrice));
+        Assert.Equal(2, Context.Orders.FindAll().Count());
+    }
+
+    [Fact]
     public void OrderWithoutCheckout_PreservesNullRelationship()
     {
         var order = new Order(42) { Buyer = new Member { Name = "external-buyer" } };
@@ -128,11 +196,14 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
 
         Assert.False(Context.Members.FindById(7).IsTest);
         Assert.False(Context.MemberTokens.FindById("legacy-token").IsTest);
-        Assert.False(Context.CheckoutTransactions.FindById(42).IsTest);
+        var checkout = Context.CheckoutTransactions.FindById(42);
+        Assert.False(checkout.IsTest);
+        Assert.Null(checkout.ClosedAt);
         var order = Context.Orders.FindById(42);
         Assert.False(order.IsTest);
         Assert.False(order.Buyer.IsTest);
         Assert.Null(order.CheckoutTransactionId);
+        Assert.Null(order.CreatedAt);
         Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
     }
 }

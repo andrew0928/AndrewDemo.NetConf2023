@@ -3,7 +3,7 @@
 ## 狀態與範圍
 
 - 日期：2026-10-17。
-- Phase 1：完成，規格與 Abstract 合約定案。
+- Phase 1：完成，規格與 Abstract 合約定案。使用者後續明確追加的兩個核帳時間欄位與查詢排除原則，見下方補充；Abstract 未異動。
 - Phase 2：尚未交付；用途判定、效果控制與 host 整合仍待實作。
 - 依使用者指示，本輪先修改 code，再同步 spec／testcases；既有 Core 基礎實作納入本次交付。
 - 適用標準 Core／API／CommonStorefront／CLI。AppleBTS、PetShop 領域政策排除；共用合約的呼叫參數同步不代表擴充模組已支援 TiP。
@@ -95,3 +95,11 @@ dotnet build src/AndrewDemo.NetConf2023.ConsoleUI/AndrewDemo.NetConf2023.Console
 3. Scoped DI、HTTP／CLI 操作範圍、事件獨立 scope 與用途恢復；補齊跨範圍及併發測試。
 4. Product／SKU 受保護寫入、OperationResult 收集、middleware headers／log 與錯誤映射。
 5. CommonStorefront 明確選用測試付款來源與結果呈現，重建本地環境，完成標準流程整合與 UI 驗收。
+
+## 核帳時間追加（2026-10-17）
+
+依使用者明確追加範圍，新增 Core 的 CheckoutTransactionRecord.ClosedAt 與 Order.CreatedAt，均為 nullable UTC 時間；舊資料未知為 null。正式語意與驗收見 [物件規格](tip-core-object-definitions.md)／[物件案例](testcases/tip-core-object-definitions.md)。
+
+業績／核帳查詢預設依各物件 IsTest 排除 test，明確要求時才列出。時間填值、自動封存、用途繼承與明文 access token log 移除留在 Phase 2；查詢功能後續再做。ClosedAt 並未定義交易終態，Checkout 獨立金額明細仍是待確認缺口，詳見 [Schema 檢驗](../docs/tip/accounting-schema-review.md)。此評估建議不自動納入 frozen schema。
+
+新增 3 項持久化／資料過濾測試，並擴充舊 BSON 測試的時間 null 斷言；完整服務與查詢驗收仍未交付。前述 107 項為原始 Phase 1 檢查點紀錄。

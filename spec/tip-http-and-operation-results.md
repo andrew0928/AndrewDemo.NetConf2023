@@ -103,3 +103,7 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
 ## 驗收
 
 見 [HTTP／結果案例](testcases/tip-http-and-operation-results.md)。目前只有結果模型與合約測試可驗證；middleware、HTTP headers、log 及 event scope 的整合驗證列入 Phase 2。
+
+## 明文 token 清理範圍（Phase 2）
+
+2026-10-17 使用者明確追加後續工作：移除既有 API middleware 與 OAuth 登入／token exchange 中的 access token 明文輸出。驗收見 TC-TIP-HTTP-017；本次時間欄位補充不修改 logging 程式。

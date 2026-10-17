@@ -315,6 +315,9 @@ namespace AndrewDemo.NetConf2023.Core
         public int MemberId { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        // 完成或取消時記錄的 UTC 結束時間；作用中或舊資料未知時為 null。
+        public DateTime? ClosedAt { get; set; }
+
         // 建立時依 Member 與 PaymentId 白名單判定，封存時保留原值。
         public bool IsTest { get; init; }
 

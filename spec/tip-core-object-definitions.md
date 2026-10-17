@@ -19,8 +19,10 @@
 | CheckoutTransactionRecord | PaymentId | int | create 時提供並保存，供 complete 與封存使用。 |
 | Order | IsTest | bool | 透過 Checkout 建立時複製 Checkout.IsTest。 |
 | Order | CheckoutTransactionId | int? | 關聯對應 Checkout；其他來源或沒有可查證歷史紀錄時為 null。 |
+| CheckoutTransactionRecord | ClosedAt | DateTime? | complete 或 cancel 時的 UTC 結束時間；作用中為 null。 |
+| Order | CreatedAt | DateTime? | 訂單成立時的 UTC 時間；新訂單由建立流程明確指定。 |
 
-上述欄位採 `get; init;`，供建立物件及持久化還原使用，一般 C# 呼叫端不能在物件建立後重新指派。此限制不等於資料庫禁止覆寫：建立來源驗證及持久化更新政策由後續服務流程保證。
+用途、付款、訂單關聯與 Order.CreatedAt 採 `get; init;`；Checkout.ClosedAt 採 `get; set;`，由服務在結束交易時填入，結束後不得改寫。前述 init 欄位供建立物件及持久化還原使用，一般 C# 呼叫端不能在物件建立後重新指派。此限制不等於資料庫禁止覆寫：建立來源驗證及持久化更新政策由後續服務流程保證。
 
 `Order.Id` 為訂單識別，建構式參數命名為 `orderId`，不自動以該值填入 CheckoutTransactionId。關聯依明確欄位查詢，不要求兩者 ID 相等。不新增 Order.PaymentId。
 
@@ -37,7 +39,7 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 | CheckoutTransactions | checkout_transactions | 作用中的 Checkout。 |
 | ArchivedCheckoutTransactions | archived_checkout_transactions | 已完成交易的封存紀錄。 |
 
-封存保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest 與 PaymentId。Order.CheckoutTransactionId 對應封存紀錄的 TransactionId。
+封存保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest 與 PaymentId，並保存交易結束時的 ClosedAt。Order.CheckoutTransactionId 對應封存紀錄的 TransactionId。
 
 這次提供獨立存取入口；CheckoutService 尚未自動搬移紀錄。成功結帳的原子封存、交易 ID 跨區唯一與重複 complete 防護，須在後續流程變更一起完成；不能因為新增 collection 就視為這些保證已成立。原有泛型 ShopDatabase.Create<CheckoutTransactionRecord> 仍指向作用中區，封存須明確使用封存入口。
 
@@ -54,3 +56,16 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 以原始 BSON 舊格式資料驗證讀取預設值，並驗證新增 init 欄位能經 LiteDB 寫入及還原、封存區與作用中區分離，以及 nullable 關聯與 Buyer 用途可獨立保存。
 
 本次測試不宣稱白名單、完整封存流程或 TiP 商業效果隔離已完成。
+
+## 2026-10-17 核帳時間補充
+
+依 [追加決策](../docs/decisions/2026-10-17-tip-accounting-timestamps.md)，本次重新開啟的規格範圍只有兩個時間欄位與查詢用途原則。
+
+- ClosedAt 表示 complete／cancel 的結束時間；必要檢查失敗、409 要求重建等未結束交易維持 null。尚未提供 cancel 入口，不因新增欄位而新增取消流程。
+- Order.CreatedAt 在建立時確定，與履約完成時間分開；履約失敗或重試不改寫。
+- 新資料的時間由 TimeProvider 取得 UTC。完成 Checkout 並建立 Order 時，ClosedAt、Order.CreatedAt 與該次完成回應採同一個業務完成時間，與 Order／封存一併提交；rollback 不留下結束時間。填值流程留在 Phase 2。
+- 舊 Checkout 缺少 ClosedAt、舊 Order 缺少 CreatedAt，均讀取 null。不以目前時間或 DateTime.MinValue 補值；沒有可查證來源時，不回填時間。
+- 業績／核帳查詢預設依各物件自己的 IsTest 排除 test，只有明確要求才列 test。不能依 Buyer.IsTest、Token 或當下白名單代替。歷史缺欄位仍依既有 false 政策處理，查詢須驗證原始 BSON 的缺值語意。
+- 本次沒有新增時間索引、查詢服務或結果 DTO；後續查詢須把時間未知的舊資料明確區隔，不能任意歸入日期。
+
+ClosedAt 本身無法區分完成與取消；Checkout 尚未保存獨立金額／明細。完整核帳需求仍有 schema 缺口，見 [檢驗結果](../docs/tip/accounting-schema-review.md)。額外欄位尚未定案，不得以本次兩個欄位交付宣稱核帳需求已完整支援。

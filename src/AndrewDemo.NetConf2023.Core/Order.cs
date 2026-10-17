@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using LiteDB;
 
 namespace AndrewDemo.NetConf2023.Core
@@ -20,6 +21,9 @@ namespace AndrewDemo.NetConf2023.Core
 
         // 對應封存的 Checkout；其他來源或缺少歷史交易紀錄時為 null。
         public int? CheckoutTransactionId { get; init; }
+
+        // 訂單成立時的 UTC 時間；舊資料無可查證時間時為 null，不以讀取時間補值。
+        public DateTime? CreatedAt { get; init; }
 
         public Member Buyer { get; set; } = null!;
 
