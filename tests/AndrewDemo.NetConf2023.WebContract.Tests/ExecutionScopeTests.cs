@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Effects;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -66,6 +67,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
             // 測試出口觀測 scoped 快照，不新增正式 API headers。
             http.Response.OnStarting(() =>
             {
+                http.Response.Headers["X-Test-Skipped-Count"] = http.RequestServices.GetRequiredService<OperationEffects>().Skipped.Count.ToString();
                 var snapshot = http.RequestServices.GetRequiredService<TransactionContext>().Current;
                 if (snapshot != null)
                 {
@@ -338,6 +340,95 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         Assert.Throws<ExecutionContextInvalidException>(() => anonymous.Services.GetRequiredService<CheckoutContextLoader>().Bind(20));
         Assert.Throws<InvalidOperationException>(() => _app.Services.GetRequiredService<CheckoutService>());
     }
+
+    [Fact]
+    public async Task TestMember_CartAddAndDeletePersistWithoutProtectedChangesOrSkips()
+    {
+        _database.Products.Insert(new Product { Id = "cart-product", Name = "商品", Price = 100m, SkuId = "cart-sku" });
+        _database.Skus.Insert(new SkuRecord { SkuId = "cart-sku", SpecificationSummary = "黑色／128GB" });
+        _database.InventoryRecords.Insert(new InventoryRecord { SkuId = "cart-sku", AvailableQuantity = 10 });
+        var before = ProtectedDocuments();
+        var created = await Send("/api/carts/create", _testToken, "{}");
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        var cart = (await created.Content.ReadFromJsonAsync<Cart>())!;
+        var added = await Send($"/api/carts/{cart.Id}/items", _testToken, "{\"productId\":\"cart-product\",\"qty\":2}");
+        Assert.Equal(HttpStatusCode.Created, added.StatusCode);
+        var read = await Send($"/api/carts/{cart.Id}", _testToken);
+        var line = Assert.Single((await read.Content.ReadFromJsonAsync<Cart>())!.LineItems);
+        Assert.Equal(2, line.Quantity);
+        Assert.Equal(2, Assert.Single(_database.Carts.FindById(cart.Id).LineItems).Quantity);
+        using var deleteRequest = new HttpRequestMessage(HttpMethod.Delete, $"/api/carts/{cart.Id}/lines/{line.LineId}");
+        deleteRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _testToken);
+        var deleted = await _client.SendAsync(deleteRequest);
+        Assert.Equal(HttpStatusCode.OK, deleted.StatusCode);
+        var reread = await Send($"/api/carts/{cart.Id}", _testToken);
+        Assert.Empty((await reread.Content.ReadFromJsonAsync<Cart>())!.LineItems);
+        Assert.Empty(_database.Carts.FindById(cart.Id).LineItems);
+        var raw = _database.Database.GetCollection("carts").FindById(cart.Id);
+        Assert.False(raw.ContainsKey("IsTest")); Assert.False(raw.ContainsKey("MemberId"));
+        Assert.Equal(before, ProtectedDocuments());
+        foreach (var response in new[] { created, added, read, deleted, reread })
+        {
+            Assert.False(response.Headers.Contains("X-Test-Context-Id"));
+            Assert.Equal("0", response.Headers.GetValues("X-Test-Skipped-Count").Single());
+        }
+    }
+
+    [Fact]
+    public async Task TwoTestMembers_CannotCompleteEachOthersCheckout_AndNoEffectsOccur()
+    {
+        var members = _app.Services.GetRequiredService<MemberService>();
+        var other = new Member { Name = "other-test", IsTest = true };
+        _database.Members.Insert(other);
+        var token = members.IssueToken(other.Id, DateTime.MaxValue).Token;
+        _database.Products.Insert(new Product { Id = "buyer-product", Price = 100m, SkuId = "buyer-sku" });
+        _database.Skus.Insert(new SkuRecord { SkuId = "buyer-sku" });
+        _database.InventoryRecords.Insert(new InventoryRecord { SkuId = "buyer-sku", AvailableQuantity = 10 });
+        var cart = new Cart(); cart.AddProducts("buyer-product", 2, DateTime.UtcNow); _database.Carts.Insert(cart);
+        var created = await Send("/api/checkout/create", _testToken,
+            System.Text.Json.JsonSerializer.Serialize(new { cartId = cart.Id, paymentId = 0 }));
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var checkoutId = (await created.Content.ReadFromJsonAsync<CheckoutController.CheckoutCreateResponse>())!.TransactionId;
+        var checkoutBefore = _database.Database.GetCollection("checkout_transactions").FindById(checkoutId).ToString();
+        var cartBefore = _database.Database.GetCollection("carts").FindById(cart.Id).ToString();
+        var protectedBefore = ProtectedDocuments();
+        var response = await Send("/api/checkout/complete", token, $"{{\"transactionId\":{checkoutId}}}");
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.False(response.Headers.Contains("X-Test-Context-Id"));
+        Assert.Equal("0", response.Headers.GetValues("X-Test-Skipped-Count").Single());
+        Assert.Empty(_database.Orders.FindAll()); Assert.Empty(_database.ArchivedCheckoutTransactions.FindAll());
+        Assert.Equal(checkoutBefore, _database.Database.GetCollection("checkout_transactions").FindById(checkoutId).ToString());
+        Assert.Equal(cartBefore, _database.Database.GetCollection("carts").FindById(cart.Id).ToString());
+        Assert.Equal(protectedBefore, ProtectedDocuments());
+    }
+
+    [Fact]
+    public async Task MaintenanceScopes_KeepPurposeAndEffectsSeparateDuringParallelCalls()
+    {
+        _database.Products.Insert(new Product { Id = "maintenance", Price = 100m });
+        var factory = _app.Services.GetRequiredService<IServiceScopeFactory>();
+        var results = await Task.WhenAll(new[] { _normalToken, _testToken }.Select(token => Task.Run(() =>
+        {
+            using var operation = ShopOperationScope.Open(factory, token);
+            var effects = operation.Services.GetRequiredService<OperationEffects>();
+            var service = operation.Services.GetRequiredService<ProductMaintenanceService>();
+            service.UpdatePrice("maintenance", token == _testToken ? 80m : 90m, identity =>
+            {
+                Assert.Equal(token == _testToken, identity.IsTest);
+            });
+            Assert.Null(operation.Services.GetRequiredService<ITransactionContext>().Current);
+            return effects;
+        })));
+        Assert.NotSame(results[0], results[1]);
+        Assert.Empty(results[0].Skipped); Assert.Single(results[1].Skipped);
+        Assert.Equal(90m, _database.Products.FindById("maintenance").Price);
+        using var next = ShopOperationScope.Open(factory, _testToken);
+        Assert.Empty(next.Services.GetRequiredService<OperationEffects>().Skipped);
+        Assert.Throws<InvalidOperationException>(() => _app.Services.GetRequiredService<ProductMaintenanceService>());
+    }
+
+    private string ProtectedDocuments() => string.Join("\n", new[] { "products", "skus", "inventory_records" }
+        .SelectMany(name => _database.Database.GetCollection(name).FindAll()).Select(x => x.ToString()));
 
     private Task<HttpResponseMessage> Send(string path, string token, string? json = null)
     {

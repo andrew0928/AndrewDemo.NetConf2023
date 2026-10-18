@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Effects;
 using System.Reflection;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
@@ -21,7 +22,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
     private readonly RecordingLogger _logger = new();
 
     private CheckoutService Service(IShopDatabaseContext? database = null, TransactionContext? transaction = null,
-        CheckoutEffects? effects = null, TestAllowlist? allowlist = null) => new(database ?? Context,
+        OperationEffects? effects = null, TestAllowlist? allowlist = null) => new(database ?? Context,
             new DiscountEngine([_rule]), _events, new DefaultProductService(database ?? Context),
             new ShopManifest { ShopId = "test" }, FixedTimeProvider, allowlist, transaction, effects, _logger);
 
@@ -51,7 +52,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
     {
         var (member, cart, productId, skuId) = Seed(memberTest);
         var context = new TransactionContext();
-        var effects = new CheckoutEffects();
+        var effects = new OperationEffects();
         var service = Service(transaction: context, effects: effects);
         var created = service.Create(CreateCommand(member, cart, payment));
         var quote = Context.CheckoutTransactions.FindById(created.TransactionId);
@@ -109,7 +110,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
     public async Task NecessaryValidation_RejectsWithoutAnyEffects(string change)
     {
         var (member, cart, productId, skuId) = Seed(true);
-        var effects = new CheckoutEffects();
+        var effects = new OperationEffects();
         var service = Service(effects: effects);
         var id = service.Create(CreateCommand(member, cart)).TransactionId;
         var before = Raw(id).ToString();
@@ -396,7 +397,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var (member, cart, productId, skuId) = Seed(true, stock: 3);
         cart.AddProducts(productId, 2, FixedUtcNow, cart.LineItems[0].LineId);
         Context.Carts.Update(cart);
-        var effects = new CheckoutEffects();
+        var effects = new OperationEffects();
         var service = Service(effects: effects);
         var id = service.Create(CreateCommand(member, cart)).TransactionId;
         var quote = Context.CheckoutTransactions.FindById(id);
@@ -419,7 +420,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var orders = AfterFailure(Context.Orders, "Insert", true);
         var database = Intercept<IShopDatabaseContext>(Context, (method, _) =>
             method.Name == "get_Orders" ? (true, orders) : (false, null));
-        var effects = new CheckoutEffects();
+        var effects = new OperationEffects();
         await Assert.ThrowsAsync<IOException>(() => Service(database: database, effects: effects).CompleteAsync(CompleteCommand(member, id)));
         var effect = Assert.Single(effects.Skipped);
         Assert.Equal("inventory.deduct", effect.EffectCode);

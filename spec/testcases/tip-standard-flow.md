@@ -78,3 +78,7 @@
 ## Create 固定內容補充
 
 2026-10-17 使用者確認金額與明細在 create 時固定。以上交易驗收的價格／數量以保存的 Checkout 為準；complete 只做必要的商品與庫存等檢查，不重讀 Cart 決定交易內容。Create 後修改 Cart／現價／折扣、終態完整搬移與凍結保護的案例見 [生命週期案例](tip-checkout-lifecycle.md)。
+
+## Phase 2.4 自動化驗證證據（2026-10-18）
+
+既有 Given／When／Then 不變。FLOW-301～303 的 Core／HTTP 自動化已補齊，新增雙 test 買方的 FLOW-205 精確情境；FLOW-307 的真實付款／出貨／事件統計 adapter 不存在，標示不適用。solution 共 285 項通過（本次新增 Core 20、HTTP／scope 3）；具體測試方法與限制見 [2.4 交付](../../docs/tip/phase2.4-delivery.md) 及 [AC 對照](../../docs/tip/ac-test-coverage.md)。HTTP headers／完整 log 仍在 2.6，事件 scope 在 2.5，UI 在 2.7，不能將本紀錄視為全部 AC 通過。

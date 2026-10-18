@@ -6,10 +6,12 @@
 
 | 文件 | 內容 |
 |---|---|
-| [Phase 1.1 API 實作交付](phase1.1-delivery.md) | 三個 admin 唯讀 API、獨立認證與 262 項回歸；真實 host 驗證完成，Docker 部署待 daemon 恢復。 |
-| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案、實作留後續；沒有 Web UI，CLI 由使用者後續追加。 |
+| [Phase 1.1 API 實作交付](phase1.1-delivery.md) | 三個 admin 唯讀 API、獨立認證與 262 項回歸；真實 host 驗證及 Docker 映像建置完成，使用者手動查詢通過。 |
+| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案且 API 已交付；沒有 Web UI，CLI 由使用者後續追加。 |
 | [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
 | [Phase 2.2 交付紀錄](phase2.2-delivery.md) | HTTP／CLI scoped context、22 筆新增驗證、153 項回歸及後置處理註記。 |
+| [Phase 2.4 交付紀錄](phase2.4-delivery.md) | 共用受保護寫入、Core 商品／SKU 維護、test Cart／並行隔離；285 項回歸。 |
+| [AC 自動化覆蓋對照](ac-test-coverage.md) | 每條 AC 對應具體測試與尚未驗收範圍，區分部分覆蓋、後續階段與不適用。 |
 | [Phase 2.3 交付紀錄](phase2.3-delivery.md) | 固定報價、原子 Order／庫存／完整封存、防寫與跨分區 ID；38 筆新增驗證、191 項回歸。 |
 | [Phase 2.1 交付紀錄](phase2.1-delivery.md) | 會員／Token 用途規則、API／CLI 接入、131 項回歸證據與後續階段邊界。 |
 | [業績與核帳 Schema 檢驗](accounting-schema-review.md) | 時間、State 與獨立交易金額明細已補齊；create 時固定、不含商品資訊快照，執行流程留 Phase 2。 |

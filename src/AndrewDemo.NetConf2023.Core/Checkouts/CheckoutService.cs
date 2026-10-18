@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Effects;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
@@ -28,14 +29,15 @@ public sealed class CheckoutService
     private readonly TimeProvider _timeProvider;
     private readonly TestAllowlist _allowlist;
     private readonly TransactionContext _transactionContext;
-    private readonly CheckoutEffects _effects;
+    private readonly OperationEffects _effects;
+    private readonly ProtectedWriteExecutor _writes;
     private readonly ILogger<CheckoutService> _logger;
 
     public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine,
         IOrderEventDispatcher orderEventDispatcher, IProductService productService,
         ShopManifest shopManifest, TimeProvider timeProvider, TestAllowlist? allowlist = null,
-        TransactionContext? transactionContext = null, CheckoutEffects? effects = null,
-        ILogger<CheckoutService>? logger = null)
+        TransactionContext? transactionContext = null, OperationEffects? effects = null,
+        ILogger<CheckoutService>? logger = null, ProtectedWriteExecutor? writes = null)
     {
         _database = database;
         _discountEngine = discountEngine;
@@ -45,8 +47,9 @@ public sealed class CheckoutService
         _timeProvider = timeProvider;
         _allowlist = allowlist ?? new TestAllowlist();
         _transactionContext = transactionContext ?? new TransactionContext();
-        _effects = effects ?? new CheckoutEffects();
+        _effects = effects ?? new OperationEffects();
         _logger = logger ?? NullLogger<CheckoutService>.Instance;
+        _writes = writes ?? new ProtectedWriteExecutor(new IdentityContext(), _transactionContext, _effects, _logger);
     }
 
     public CheckoutCreateResult Create(CheckoutCreateCommand command)
@@ -198,17 +201,14 @@ public sealed class CheckoutService
             }
             foreach (var requirement in requirements)
             {
-                if (transaction.IsTest)
-                {
-                    _effects.RecordInventoryDeduction(requirement.Key);
-                    _logger.LogInformation("TiP 略過 {EffectCode}，{TargetType}/{TargetId}，原因 {ReasonCode}，Checkout {TransactionId}",
-                        "inventory.deduct", "inventory", requirement.Key, "test_behavior", transaction.TransactionId);
-                    continue;
-                }
-                var record = inventory[requirement.Key];
-                record.AvailableQuantity -= requirement.Value;
-                record.UpdatedAt = completedAt;
-                if (!_database.InventoryRecords.Update(record)) throw new InvalidOperationException("庫存更新失敗。");
+                _writes.ForCheckout(transaction.TransactionId, "inventory.deduct", "inventory", requirement.Key,
+                    requirement.Value, () =>
+                    {
+                        var record = inventory[requirement.Key];
+                        record.AvailableQuantity -= requirement.Value;
+                        record.UpdatedAt = completedAt;
+                        if (!_database.InventoryRecords.Update(record)) throw new InvalidOperationException("庫存更新失敗。");
+                    });
             }
             _database.Orders.Insert(order);
             // 使用原 BSON，保留所有原欄位（包括未知的擴充欄位），只設定終態與時間。

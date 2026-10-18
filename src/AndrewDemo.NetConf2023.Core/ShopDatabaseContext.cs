@@ -15,6 +15,7 @@ namespace AndrewDemo.NetConf2023.Core
     {
         ILiteDatabase Database { get; }
         ILiteCollection<Cart> Carts { get; }
+        // 基礎儲存入口；標準維護走 ProductMaintenanceService，扣庫存走 CheckoutService 的效果邊界。
         ILiteCollection<Product> Products { get; }
         ILiteCollection<SkuRecord> Skus { get; }
         ILiteCollection<InventoryRecord> InventoryRecords { get; }
@@ -247,9 +248,10 @@ namespace AndrewDemo.NetConf2023.Core
                 throw new ArgumentNullException(nameof(entity));
             }
 
+            if (entity is Member or MemberAccessTokenRecord or CheckoutTransactionRecord or Order
+                or Product or SkuRecord or InventoryRecord)
+                throw new InvalidOperationException("用途固定或受保護物件必須透過對應 Core 服務／受控初始化建立。");
             var context = Current;
-            if (entity is Member or MemberAccessTokenRecord or CheckoutTransactionRecord or Order)
-                throw new InvalidOperationException("用途固定物件必須透過對應 Core 服務建立。");
             var collection = GetCollection<T>(context);
             collection.Insert(entity);
             return entity;
