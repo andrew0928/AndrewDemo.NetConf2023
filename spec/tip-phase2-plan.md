@@ -36,7 +36,7 @@
 
 ## 已定案限制
 
-2026-10-18 追加範圍：[Phase 1.1 管理查核](tip-phase1.1.md) 獨立定義 admin 查詢與 shell CLI。原清單「正式報表／查詢 API 不在本輪」指原 Phase 2.1～2.7；新增範圍本輪只交付規格，實作與部署留待後續，不能併入既有階段的完成宣告。
+2026-10-18 追加範圍：[Phase 1.1 管理查核](tip-phase1.1.md) 獨立定義 admin 查詢，沒有 Web UI；CLI 由使用者後續追加，文件保留呼叫契約參考。原清單「正式報表／查詢 API 不在本輪」指原 Phase 2.1～2.7；新增範圍本輪只交付規格，實作與部署留待後續，不能併入既有階段的完成宣告。
 
 - Identity 與 Transaction 分開；Core command 明確接收 RequestMember，由 API／CLI 組合。
 - MemberId 白名單預設 900001、PaymentId 白名單預設 990001；只在建立時分類。Cart 不承接會員或 test 標記。

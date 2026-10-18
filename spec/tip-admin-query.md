@@ -1,12 +1,12 @@
-# TiP 管理查核 API 與 CLI 規格
+# TiP 管理查核 API 規格
 
-日期：2026-10-18。歸屬：[Phase 1.1](tip-phase1.1.md)。狀態：查詢設計已授權；認證傳遞／設定方式待確認，實作未開始。
+日期：2026-10-18。歸屬：[Phase 1.1](tip-phase1.1.md)。狀態：Phase 1.1 規格定案；實作未開始。
 
 ## 目的與邊界
 
 查詢總訂單金額、訂單清單、結帳清單、會員清單。由作用中 API 的資料庫服務讀取已提交資料，不要求停止 container、不透過宿主機 DB extension，不提供任意 SQL 或資料修改能力。
 
-適用標準 Core／API。第一版提供 shell CLI；UI、CSV 匯出、外部金流對帳、退款／沖銷與獨立報表資料庫不納入。此處「總訂單金額」是成立訂單的保存金額，不表示實收收入。
+適用標準 Core／API。需求僅有 API，沒有 Web UI；使用者後續追加 shell CLI，以下保留其呼叫契約供交接參考。CSV 匯出、外部金流對帳、退款／沖銷與獨立報表資料庫不納入。此處「總訂單金額」是成立訂單的保存金額，不表示實收收入。
 
 ## 獨立 admin 認證
 
@@ -19,7 +19,7 @@
 - 不將 admin token 寫入會員／Token collection、URL、回應、log 或版控。比對使用固定時間的秘密比對方式。
 - admin 唯讀查詢不冒充會員或系統交易執行，不新增 Abstract IdentityKind；集合查詢無 current transaction，不輸出單筆交易 headers。
 
-以下設定方式待使用者確認：
+已定案設定方式：
 
 - 使用 `Authorization: Bearer <admin token>`；不接受 query string、cookie 或 body 代傳。
 - API 啟動時讀取 `SHOP_ADMIN_ACCESS_TOKEN`。未設定或空字串時停用 admin 入口，回 404；有值但格式不合法則啟動失敗，訊息不得帶出秘密。
@@ -98,9 +98,9 @@ members 列欄位：`id`、`name`、`isTest`。不回傳 token、ShopNotes 或�
 
 不同 endpoints 與分頁請求各自反映當時已提交狀態，不承諾跨請求一致。第一版針對 PoC 規模；實作交付須記錄全量掃描／記憶體成本，不把分頁誤稱為已完成資料庫端效能最佳化。
 
-## Shell CLI 契約
+## 後續 Shell CLI 呼叫契約（參考）
 
-規劃路徑 `scripts/admin-query.sh`，尚未實作。依賴 bash、curl；格式化可由使用者另接 jq，CLI 本身輸出原始 JSON。
+供使用者後續追加 CLI 參考，建議路徑 `scripts/admin-query.sh`，不屬本次 API 實作交付要求，目前尚未實作。依賴 bash、curl；格式化可由使用者另接 jq，CLI 本身輸出原始 JSON。
 
 ```bash
 # 先由安全的本機環境提供 SHOP_ADMIN_ACCESS_TOKEN；不要把秘密填進 URL。
@@ -114,10 +114,10 @@ bash scripts/admin-query.sh members name=test
 - 子命令僅 orders／checkouts／members。沒有 summary 子命令，orders 回應已含全符合條件的總額。
 - 各參數格式為 `key=value`；CLI 負責 URL encode，使用者傳入未編碼值，含空白時用 shell 引號包住。不拼接未驗證的任意 route 或 shell eval。
 - base URL 由 SHOP_ADMIN_BASE_URL 指定，預設 http://localhost:5128；尾端 slash 正規化。除本機 localhost／127.0.0.1／[::1] 外須使用 HTTPS，不跟隨 redirect 搬送秘密。
-- token 設定方式跟隨前述待確認的認證方案；不接受 token 命令列參數、不使用 set -x，也不在 curl argv 暴露 token。
+- token 由 SHOP_ADMIN_ACCESS_TOKEN 提供，使用前述 Bearer 認證；不接受 token 命令列參數、不使用 set -x，也不在 curl argv 暴露 token。
 - stdout 僅成功回應 JSON；失敗訊息與 HTTP status 到 stderr，非 2xx、連線失敗、缺少 token 或用法錯誤均回非零 exit code，不偽裝空清單。
 - 不開 DB、不停／啟動服務、不自行計算總額、不自動重試認證失敗。
 
 ## 驗收
 
-依 [案例](testcases/tip-admin-query.md) 驗證。規格階段不提供測試已通過的宣告；後續完成實作後記錄 HTTP、CLI、並行及部署證據。
+依 [案例](testcases/tip-admin-query.md) 驗證。規格階段不提供測試已通過的宣告；後續 API 實作記錄 HTTP、並行及部署證據；CLI 案例於使用者追加該工具時驗證。

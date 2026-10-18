@@ -2,7 +2,7 @@
 
 ## 狀態
 
-accepted（查核方向、獨立 admin token、shell CLI、規格先行）；認證傳遞與設定方式待使用者確認。
+accepted。Phase 1.1 規格定案，未設定 admin token 即停用。需求僅有 API，沒有 Web UI；CLI 由使用者後續追加。
 
 2026-10-18 使用者要求查總訂單金額、訂單／結帳／會員清單，接受 `/api/admin/*` 設計，指定預先設定、小寫且無連字號、以 `admin_` 為前綴的 token，並要求 shell script 讀取。隨後指定為 Phase 1.1，明確確認「先完成 Phase 1.1 規格，實作留待後續」。
 
@@ -17,12 +17,12 @@ accepted（查核方向、獨立 admin token、shell CLI、規格先行）；認
 - 運行中的 API 提供唯讀管理查詢，查詢服務集中處理用途、時間、總額與分頁。
 - 訂單總額與清單共用篩選，不依會員或 PaymentId 當前白名單重分類；Checkout 合併作用中與封存但不與訂單重複加總。
 - admin token 獨立認證，與會員 token 雙向隔離；無需讓 admin 冒充 Member 或 System。
-- 第一版以 shell CLI 操作；後台 UI 留後續，沒有任意 SQL 或管理寫入能力。
+- 需求僅有 API，不建立 Web UI，也不列為未來待做項目。使用者後續追加 shell CLI；保留呼叫契約參考，沒有任意 SQL 或管理寫入能力。
 - 本輪完成規格與案例，實作與部署另行授權。使用者允許必要時拆成兩個 commit；目前僅規格交付，不替尚未存在的實作建立 commit。
 
-## 待確認
+## 認證定案
 
-建議採 Authorization Bearer 與 SHOP_ADMIN_ACCESS_TOKEN 環境變數，未設定停用入口。問題已送出，未回覆前不視為定案。
+採 Authorization Bearer 與 SHOP_ADMIN_ACCESS_TOKEN 環境變數；使用者確認「未設定就停用 ok」。未設定或空字串時 admin 入口回 404；合法設定啟用後，錯誤或缺少認證回 401。會員認證不變。
 
 ## 替代方案
 

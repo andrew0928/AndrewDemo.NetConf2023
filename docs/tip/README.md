@@ -6,7 +6,7 @@
 
 | 文件 | 內容 |
 |---|---|
-| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin 認證、訂單總額與三種清單、shell CLI；本輪只交付規格，認證設定方式待確認，實作留後續。 |
+| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案、實作留後續；沒有 Web UI，CLI 由使用者後續追加。 |
 | [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
 | [業績與核帳 Schema 檢驗](accounting-schema-review.md) | 時間、State 與獨立交易金額明細已補齊；create 時固定、不含商品資訊快照，執行流程留 Phase 2。 |
 | [Phase 1 定案基準](../../spec/tip-phase1.md) | 正式規格、Abstract 合約、AC 對照、107 項測試證據與 Phase 2 邊界。 |

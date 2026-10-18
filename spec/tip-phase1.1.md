@@ -1,12 +1,12 @@
-# TiP Phase 1.1：管理查核 API 與 shell CLI
+# TiP Phase 1.1：管理查核 API
 
 日期：2026-10-18。分支：feature-test-in-production。
 
 ## 範圍與狀態
 
-使用者接受正式查核入口，指定 `/api/admin/*` 採獨立認證、預先指定的小寫無連字號 `admin_` 前綴 access token，並要求 shell CLI 讀取。隨後明確指定本輪只完成 Phase 1.1 規格，實作留待後續。
+使用者接受正式查核入口，指定 `/api/admin/*` 採獨立認證、預先指定的小寫無連字號 `admin_` 前綴 access token，由使用者後續追加 shell CLI 讀取。本輪只完成 Phase 1.1 規格，實作留待後續；需求只存在 API，沒有 Web UI。
 
-本輪交付正式查詢規格、案例與決策；不新增 API、CLI 或 UI 實作，不變更持久化 schema、會員認證、既有 TiP 交易契約或 Abstract。認證傳遞與設定方式仍待使用者確認，確認前該部分為草案，不宣告整份定案。
+本輪交付正式查詢規格、案例與決策；不新增 API、CLI 或 UI 實作，不變更持久化 schema、會員認證、既有 TiP 交易契約或 Abstract。使用者已確認未設定 token 即停用；認證採 Authorization Bearer 與 SHOP_ADMIN_ACCESS_TOKEN 環境變數，Phase 1.1 規格定案。
 
 | 文件 | 用途 |
 |---|---|
@@ -30,7 +30,7 @@
 
 1. 實作 Core 查詢服務及三個 admin API；驗證讀取一致性，不能只宣稱 BeginTrans 足以跨集合一致。
 2. 實作 admin token 認證與部署設定，與會員 token 雙向隔離。
-3. 實作 shell CLI；所有計算由 API 完成，不在 shell 另寫統計公式。
-4. 完成案例中的資料／認證／並行／CLI 驗證，再提供部署與交付紀錄。後台查核頁面留後續擴充，不是這批 API＋CLI 的完成條件。
+3. 完成 API 案例中的資料／認證／並行驗證，再提供部署與交付紀錄。Web UI 不在需求內，也不列為待做項目。
+4. 使用者後續追加 shell CLI；文件中的 CLI 契約與案例供該次工作參考，不是 API 交付的前置條件。所有統計仍由 API 計算。
 
 本輪不執行部署、不設定實際秘密、不新增登入帳號，不宣稱新增 endpoints 可用。
