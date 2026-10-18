@@ -1,6 +1,6 @@
 # TiP 研究文件
 
-本目錄集中收錄 AndrewShop 的 Testing in Production（TiP）說明、接受條件與架構設計筆記；相關決策統一收錄於 `docs/decisions`，由下方索引連結。文件供需求討論與確認使用。標準實作的 [Phase 1 規格與合約](../../spec/tip-phase1.md) 已定案；完整 TiP 流程仍待 Phase 2 實作。
+本目錄集中收錄 AndrewShop 的 Testing in Production（TiP）說明、接受條件與架構設計筆記；相關決策統一收錄於 `docs/decisions`，由下方索引連結。文件供需求討論與確認使用。標準實作的 [Phase 1 規格與合約](../../spec/tip-phase1.md) 已定案；標準 TiP 流程已完成 Phase 2.1～2.7 交付，實際證據與不適用範圍見各階段紀錄。
 
 ## 文件索引
 
@@ -10,6 +10,8 @@
 | [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案且 API 已交付；沒有 Web UI，CLI 由使用者後續追加。 |
 | [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
 | [Phase 2.2 交付紀錄](phase2.2-delivery.md) | HTTP／CLI scoped context、22 筆新增驗證、153 項回歸及後置處理註記。 |
+| [Phase 2.7 交付紀錄](phase2.7-delivery.md) | Storefront 付款／結果、Docker 重建、Edge 全流程與 admin／LiteDB 核對；335 項回歸。 |
+| [Phase 2.6 交付紀錄](phase2.6-delivery.md) | OperationResult、HTTP／CLI／事件出口、結構化 log 與明文 token 清理；327 項回歸。 |
 | [Phase 2.5 交付紀錄](phase2.5-delivery.md) | 事件獨立 scope、System／保存 Order 用途、重送與巢狀／並行隔離；310 項回歸。 |
 | [Phase 2.4 交付紀錄](phase2.4-delivery.md) | 共用受保護寫入、Core 商品／SKU 維護、test Cart／並行隔離；285 項回歸。 |
 | [AC 自動化覆蓋對照](ac-test-coverage.md) | 每條 AC 對應具體測試與尚未驗收範圍，區分部分覆蓋、後續階段與不適用。 |

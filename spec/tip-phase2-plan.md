@@ -13,7 +13,7 @@
 
 ## 階段與驗收
 
-Phase 2.1～2.5 已於 2026-10-18 完成交付；2.6～2.7 尚未交付。模型、白名單、Context 基礎實作與既有付款前移不等同完整流程完成。
+Phase 2.1～2.7 已於 2026-10-18 完成標準流程交付，待 review；各階段的驗證範圍與不適用項目見下方紀錄。模型、白名單、Context 基礎實作與既有付款前移不等同完整流程完成。
 
 | Phase | 相依 | 主要變更與完成條件 | 規格／案例 |
 |---|---|---|---|
@@ -88,8 +88,8 @@ dotnet test src/AndrewDemo.NetConf2023.slnx --nologo
 | 2.3 | 完成，待 review | [交付紀錄](../docs/tip/phase2.3-delivery.md)：create 固定報價／用途與 context、complete 必要驗證、原子庫存／Order／完整封存、防寫與跨分區 ID；solution 191 tests 通過，solution／CLI build 成功。使用者後續授權重建 Common Docker，已備份並保留 DB，網站／API 200；共用效果控制接續 2.4，完整 UI 驗收仍待 2.7。 |
 | 2.4 | 完成，待 review | [交付紀錄](../docs/tip/phase2.4-delivery.md)：共用效果控制、Core 商品／SKU 維護、test Cart、並行交易及雙 test 買方隔離；solution 285 tests 通過。完整出口／事件接續 2.5～2.6；未重建 Docker。 |
 | 2.5 | 完成，待 review | [交付紀錄](../docs/tip/phase2.5-delivery.md)：標準事件獨立 scope、System identity／保存 Order 用途、重送／巢狀／並行及用途 BUG 驗證；solution 310 tests 通過。真實 adapter 不適用，完整出口接續 2.6；未重建 Docker。 |
-| 2.6 | 尚未開始 | — |
-| 2.7 | 尚未開始 | — |
+| 2.6 | 完成，待 review | [交付紀錄](../docs/tip/phase2.6-delivery.md)：統一結果、HTTP headers／錯誤、CLI／事件出口、完整略過 log 與 OAuth token 清理；solution 327 tests 通過，CLI build 成功。Docker／UI 接續 2.7；未重建 Docker。 |
+| 2.7 | 完成，待 review | [交付紀錄](../docs/tip/phase2.7-delivery.md)：CommonStorefront 明確付款與結果摘要；335 項回歸、Docker 重建、Edge 四組付款／會員及庫存拒絕流程、400px 手機主要任務、admin／LiteDB 核對通過。2.6／2.7 依使用者授權一併提交；真實 adapter 與非標準模組依既定範圍不適用。 |
 
 ## 新 Session 起始指令範例
 

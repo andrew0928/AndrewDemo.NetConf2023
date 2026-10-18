@@ -20,6 +20,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     {
         private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _codes = new();
         private readonly MemberService _members;
+        private readonly ILogger<LoginController> _logger;
         private readonly IWebHostEnvironment _environment;
 
         /// <summary>
@@ -27,9 +28,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// </summary>
         /// <param name="environment">目前主機執行環境。</param>
         /// <param name="members">會員與 Token 共用服務。</param>
-        public LoginController(IWebHostEnvironment environment, MemberService members)
+        /// <param name="logger">不包含認證秘密的診斷紀錄。</param>
+        public LoginController(IWebHostEnvironment environment, MemberService members, ILogger<LoginController>? logger = null)
         {
             _members = members;
+            _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<LoginController>.Instance;
             _environment = environment;
         }
 
@@ -71,14 +74,13 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             string code = Guid.NewGuid().ToString("N");
             _codes[code] = token;
-            Console.WriteLine($"[/oauth/authorize] Authorize success: {name}, code: {code}, token: {token}");
+            _logger.LogInformation("OAuth 授權完成 MemberId={MemberId}", member.Id);
 
             if (_environment.IsDevelopment())
             {
                 Response.Headers.Append("X-OAuth-Code", code);
             }
 
-            Console.WriteLine($"[/oauth/authorize] Redirect to: {redirectURL}?code={code}&state={state}");
             return Redirect($"{redirectURL}?code={code}&state={state}");
         }
 
@@ -94,15 +96,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         [Consumes("application/x-www-form-urlencoded")]
         public IActionResult PostToken([FromForm]TokenRequest request)
         {
-            Console.WriteLine($"[/oauth/token] Request Form: [{request}]");
 
             if (!_codes.TryRemove(request.code, out var token))
             {
-                Console.WriteLine($"[/oauth/token] Invalid code: {request.code}");
+                _logger.LogInformation("OAuth token exchange 拒絕：授權碼無效。");
                 return BadRequest();
             }
 
-            Console.WriteLine($"[/oauth/token] Return access-token: {token}");
+            _logger.LogInformation("OAuth token exchange 完成。");
 
             return Ok(new
             {

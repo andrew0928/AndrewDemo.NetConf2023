@@ -5,12 +5,17 @@
 }
 <section>
     <h1 class="page-heading">結帳</h1>
-    <p class="hint-text">第一版以單頁確認為主，付款編號由 storefront demo 自動產生。</p>
+    <p class="hint-text">確認商品與付款方式後送出訂單。此示範商店尚未串接真實金流。</p>
 </section>
 
 @if (Model.ErrorSummary.Errors.Count > 0)
 {
     <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (Model.Operation != null)
+{
+    <partial name="_OperationSummary" model="Model.Operation" />
 }
 
 @if (!Model.Lines.Any())
@@ -39,8 +44,17 @@ else
 
     <section class="panel">
         <h2>確認送單</h2>
-        <p>送出後會建立訂單，第一版 storefront 不提供消費者填寫滿意度與備註。</p>
+        <p>必要檢查通過後才會建立訂單。測試交易同樣需要通過商品與庫存檢查。</p>
         <form method="post">
+            <fieldset aria-describedby="payment-help payment-error">
+                <legend>付款方式</legend>
+                <p id="payment-help" class="hint-text">測試會員或使用測試付款，都會建立測試交易；實際用途以結帳結果為準。</p>
+                <p><input asp-for="PaymentMode" type="radio" id="payment-normal" value="normal" />
+                    <label for="payment-normal">一般示範付款</label></p>
+                <p><input asp-for="PaymentMode" type="radio" id="payment-test" value="test" />
+                    <label for="payment-test">測試付款（不產生真實商業效果）</label></p>
+                <span asp-validation-for="PaymentMode" id="payment-error"></span>
+            </fieldset>
             <div class="page-actions">
                 <button class="button button--primary" type="submit">送出訂單</button>
                 <a class="button button--secondary" href="/cart">返回購物車</a>

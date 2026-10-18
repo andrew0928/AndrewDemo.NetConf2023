@@ -1,3 +1,5 @@
+using AndrewDemo.NetConf2023.Core.Operations;
+using AndrewDemo.NetConf2023.Abstract.Operations;
 using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using Microsoft.Extensions.Logging;
@@ -19,9 +21,10 @@ public static class ExecutionServices
         services.AddScoped<CheckoutContextLoader>();
         services.AddScoped<OrderContextLoader>();
         services.AddScoped<OperationEffects>();
+        services.AddScoped<OperationExecution>();
         services.AddScoped(sp => new ProtectedWriteExecutor(sp.GetRequiredService<IIdentityContext>(),
             sp.GetRequiredService<ITransactionContext>(), sp.GetRequiredService<OperationEffects>(),
-            sp.GetService<ILogger<ProtectedWriteExecutor>>(), sp.GetRequiredService<OrderContextLoader>()));
+            sp.GetService<ILogger<ProtectedWriteExecutor>>(), sp.GetRequiredService<OrderContextLoader>(), sp.GetRequiredService<OperationExecution>()));
         services.AddScoped<ProductMaintenanceService>();
         services.AddScoped<CheckoutService>();
         return services;
@@ -57,6 +60,9 @@ public sealed class ShopOperationScope : IDisposable
 {
     private readonly IServiceScope _scope;
     public IServiceProvider Services => _scope.ServiceProvider;
+    public OperationExecution Execution => Services.GetRequiredService<OperationExecution>();
+    public OperationResult? Complete(OperationOutcome outcome = OperationOutcome.Succeeded) => Execution.Complete(outcome);
+    public OperationResult? Fail(Exception error) => Execution.Fail(error);
     private ShopOperationScope(IServiceScope scope) => _scope = scope;
 
     public static ShopOperationScope Open(IServiceScopeFactory factory, string? token)
@@ -64,6 +70,8 @@ public sealed class ShopOperationScope : IDisposable
         var scope = factory.CreateScope();
         try
         {
+            var execution = scope.ServiceProvider.GetRequiredService<OperationExecution>();
+            execution.Begin();
             var identity = scope.ServiceProvider.GetRequiredService<IdentityContext>();
             if (token != null)
             {
@@ -73,7 +81,14 @@ public sealed class ShopOperationScope : IDisposable
             }
             return new ShopOperationScope(scope);
         }
-        catch { scope.Dispose(); throw; }
+        catch (Exception error)
+        {
+            var execution = scope.ServiceProvider.GetRequiredService<OperationExecution>();
+            execution.InvalidatePurpose();
+            execution.Fail(error);
+            scope.Dispose();
+            throw;
+        }
     }
 
     public void Dispose() => _scope.Dispose();

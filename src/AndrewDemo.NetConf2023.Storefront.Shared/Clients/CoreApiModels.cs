@@ -9,16 +9,19 @@ namespace AndrewDemo.NetConf2023.Storefront.Shared.Clients;
 
 public sealed class CoreApiRequestException : Exception
 {
-    public CoreApiRequestException(HttpStatusCode statusCode, string? body)
+    public CoreApiRequestException(HttpStatusCode statusCode, string? body, ApiOperationSummary? operation = null)
         : base($"Core API request failed: {(int)statusCode} {statusCode}")
     {
         StatusCode = statusCode;
         ResponseBody = body;
+        Operation = operation;
     }
 
     public HttpStatusCode StatusCode { get; }
 
     public string? ResponseBody { get; }
+
+    public ApiOperationSummary? Operation { get; }
 }
 
 public sealed class TokenExchangeResponse
@@ -64,6 +67,7 @@ public sealed class MemberOrdersResponseDto
 
 public sealed class OrderDto
 {
+    public bool IsTest { get; set; }
     public int Id { get; set; }
 
     public Member Buyer { get; set; } = new();
@@ -101,6 +105,9 @@ public sealed class OrderDiscountLineDto
 
 public sealed class CheckoutCreateResponseDto
 {
+    [JsonIgnore]
+    public ApiOperationSummary? Operation { get; set; }
+
     public int TransactionId { get; set; }
 
     public DateTime TransactionStartAt { get; set; }
@@ -112,6 +119,9 @@ public sealed class CheckoutCreateResponseDto
 
 public sealed class CheckoutCompleteResponseDto
 {
+    [JsonIgnore]
+    public ApiOperationSummary? Operation { get; set; }
+
     public int TransactionId { get; set; }
 
     public int PaymentId { get; set; }

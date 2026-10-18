@@ -883,3 +883,7 @@ API spec draft：
 2026-10-18 TiP Phase 2.4 完成：受保護寫入共用執行器、商品／SKU Core 維護、OperationEffects，以及 test Cart／並行交易／雙 test 買方拒絕的精確案例。solution 285 項通過；完整事件／出口／UI 留待 2.5～2.7，未重建 Docker。見 [交付紀錄](tip/phase2.4-delivery.md) 與 [AC 自動化覆蓋對照](tip/ac-test-coverage.md)。
 
 2026-10-18 TiP Phase 2.5 完成：標準 dispatcher 每次派送建立獨立 scope，以 System identity 載入保存 Order 用途，事件效果驗證原快照未遭替換。補齊重送、巢狀／並行、缺 Order／用途 BUG 及履約失敗封存不變；solution 310 項通過。真實商業 adapter 不適用；完整出口與 UI 留待 2.6／2.7。見 [交付紀錄](tip/phase2.5-delivery.md)。
+
+2026-10-18 TiP Phase 2.6 完成：統一 OperationResult、HTTP headers／錯誤映射、CLI／事件結果及完整略過 log，移除 OAuth 明文 token／授權碼診斷輸出。solution 327 項通過，CLI build 成功；2.5 已提交為 `64ced22`。CommonStorefront／Docker／UI 驗收留待 2.7，本輪未重建部署。見 [交付紀錄](tip/phase2.6-delivery.md)。
+
+2026-10-18 TiP Phase 2.7 完成標準流程交付：CommonStorefront 明確一般／測試付款、操作結果與用途呈現；solution 335 項通過，Docker 已重建。Edge 四種會員／付款組合、庫存拒絕流程與 400px 手機主要任務通過，admin／一致性 LiteDB 快照確認正式統計排除 test、只有一般交易扣庫存。2.6／2.7 依使用者授權一併提交；實際驗證與不適用範圍見 [2.7 交付紀錄](tip/phase2.7-delivery.md)。

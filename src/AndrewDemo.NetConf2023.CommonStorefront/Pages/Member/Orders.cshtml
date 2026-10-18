@@ -7,6 +7,11 @@
     <h1 class="page-heading">訂單列表</h1>
 </section>
 
+@if (Model.CheckoutOperation != null)
+{
+    <partial name="_OperationSummary" model="Model.CheckoutOperation" />
+}
+
 @if (Model.ErrorSummary.Errors.Count > 0)
 {
     <partial name="_ErrorSummary" model="Model.ErrorSummary" />
@@ -26,7 +31,7 @@ else
                 <dd>@Model.TotalOrders</dd>
             </div>
             <div class="summary-list__row">
-                <dt>總金額</dt>
+                <dt>購買紀錄總金額（含測試訂單）</dt>
                 <dd>NT$ @Model.TotalAmount</dd>
             </div>
         </dl>
@@ -36,6 +41,7 @@ else
     {
         <section class="panel">
             <h2>訂單 #@order.Id</h2>
+            <p>用途：@(order.IsTest ? "測試訂單" : "一般訂單")</p>
             <p>總額：NT$ @order.TotalPrice</p>
             <p>履約狀態：@order.FulfillmentStatus</p>
             <h3>商品明細</h3>

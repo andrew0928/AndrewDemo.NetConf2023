@@ -305,8 +305,11 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("清空購物車。購物車內的代結帳商品清單會完全歸零回復原狀")]
         public static void ShopFunction_EmptyCart()
         {
-            using var operation = BeginOperation();
-            _cartId = CreateNewCart().Id;
+            RunOperation(() =>
+            {
+                _cartId = CreateNewCart().Id;
+                return true;
+            });
         }
 
         // Cart_AddItem
@@ -315,13 +318,15 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品ID")] int productId,
             [Description("指定加入購物車的商品數量")] int quanty)
         {
-            using var operation = BeginOperation();
-            if (GetProductById(productId) == null)
+            return RunOperation(() =>
             {
-                return false;
-            }
+                if (GetProductById(productId) == null)
+                {
+                    return false;
+                }
 
-            return UpdateCartItemQuantity(productId, quanty);
+                return UpdateCartItemQuantity(productId, quanty);
+            }, value => value);
         }
 
         // Cart_RemoveItem
@@ -330,25 +335,31 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定要從購物車移除的商品ID")] int productId,
             [Description("指定要從購物車移除的商品數量")] int quanty)
         {
-            using var operation = BeginOperation();
-            return UpdateCartItemQuantity(productId, -quanty);
+            return RunOperation(() =>
+            {
+                return UpdateCartItemQuantity(productId, -quanty);
+            }, value => value);
         }
 
         // Cart_EstimatePrice
         [KernelFunction, Description("試算目前購物車的結帳金額 (包含可能發生的折扣)")]
         public static decimal ShopFunction_EstimatePrice()
         {
-            using var operation = BeginOperation();
-            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            return EstimatePrice(cart);
+            return RunOperation(() =>
+            {
+                var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
+                return EstimatePrice(cart);
+            });
         }
 
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
         public static LineItem[] ShopFunction_ShowMyCartItems()
         {
-            using var operation = BeginOperation();
-            var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
-            return cart.LineItems.ToArray();
+            return RunOperation(() =>
+            {
+                var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
+                return cart.LineItems.ToArray();
+            });
         }
 
 
@@ -357,30 +368,35 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Order? ShopFunction_Checkout(
             [Description("建立 Checkout 時指定的付款來源代碼")] int paymentId)
         {
-            using var operation = BeginOperation();
-            var token = _access_token ?? throw new InvalidOperationException("access token not set");
+            return RunOperation(() =>
+            {
+                var token = _access_token ?? throw new InvalidOperationException("access token not set");
                 int checkoutId = CreateCheckoutTransaction(_cartId, token, paymentId);
                 var response = CompleteCheckoutTransactionAsync(checkoutId);
-            while (!response.Wait(1000))
-            {
-                InfoOutput("waiting for payment...");
-            }
+                while (!response.IsCompleted)
+                {
+                    InfoOutput("waiting for payment...");
+                    Thread.Sleep(1000);
+                }
 
-            if (response.Result != null)
-            {
+                if (response.GetAwaiter().GetResult() != null)
+                {
                     _cartId = CreateNewCart().Id;
-                return response.Result;
-            }
+                    return response.GetAwaiter().GetResult();
+                }
 
-            return null;
+                return null;
+            }, value => value != null);
         }
 
         // Product_List
         [KernelFunction, Description("傳回店內所有出售的商品品項資訊")]
         public static Product[] ShopFunction_ListProducts()
         {
-            using var operation = BeginOperation();
-            return GetAllProducts().ToArray();
+            return RunOperation(() =>
+            {
+                return GetAllProducts().ToArray();
+            });
         }
 
         // Product_Get
@@ -388,27 +404,33 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Product? ShopFunction_GetProduct(
             [Description("指定查詢的商品 ID")] int productId)
         {
-            using var operation = BeginOperation();
+            return RunOperation(() =>
+            {
                 return GetProductById(productId);
+            }, value => value != null);
         }
 
         // Member_Get
         [KernelFunction, Description("傳回我 (目前登入) 的個人資訊")]
         public static Member? ShopFunction_GetMyInfo()
         {
-            using var operation = BeginOperation();
-            var token = _access_token ?? throw new InvalidOperationException("access token not set");
-            return GetMemberByToken(token);
+            return RunOperation(() =>
+            {
+                var token = _access_token ?? throw new InvalidOperationException("access token not set");
+                return GetMemberByToken(token);
+            }, value => value != null);
         }
 
         // Member_GetOrders
         [KernelFunction, Description("傳回我 (目前登入) 的過去訂購紀錄")]
         public static Order[] ShopFunction_GetMyOrders()
         {
-            using var operation = BeginOperation();
-            var token = _access_token ?? throw new InvalidOperationException("access token not set");
-            var member = GetMemberByToken(token) ?? throw new InvalidOperationException("member not found");
-            return GetOrdersForMember(member.Id).ToArray();
+            return RunOperation(() =>
+            {
+                var token = _access_token ?? throw new InvalidOperationException("access token not set");
+                var member = GetMemberByToken(token) ?? throw new InvalidOperationException("member not found");
+                return GetOrdersForMember(member.Id).ToArray();
+            });
         }
 
         #endregion

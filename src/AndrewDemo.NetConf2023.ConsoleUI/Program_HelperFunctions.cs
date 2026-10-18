@@ -1,3 +1,5 @@
+using AndrewDemo.NetConf2023.Abstract.Operations;
+using AndrewDemo.NetConf2023.Core.Operations;
 using AndrewDemo.NetConf2023.Core.Contexts;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -68,7 +70,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             ?? throw new ExecutionContextInvalidException("CLI 操作缺少 scope。");
         private static MemberService Members => CurrentOperation.GetRequiredService<MemberService>();
 
-        private static IDisposable BeginOperation()
+        private static OperationLease BeginOperation()
         {
             var scope = ShopOperationScope.Open(OperationServices.GetRequiredService<IServiceScopeFactory>(), _access_token);
             var previous = ActiveOperation.Value;
@@ -78,11 +80,43 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private sealed class OperationLease(ShopOperationScope scope, IServiceProvider? previous) : IDisposable
         {
+            public OperationExecution Execution => scope.Execution;
+
             public void Dispose()
             {
                 ActiveOperation.Value = previous;
                 scope.Dispose();
             }
+        }
+
+        private static T RunOperation<T>(Func<T> action, Func<T, bool>? accepted = null, bool display = true)
+        {
+            using var operation = BeginOperation();
+            try
+            {
+                var value = action();
+                var result = operation.Execution.Complete(accepted == null || accepted(value)
+                    ? OperationOutcome.Succeeded : OperationOutcome.Rejected);
+                if (display) ShowOperationResult(operation.Execution);
+                return value;
+            }
+            catch (Exception error)
+            {
+                operation.Execution.Fail(error);
+                if (display) ShowOperationResult(operation.Execution);
+                throw;
+            }
+        }
+
+        private static void ShowOperationResult(OperationExecution execution)
+        {
+            var result = execution.Result;
+            InfoOutput($"用途：{(result == null ? "未知" : result.IsTestBehavior ? "test" : "normal")}；結果：{execution.Outcome?.ToString().ToLowerInvariant()}；TraceId：{execution.TraceId}");
+            if (execution.Transaction is { } transaction)
+                InfoOutput($"交易：{transaction.Kind.ToString().ToLowerInvariant()}/{transaction.Id}；IsTest：{transaction.IsTest}");
+            if (result != null)
+                foreach (var effect in result.SkippedEffects)
+                    InfoOutput($"略過：{effect.EffectCode} {effect.TargetType}/{effect.TargetId} ({effect.ReasonCode})");
         }
 
         private static Member? GetMemberByToken(string token)
@@ -141,7 +175,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static int CreateCheckoutTransaction(int cartId, string token, int paymentId)
         {
             var cart = Database.Carts.FindById(cartId) ?? throw new ArgumentOutOfRangeException(nameof(cartId));
-            if (!cart.LineItems.Any()) throw new InvalidOperationException("cart is empty");
+            if (!cart.LineItems.Any()) throw new CheckoutRejectedException("cart is empty");
 
             var member = GetMemberByToken(token) ?? throw new ArgumentOutOfRangeException(nameof(token));
             var result = BuildCheckoutService().Create(new CheckoutCreateCommand
@@ -153,7 +187,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (result.Status != CheckoutCreateStatus.Succeeded)
             {
-                throw new InvalidOperationException(result.ErrorMessage ?? "create checkout failed");
+                throw new CheckoutRejectedException(result.ErrorMessage ?? "create checkout failed");
             }
 
             return result.TransactionId;
@@ -164,7 +198,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             var member = RequireCurrentMember();
             var binding = CurrentOperation.GetRequiredService<CheckoutContextLoader>().Bind(transactionId);
             if (binding != CheckoutContextStatus.Bound)
-                throw new InvalidOperationException($"Checkout 無法存取：{binding}");
+                throw new CheckoutRejectedException($"Checkout 無法存取：{binding}");
             var result = await BuildCheckoutService().CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transactionId,
@@ -175,7 +209,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (result.Status != CheckoutCompleteStatus.Succeeded || result.OrderDetail == null)
             {
-                throw new InvalidOperationException(result.ErrorMessage ?? "complete checkout failed");
+                throw new CheckoutRejectedException(result.ErrorMessage ?? "complete checkout failed");
             }
 
             return result.OrderDetail;

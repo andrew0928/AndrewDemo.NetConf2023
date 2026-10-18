@@ -31,3 +31,9 @@
 - When：擷取各路徑的應用 log。
 - Then：任何訊息、結構化屬性或例外輸出均不包含完整 access token；保留不依賴秘密的診斷資訊。
 - 範圍包含 API Program middleware、LoginController 的登入及 token 回應輸出；本次僅追加案例，尚未修改程式。
+
+## Phase 2.6 執行證據（2026-10-18）
+
+本節只補驗收證據，不修改前述定案案例。HTTP-001～017 的標準 Core／API／CLI／事件出口已由 ExecutionScopeTests（含 OperationOutputTests partial）、OrderEventScopeTests 與原有 OperationResultContractTests 覆蓋；完整方法與限制對照見 [2.6 交付紀錄](../../docs/tip/phase2.6-delivery.md)。solution 327 項通過，ConsoleUI build 成功。
+
+維護 HTTP 案例採測試組件專用探針，沒有新增正式維護 API；真實商業 adapter 不適用。HTTP-014 的 409 與固定 code 已驗證；前端重新建立提示、付款選擇與操作結果呈現仍須在 2.7 完成 UI 整合驗收。現有 Docker 尚未包含此批程式；不將自動化出口證據視為 UI／部署完成。

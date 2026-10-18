@@ -24,6 +24,10 @@ else if (Model.Member != null)
                 <dd>@Model.Member.Name</dd>
             </div>
             <div class="summary-list__row">
+                <dt>會員用途</dt>
+                <dd>@(Model.Member.IsTest ? "測試會員" : "一般會員")</dd>
+            </div>
+            <div class="summary-list__row">
                 <dt>商店註記</dt>
                 <dd>@(string.IsNullOrWhiteSpace(Model.Member.ShopNotes) ? "無" : Model.Member.ShopNotes)</dd>
             </div>

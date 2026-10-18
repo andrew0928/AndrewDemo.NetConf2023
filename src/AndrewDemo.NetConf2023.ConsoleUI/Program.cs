@@ -42,13 +42,9 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             InitSK();
             InitShop();
 
-            using (BeginOperation())
-            {
-                if (!UserAuthorize()) return;
-            }
+            if (!RunOperation(UserAuthorize, accepted: value => value, display: false)) return;
 
-            Member member;
-            using (BeginOperation()) member = RequireCurrentMember();
+            var member = RunOperation(RequireCurrentMember, display: false);
             Console.WriteLine($"Hello {member.Name}({member.Id}), Welcome to Andrew's Shop!");
             Console.WriteLine();
 
@@ -84,8 +80,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     try
                     {
-                        using var operation = BeginOperation();
-                        commandProcessors[command](parameters);
+                        RunOperation(() => { commandProcessors[command](parameters); return true; }, display: false);
                         Console.WriteLine();
                     }
                     catch (Exception ex)
@@ -97,9 +92,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     //AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
                     AssistantOutput("請稍待，正在幫您詢問助理店長 (copilot) 中...");
-                    using var operation = BeginOperation();
-                    var result = CopilotAsk(commandline);
-                    Console.WriteLine($"copilot answer > {result}");
+                    try
+                    {
+                        var result = RunOperation(() => CopilotAsk(commandline), display: false);
+                        Console.WriteLine($"copilot answer > {result}");
+                    }
+                    catch (Exception error) { SystemOutput($"Error: {error.Message}"); }
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;

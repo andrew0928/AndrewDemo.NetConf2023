@@ -1,3 +1,6 @@
+using System.Collections.Concurrent;
+using AndrewDemo.NetConf2023.Abstract.Operations;
+using AndrewDemo.NetConf2023.Core.Operations;
 using AndrewDemo.NetConf2023.Core.Effects;
 using System.Net;
 using System.Net.Http.Headers;
@@ -27,12 +30,14 @@ using Microsoft.Extensions.Hosting;
 
 namespace AndrewDemo.NetConf2023.WebContract.Tests;
 
-public sealed class ExecutionScopeTests : IAsyncLifetime
+public sealed partial class ExecutionScopeTests : IAsyncLifetime
 {
     private readonly string _path = Path.Combine(Path.GetTempPath(), $"tip22-{Guid.NewGuid():N}.db");
     private WebApplication _app = null!;
     private HttpClient _client = null!;
     private ShopDatabaseContext _database = null!;
+    private readonly OperationLogCapture _logs = new();
+    private readonly ConcurrentQueue<OperationExecution> _executions = new();
     private string _normalToken = null!;
     private string _testToken = null!;
 
@@ -41,11 +46,13 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
         builder.WebHost.UseUrls("http://127.0.0.1:0");
         builder.Logging.ClearProviders();
+        builder.Logging.AddProvider(_logs);
+        builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
         builder.Host.UseDefaultServiceProvider(options => { options.ValidateScopes = true; options.ValidateOnBuild = true; });
         _database = new ShopDatabaseContext(new ShopDatabaseOptions { ConnectionString = $"Filename={_path};Connection=Direct" });
         builder.Services.AddSingleton<IShopDatabaseContext>(_database);
         builder.Services.AddSingleton(TimeProvider.System);
-        builder.Services.AddSingleton(new TestAllowlist(["test"], []));
+        builder.Services.AddSingleton(new TestAllowlist(["test"], [990001]));
         builder.Services.AddSingleton<MemberService>();
         builder.Services.AddSingleton(new ShopManifest { ShopId = "test" });
         builder.Services.AddSingleton(new DiscountEngine([]));
@@ -64,9 +71,10 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         _app.UseRouting();
         _app.Use(async (http, next) =>
         {
-            // 測試出口觀測 scoped 快照，不新增正式 API headers。
+            // 在正式出口完成後擷取結果；測試專用 header 保留前階段的 context 驗證。
             http.Response.OnStarting(() =>
             {
+                _executions.Enqueue(http.RequestServices.GetRequiredService<OperationExecution>());
                 http.Response.Headers["X-Test-Skipped-Count"] = http.RequestServices.GetRequiredService<OperationEffects>().Skipped.Count.ToString();
                 var snapshot = http.RequestServices.GetRequiredService<TransactionContext>().Current;
                 if (snapshot != null)
@@ -138,6 +146,9 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var response = await Send("/api/checkout/complete", _testToken, "{\"transactionId\":30}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("checkout_recreate_required", await response.Content.ReadAsStringAsync());
+        Assert.Equal("rejected", response.Headers.GetValues("X-Shop-Outcome").Single());
+        Assert.Equal("test", response.Headers.GetValues("X-Shop-Behavior").Single());
+        Assert.False(response.Headers.Contains("X-Shop-Skipped-Effects"));
         Assert.Equal(raw.ToString(), _database.Database.GetCollection("checkout_transactions").FindById(30).ToString());
         Assert.Empty(_database.Orders.FindAll());
     }
@@ -181,6 +192,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var probe = await response.Content.ReadFromJsonAsync<ContextProbe>();
         Assert.Equal(20, probe!.TransactionId);
         Assert.Equal(probe.BoundRequestId, probe.TransactionId);
+        AssertHeaders(response, "test", "succeeded", 20, true);
         Assert.True(probe.TransactionIsTest);
         Assert.True(probe.SameInstances);
     }
@@ -196,7 +208,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
     {
         var response = await Send("/api/context-probe/complete", _testToken, json);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
+        AssertHeaders(response, "test", "rejected");
         Assert.Empty(_database.Orders.FindAll());
     }
 
@@ -222,7 +234,9 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/context-probe/complete");
         request.Headers.TryAddWithoutValidation("Authorization", authorization);
         request.Content = JsonContent.Create(new { transactionId = 20 });
-        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.SendAsync(request)).StatusCode);
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        AssertHeaders(response, null, "rejected");
     }
 
     [Fact]
@@ -234,6 +248,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var response = await Send("/api/context-probe/complete", "bad-purpose", "{\"transactionId\":20}");
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Contains("execution_context_invalid", await response.Content.ReadAsStringAsync());
+        AssertHeaders(response, null, "failed");
         Assert.False(response.Headers.Contains("X-Shop-Behavior"));
         Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
         Assert.Empty(_database.Orders.FindAll());
@@ -249,6 +264,9 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var response = await Send("/api/checkout/complete", _testToken, "{\"transactionId\":20}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("checkout_recreate_required", await response.Content.ReadAsStringAsync());
+        Assert.Equal("rejected", response.Headers.GetValues("X-Shop-Outcome").Single());
+        Assert.Equal("test", response.Headers.GetValues("X-Shop-Behavior").Single());
+        Assert.False(response.Headers.Contains("X-Shop-Skipped-Effects"));
         Assert.NotNull(raw.FindById(20));
         Assert.Empty(_database.Orders.FindAll());
     }
@@ -276,6 +294,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var response = await Send("/api/context-probe/complete", _testToken, "{\"transactionId\":20}");
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Contains("execution_context_invalid", await response.Content.ReadAsStringAsync());
+        AssertHeaders(response, null, "failed");
         Assert.Empty(_database.Orders.FindAll());
     }
 
@@ -307,6 +326,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
             Assert.Equal(id, probe!.TransactionId);
             Assert.Equal(test, probe.IdentityIsTest);
             Assert.Equal(test, probe.TransactionIsTest);
+            AssertHeaders(response, test ? "test" : "normal", "succeeded", id, test);
         }));
         var next = await (await Send("/api/context-probe/20", _normalToken)).Content.ReadFromJsonAsync<ContextProbe>();
         Assert.Null(next!.TransactionId);
@@ -394,6 +414,7 @@ public sealed class ExecutionScopeTests : IAsyncLifetime
         var protectedBefore = ProtectedDocuments();
         var response = await Send("/api/checkout/complete", token, $"{{\"transactionId\":{checkoutId}}}");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        AssertHeaders(response, "test", "rejected");
         Assert.False(response.Headers.Contains("X-Test-Context-Id"));
         Assert.Equal("0", response.Headers.GetValues("X-Test-Skipped-Count").Single());
         Assert.Empty(_database.Orders.FindAll()); Assert.Empty(_database.ArchivedCheckoutTransactions.FindAll());

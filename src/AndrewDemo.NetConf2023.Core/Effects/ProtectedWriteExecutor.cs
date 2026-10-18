@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Operations;
 using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
 using AndrewDemo.NetConf2023.Abstract.Operations;
@@ -9,7 +10,7 @@ namespace AndrewDemo.NetConf2023.Core.Effects;
 
 /// <summary>標準流程的效果邊界；呼叫端先完成驗證，再依指定來源執行或略過寫入。</summary>
 public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransactionContext transaction,
-    OperationEffects effects, ILogger? logger = null, OrderContextLoader? orders = null)
+    OperationEffects effects, ILogger? logger = null, OrderContextLoader? orders = null, OperationExecution? operation = null)
 {
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
@@ -58,6 +59,11 @@ public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransacti
             return;
         }
         effects.Record(effect);
+        if (operation != null)
+        {
+            operation.RecordSkipped(effect, identitySnapshot, transactionSnapshot, requestedChange);
+            return;
+        }
         _logger.LogInformation(
             "TiP 略過 {EffectCode}，{TargetType}/{TargetId}，原因 {ReasonCode}；身分 {IdentityKind}/{MemberId}；交易 {TransactionKind}/{TransactionId}/{TransactionIsTest}；要求 {RequestedChange}",
             effect.EffectCode, effect.TargetType, effect.TargetId, effect.ReasonCode,

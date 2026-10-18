@@ -23,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.CommonStorefront\AndrewDemo.NetConf2023.CommonStorefront.csproj" />
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.API\AndrewDemo.NetConf2023.API.csproj" />
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.Storefront.Shared\AndrewDemo.NetConf2023.Storefront.Shared.csproj" />
   </ItemGroup>

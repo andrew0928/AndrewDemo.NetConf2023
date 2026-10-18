@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Operations;
 using System.Collections.Concurrent;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
 using AndrewDemo.NetConf2023.Abstract.Operations;
@@ -98,6 +99,9 @@ public sealed class OrderEventScopeTests : IDisposable
             Assert.Equal(1, h.Transaction.Current.Id); Assert.Equal(isTest, h.Transaction.Current.IsTest);
             Assert.Equal(cancelled, h.Cancelled); Assert.True(h.Disposed);
             Assert.Equal(isTest ? 2 : 0, h.Effects.Skipped.Count);
+            Assert.Equal(isTest, h.Execution.Result!.IsTestBehavior);
+            Assert.Equal(OperationOutcome.Succeeded, h.Execution.Result.Outcome);
+            Assert.Equal(isTest ? 2 : 0, h.Execution.Result.SkippedEffects.Count);
         });
         Assert.Equal(isTest ? 0 : 4, _state.RealEffects);
         Assert.Equal(4, _state.Validations);
@@ -111,6 +115,9 @@ public sealed class OrderEventScopeTests : IDisposable
             Assert.Equal(TransactionKind.Order, entry.Fields["TransactionKind"]);
             Assert.Equal(1, entry.Fields["TransactionId"]); Assert.Equal(true, entry.Fields["TransactionIsTest"]);
             Assert.Equal("test_behavior", entry.Fields["ReasonCode"]);
+            Assert.Equal("test", entry.Fields["ShopId"]);
+            Assert.Equal(OperationOutcome.Succeeded, entry.Fields["Outcome"]);
+            Assert.Contains(handlers, h => h.Execution.TraceId == (string)entry.Fields["TraceId"]!);
         });
     }
 
@@ -229,6 +236,7 @@ public sealed class OrderEventScopeTests : IDisposable
         Assert.Equal(0, _state.Validations); Assert.Equal(0, _state.RealEffects);
         var handler = Assert.Single(_state.Handlers); Assert.Empty(handler.Effects.Skipped); Assert.True(handler.Disposed);
         Assert.Contains(_logs.Entries, x => x.Level == LogLevel.Error);
+        Assert.Null(handler.Execution.Result); Assert.Equal(OperationOutcome.Failed, handler.Execution.Outcome);
     }
 
     [Theory]
@@ -241,6 +249,7 @@ public sealed class OrderEventScopeTests : IDisposable
             () => throw new UnauthorizedAccessException("拒絕"), () => Interlocked.Increment(ref _state.RealEffects));
         Assert.Throws<UnauthorizedAccessException>(() => Send(1));
         Assert.Empty(Assert.Single(_state.Handlers).Effects.Skipped); Assert.Equal(0, _state.RealEffects);
+        Assert.Equal(OperationOutcome.Rejected, Assert.Single(_state.Handlers).Execution.Result!.Outcome);
     }
 
     [Theory]
@@ -288,8 +297,30 @@ public sealed class OrderEventScopeTests : IDisposable
         using var provider = Services().BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
         var dispatcher = provider.GetRequiredService<IOrderEventDispatcher>();
         Seed(1, true); dispatcher.Dispatch(new OrderCompletedEvent { OrderId = 1 });
-        Assert.Empty(_state.Handlers); Assert.Empty(_logs.Entries);
+        Assert.Empty(_state.Handlers); Assert.DoesNotContain(_logs.Entries, x => x.Fields.ContainsKey("EffectCode"));
         Assert.Throws<ExecutionContextInvalidException>(() => dispatcher.Dispatch(new OrderCompletedEvent { OrderId = 99 }));
+    }
+
+    [Fact]
+    public void EventResult_IsReturnedDirectly_AndFailureRetainsEarlierEffects()
+    {
+        Seed(1, true);
+        var dispatcher = (DefaultOrderEventDispatcher)Dispatcher;
+        var result = dispatcher.DispatchWithResult(new OrderCompletedEvent { OrderId = 1 });
+        Assert.True(result.IsTestBehavior); Assert.Equal(OperationOutcome.Succeeded, result.Outcome);
+        Assert.Equal(2, result.SkippedEffects.Count);
+        var trace = Assert.Single(_state.Handlers).Execution.TraceId;
+        _state.Process = (handler, id) => { handler.RunEffects(id); throw new IOException("後續失敗"); };
+        Assert.Throws<IOException>(() => dispatcher.DispatchWithResult(new OrderCancelledEvent { OrderId = 1 }));
+        var failed = Assert.Single(_state.Handlers, x => x.Execution.TraceId != trace);
+        Assert.True(failed.Execution.Result!.IsTestBehavior);
+        Assert.Equal(OperationOutcome.Failed, failed.Execution.Result.Outcome);
+        Assert.Equal(2, failed.Execution.Result.SkippedEffects.Count);
+        var logs = _logs.Entries.Where(x => x.Fields.ContainsKey("EffectCode") && (string)x.Fields["TraceId"]! == failed.Execution.TraceId).ToArray();
+        Assert.Equal(2, logs.Length);
+        Assert.All(logs, entry => Assert.Equal(OperationOutcome.Failed, entry.Fields["Outcome"]));
+        Assert.Equal(OperationOutcome.Succeeded, result.Outcome);
+        Assert.Equal(0, _state.RealEffects);
     }
 
     private sealed class State
@@ -307,11 +338,12 @@ public sealed class OrderEventScopeTests : IDisposable
         public ITransactionContext Transaction { get; }
         public ProtectedWriteExecutor Writes { get; }
         public OperationEffects Effects { get; }
+        public OperationExecution Execution { get; }
         public bool Disposed { get; private set; }
         public bool Cancelled { get; private set; }
-        public Handler(State state, IIdentityContext identity, ITransactionContext transaction, ProtectedWriteExecutor writes, OperationEffects effects)
+        public Handler(State state, IIdentityContext identity, ITransactionContext transaction, ProtectedWriteExecutor writes, OperationEffects effects, OperationExecution execution)
         {
-            _state = state; Identity = identity; Transaction = transaction; Writes = writes; Effects = effects;
+            _state = state; Execution = execution; Identity = identity; Transaction = transaction; Writes = writes; Effects = effects;
             Assert.Equal(IdentityKind.System, identity.Current.Kind);
             Assert.Equal(TransactionKind.Order, transaction.Current!.Kind);
             Assert.Empty(effects.Skipped); state.Handlers.Add(this);

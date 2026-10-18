@@ -86,3 +86,7 @@
 ## Phase 2.5 自動化驗證證據（2026-10-18）
 
 FLOW-209、210、304～306 已以正式 DefaultOrderEventDispatcher、獨立 DI scope 與隔離 LiteDB 驗證；新增 24 項事件整合與 1 項 Core 防繞過案例，solution 共 310 項通過。FLOW-307 以可計數替身驗證效果邊界；真實付款／出貨／事件統計 adapter 仍不存在，標示不適用。舊 IsTest 完全缺欄位按既定 false 規則；明確 null／錯誤型別、缺 Order 或已載入 context 遭替換為 BUG。既定契約不變；詳細方法與剩餘出口工作見 [2.5 交付](../../docs/tip/phase2.5-delivery.md)。
+
+## Phase 2.7 部署驗證證據（2026-10-18）
+
+既有 Given／When／Then 不變。solution 335 項通過，包含新增 8 項 Storefront PageModel／client 測試。重建 Common API／Storefront images 後，依使用者指定以 Edge InPrivate 操作四組會員／付款、庫存不足拒絕與 test Cart 增刪。搭配 admin 唯讀 API 及停止 writer 後的 LiteDB 快照，確認 FLOW-101～104、201～204、302、308 的部署行為；實際部署商品單價 18，與隔離自動化案例的 100 元 fixture 分開記錄。原有訂單未變，庫存只扣一般交易，測試訂單不增加正式統計。完整數值、命令、工具與適用範圍見 [2.7 交付](../../docs/tip/phase2.7-delivery.md)。FLOW-307 真實 adapter 仍不適用；不能把全部 AC 宣稱為 unit test。

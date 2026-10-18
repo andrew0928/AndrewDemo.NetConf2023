@@ -130,3 +130,8 @@
 - When: 檢視 host 設定與實際呼叫拓樸
 - Then: storefront server side 直接呼叫內部 backend service URL
 - And: 不應透過對外 Front Door URL 再回呼 `/api`
+
+
+## TiP Phase 2.7 手機尺寸補驗（2026-10-18）
+
+依使用者指定使用 Edge，環境未提供 agent-browser，因此不宣稱執行該工具或重跑全套 baseline。Edge DevTools Responsive 400 × 611 CSS px 已完成 TC-CS-012 的主要任務：商品列表、詳細頁、購物車、付款選擇、送單及結果呈現，不需水平捲動。補驗數量輸入、付款 radio、Tab 到送單及 Return 提交；focus 可見，非 TC-CS-010 全站純鍵盤覆蓋。成功結果保留 test／succeeded／inventory.deduct，Checkout #9 與 Order #8 分別正確顯示。證據、資料核對及適用限制見 [TiP 2.7 交付](../../docs/tip/phase2.7-delivery.md)。
