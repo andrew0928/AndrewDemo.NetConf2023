@@ -269,6 +269,18 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
 #pragma warning restore CS0618
     }
 
+    [Fact]
+    public void OrderEffect_RejectsManuallyBoundContextWithoutPersistedLoad()
+    {
+        _identity.Initialize(IdentitySnapshot.System);
+        _transaction.Bind(new(TransactionKind.Order, 1, false));
+        var invoked = false;
+        Assert.Throws<ExecutionContextInvalidException>(() => Writes.ForOrder(1, "shipment.create", "order", "1", "測試替身",
+            () => invoked = true, () => invoked = true));
+        Assert.False(invoked); Assert.Empty(_effects.Skipped);
+        Assert.Contains(_logger.Entries, x => x.Level == LogLevel.Error);
+    }
+
     private CheckoutService Checkout(OperationEffects? effects = null, TransactionContext? transaction = null) => new(Context,
         new DiscountEngine([]), new NullDispatcher(), new DefaultProductService(Context), new ShopManifest { ShopId = "test" },
         FixedTimeProvider, transactionContext: transaction, effects: effects, logger: _logger);

@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Core.Products;
 using Microsoft.Extensions.Logging;
 using AndrewDemo.NetConf2023.Core.Effects;
@@ -16,10 +17,11 @@ public static class ExecutionServices
         services.AddScoped<TransactionContext>();
         services.AddScoped<ITransactionContext>(sp => sp.GetRequiredService<TransactionContext>());
         services.AddScoped<CheckoutContextLoader>();
+        services.AddScoped<OrderContextLoader>();
         services.AddScoped<OperationEffects>();
         services.AddScoped(sp => new ProtectedWriteExecutor(sp.GetRequiredService<IIdentityContext>(),
             sp.GetRequiredService<ITransactionContext>(), sp.GetRequiredService<OperationEffects>(),
-            sp.GetService<ILogger<ProtectedWriteExecutor>>()));
+            sp.GetService<ILogger<ProtectedWriteExecutor>>(), sp.GetRequiredService<OrderContextLoader>()));
         services.AddScoped<ProductMaintenanceService>();
         services.AddScoped<CheckoutService>();
         return services;

@@ -43,7 +43,6 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static TimeProvider CurrentTimeProvider { get; } = TimeProviderFactory.Create(new TimeOptions());
 
         private static IProductService ProductService => new DefaultProductService(Database);
-        private static IOrderEventDispatcher OrderEventDispatcher { get; } = new DefaultOrderEventDispatcher();
 
         private static ServiceProvider OperationServices { get; set; } = null!;
         private static readonly AsyncLocal<IServiceProvider?> ActiveOperation = new();
@@ -56,7 +55,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             services.AddSingleton(CurrentTimeProvider);
             services.AddSingleton(DiscountEngineService);
             services.AddSingleton<IProductService>(ProductService);
-            services.AddSingleton<IOrderEventDispatcher>(OrderEventDispatcher);
+            services.AddSingleton<IOrderEventDispatcher, DefaultOrderEventDispatcher>();
             services.AddSingleton(_ => new AndrewDemo.NetConf2023.Core.Testing.TestAllowlist());
             services.AddLogging(builder => builder.AddConsole());
             services.AddSingleton<MemberService>();

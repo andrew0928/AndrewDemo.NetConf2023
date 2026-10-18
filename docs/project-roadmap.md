@@ -881,3 +881,5 @@ API spec draft：
 2026-10-18 TiP Phase 2.3 完成：create 固定用途、付款與報價，complete 沿用保存內容並驗證商品／SKU／庫存；正式扣減、test 略過並留證據。Order、完整終態封存與作用中移除原子提交，補上用途／封存防寫、跨分區 ID、rollback 與併發驗證；solution 191 tests 通過，solution／CLI build 成功。Docker 未重建；後續接續 2.4 共用效果控制。詳見 [2.3 交付紀錄](tip/phase2.3-delivery.md)。
 
 2026-10-18 TiP Phase 2.4 完成：受保護寫入共用執行器、商品／SKU Core 維護、OperationEffects，以及 test Cart／並行交易／雙 test 買方拒絕的精確案例。solution 285 項通過；完整事件／出口／UI 留待 2.5～2.7，未重建 Docker。見 [交付紀錄](tip/phase2.4-delivery.md) 與 [AC 自動化覆蓋對照](tip/ac-test-coverage.md)。
+
+2026-10-18 TiP Phase 2.5 完成：標準 dispatcher 每次派送建立獨立 scope，以 System identity 載入保存 Order 用途，事件效果驗證原快照未遭替換。補齊重送、巢狀／並行、缺 Order／用途 BUG 及履約失敗封存不變；solution 310 項通過。真實商業 adapter 不適用；完整出口與 UI 留待 2.6／2.7。見 [交付紀錄](tip/phase2.5-delivery.md)。

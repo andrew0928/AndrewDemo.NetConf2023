@@ -82,3 +82,7 @@
 ## Phase 2.4 自動化驗證證據（2026-10-18）
 
 既有 Given／When／Then 不變。FLOW-301～303 的 Core／HTTP 自動化已補齊，新增雙 test 買方的 FLOW-205 精確情境；FLOW-307 的真實付款／出貨／事件統計 adapter 不存在，標示不適用。solution 共 285 項通過（本次新增 Core 20、HTTP／scope 3）；具體測試方法與限制見 [2.4 交付](../../docs/tip/phase2.4-delivery.md) 及 [AC 對照](../../docs/tip/ac-test-coverage.md)。HTTP headers／完整 log 仍在 2.6，事件 scope 在 2.5，UI 在 2.7，不能將本紀錄視為全部 AC 通過。
+
+## Phase 2.5 自動化驗證證據（2026-10-18）
+
+FLOW-209、210、304～306 已以正式 DefaultOrderEventDispatcher、獨立 DI scope 與隔離 LiteDB 驗證；新增 24 項事件整合與 1 項 Core 防繞過案例，solution 共 310 項通過。FLOW-307 以可計數替身驗證效果邊界；真實付款／出貨／事件統計 adapter 仍不存在，標示不適用。舊 IsTest 完全缺欄位按既定 false 規則；明確 null／錯誤型別、缺 Order 或已載入 context 遭替換為 BUG。既定契約不變；詳細方法與剩餘出口工作見 [2.5 交付](../../docs/tip/phase2.5-delivery.md)。

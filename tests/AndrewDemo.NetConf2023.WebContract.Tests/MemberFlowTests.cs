@@ -66,7 +66,7 @@ public sealed class MemberFlowTests : IDisposable
         {
             Token = "contradictory", MemberId = member.Id, IsTest = false, Expire = DateTime.MaxValue
         });
-        var checkout = new CheckoutService(_database, new DiscountEngine([]), new DefaultOrderEventDispatcher(),
+        var checkout = new CheckoutService(_database, new DiscountEngine([]), new StubOrderEventDispatcher(),
             new DefaultProductService(_database), new ShopManifest { ShopId = "default" }, TimeProvider.System);
         var controller = new CheckoutController(checkout, _members)
         {

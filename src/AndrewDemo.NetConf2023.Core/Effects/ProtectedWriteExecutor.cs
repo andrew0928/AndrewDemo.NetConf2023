@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Orders;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
 using AndrewDemo.NetConf2023.Abstract.Operations;
 using AndrewDemo.NetConf2023.Core.Contexts;
@@ -8,7 +9,7 @@ namespace AndrewDemo.NetConf2023.Core.Effects;
 
 /// <summary>標準流程的效果邊界；呼叫端先完成驗證，再依指定來源執行或略過寫入。</summary>
 public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransactionContext transaction,
-    OperationEffects effects, ILogger? logger = null)
+    OperationEffects effects, ILogger? logger = null, OrderContextLoader? orders = null)
 {
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
@@ -32,6 +33,16 @@ public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransacti
         // CheckoutService 已在同一資料庫交易內驗證全部商品與庫存；此處不能重新套用會員用途。
         Execute(snapshot.IsTest, identity.Current, snapshot, effectCode, targetType, targetId,
             requestedChange, () => { }, write);
+    }
+
+    /// <summary>事件效果以保存的 Order 為準；System 的正式身分不解除 test 限制。</summary>
+    public void ForOrder(int orderId, string effectCode, string targetType, string targetId,
+        object requestedChange, Action validate, Action write)
+    {
+        if (orders == null) throw ContextError("事件效果缺少 Order 載入邊界。");
+        var snapshot = orders.RequireCurrent(orderId);
+        Execute(snapshot.IsTest, identity.Current, snapshot, effectCode, targetType, targetId,
+            requestedChange, validate, write);
     }
 
     private void Execute(bool isTest, IdentitySnapshot identitySnapshot, TransactionSnapshot? transactionSnapshot,

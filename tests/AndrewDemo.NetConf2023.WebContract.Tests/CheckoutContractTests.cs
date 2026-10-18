@@ -68,7 +68,7 @@ public sealed class CheckoutContractTests
             {
                 ["_id"] = 42, ["MemberId"] = member.Id, ["CartId"] = 11
             });
-            var service = new CheckoutService(database, new DiscountEngine([]), new DefaultOrderEventDispatcher(),
+            var service = new CheckoutService(database, new DiscountEngine([]), new StubOrderEventDispatcher(),
                 new DefaultProductService(database), new ShopManifest { ShopId = "default" }, TimeProvider.System);
             var controller = new CheckoutController(service, new MemberService(database, new AndrewDemo.NetConf2023.Core.Testing.TestAllowlist(), TimeProvider.System))
             {

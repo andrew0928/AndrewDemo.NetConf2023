@@ -359,7 +359,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             return new CheckoutService(
                 Context,
                 new DiscountEngine(enabledRules),
-                new DefaultOrderEventDispatcher(),
+                new StubOrderEventDispatcher(),
                 new DefaultProductService(Context),
                 manifest,
                 FixedTimeProvider);
