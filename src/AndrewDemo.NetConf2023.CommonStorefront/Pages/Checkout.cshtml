@@ -5,7 +5,7 @@
 }
 <section>
     <h1 class="page-heading">結帳</h1>
-    <p class="hint-text">確認商品與付款方式後送出訂單。此示範商店尚未串接真實金流。</p>
+    <p class="hint-text">確認商品與 PaymentID 後送出訂單。此示範商店尚未串接真實金流。</p>
 </section>
 
 @if (Model.ErrorSummary.Errors.Count > 0)
@@ -46,15 +46,14 @@ else
         <h2>確認送單</h2>
         <p>必要檢查通過後才會建立訂單。測試交易同樣需要通過商品與庫存檢查。</p>
         <form method="post">
-            <fieldset aria-describedby="payment-help payment-error">
-                <legend>付款方式</legend>
-                <p id="payment-help" class="hint-text">測試會員或使用測試付款，都會建立測試交易；實際用途以結帳結果為準。</p>
-                <p><input asp-for="PaymentMode" type="radio" id="payment-normal" value="normal" />
-                    <label for="payment-normal">一般示範付款</label></p>
-                <p><input asp-for="PaymentMode" type="radio" id="payment-test" value="test" />
-                    <label for="payment-test">測試付款（不產生真實商業效果）</label></p>
-                <span asp-validation-for="PaymentMode" id="payment-error"></span>
-            </fieldset>
+            <div class="field">
+                <label asp-for="PaymentId">PaymentID（模擬卡號）</label>
+                <input asp-for="PaymentId" type="text" inputmode="numeric" autocomplete="off" required
+                       placeholder="例如 123456" aria-describedby="payment-help payment-test-help payment-error" />
+                <p id="payment-help" class="hint-text">僅供模擬，請勿輸入真實信用卡號。</p>
+                <p id="payment-test-help" class="hint-text">預設測試 PaymentID：990001。系統會依付款 ID 判定；測試會員或使用測試 ID 都會建立測試交易，不產生真實商業效果。實際用途以結帳結果為準。</p>
+                <span asp-validation-for="PaymentId" id="payment-error"></span>
+            </div>
             <div class="page-actions">
                 <button class="button button--primary" type="submit">送出訂單</button>
                 <a class="button button--secondary" href="/cart">返回購物車</a>

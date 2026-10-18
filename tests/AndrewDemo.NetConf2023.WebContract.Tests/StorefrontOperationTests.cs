@@ -1,4 +1,8 @@
 using System.Net;
+using System.Globalization;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Binders;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Primitives;
 using System.Text;
 using System.Text.Json;
 using AndrewDemo.NetConf2023.CommonStorefront.Pages;
@@ -15,14 +19,17 @@ namespace AndrewDemo.NetConf2023.WebContract.Tests;
 public sealed class StorefrontOperationTests
 {
     [Theory]
-    [InlineData("normal", "normal", 0)]
-    [InlineData("test", "test", 990001)]
-    [InlineData("normal", "test", 0)]
-    public async Task Checkout_UsesExplicitPaymentAndApiPurpose_AndShowsActualOrderId(string mode, string behavior, int payment)
+    [InlineData(0, "normal")]
+    [InlineData(123456, "normal")]
+    [InlineData(990001, "test")]
+    [InlineData(0, "test")]
+    [InlineData(int.MinValue, "normal")]
+    [InlineData(int.MaxValue, "normal")]
+    public async Task Checkout_UsesExplicitPaymentAndApiPurpose_AndShowsActualOrderId(int payment, string behavior)
     {
         using var handler = new ApiHandler(HttpStatusCode.OK, behavior);
         using var http = new HttpClient(handler) { BaseAddress = new("https://test.invalid") };
-        var (page, session) = Page(new CoreApiClient(http)); page.PaymentMode = mode;
+        var (page, session) = Page(new CoreApiClient(http)); page.PaymentId = payment;
         Assert.Equal("/member/orders", Assert.IsType<RedirectResult>(await page.OnPostAsync(default)).Url);
         Assert.Null(session.GetCartId());
         Assert.Contains("訂單 99", (string)page.TempData["NotificationMessage"]!);
@@ -44,9 +51,10 @@ public sealed class StorefrontOperationTests
     {
         using var handler = new ApiHandler((HttpStatusCode)status, status == 500 ? null : "test");
         using var http = new HttpClient(handler) { BaseAddress = new("https://test.invalid") };
-        var (page, session) = Page(new CoreApiClient(http)); page.PaymentMode = "test";
+        var (page, session) = Page(new CoreApiClient(http)); page.PaymentId = 990001;
         Assert.IsType<PageResult>(await page.OnPostAsync(default));
         Assert.Equal(11, session.GetCartId());
+        Assert.Equal(990001, page.PaymentId);
         Assert.Contains(message, Assert.Single(page.ErrorSummary.Errors));
         Assert.Equal(outcome, page.Operation!.Outcome);
         if (status == 500) Assert.Null(page.Operation.IsTestBehavior);
@@ -67,15 +75,30 @@ public sealed class StorefrontOperationTests
         Assert.Null(partial.Transaction); Assert.Null(partial.IsTestBehavior); Assert.Equal("failed", partial.Outcome);
     }
 
-    [Fact]
-    public async Task InvalidPaymentSelection_DoesNotCallCheckout()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("not-a-number")]
+    [InlineData("1.5")]
+    [InlineData("2147483648")]
+    public async Task InvalidOrMissingPaymentId_DoesNotCallCheckout(string? input)
     {
         using var handler = new ApiHandler(HttpStatusCode.OK, "test");
         using var http = new HttpClient(handler) { BaseAddress = new("https://test.invalid") };
-        var (page, _) = Page(new CoreApiClient(http)); page.PaymentMode = "arbitrary";
-        page.ModelState.AddModelError("PaymentMode", "請選擇付款方式");
+        var (page, session) = Page(new CoreApiClient(http));
+        var metadata = new EmptyModelMetadataProvider().GetMetadataForProperty(typeof(CheckoutModel), nameof(CheckoutModel.PaymentId));
+        var form = new Dictionary<string, StringValues>();
+        if (input != null) form.Add("PaymentId", input);
+        var binding = DefaultModelBindingContext.CreateBindingContext(page.PageContext,
+            new FormValueProvider(BindingSource.Form, new FormCollection(form), CultureInfo.InvariantCulture), metadata, null, "PaymentId");
+        await new SimpleTypeModelBinder(typeof(int?), NullLoggerFactory.Instance).BindModelAsync(binding);
+        page.PaymentId = binding.Result.Model as int?;
         Assert.IsType<PageResult>(await page.OnPostAsync(default));
         Assert.DoesNotContain(handler.Requests, x => x.Path.StartsWith("/api/checkout"));
+        Assert.Equal(11, session.GetCartId());
+        Assert.Contains("PaymentID", Assert.Single(page.ErrorSummary.Errors));
+        Assert.Contains("整數", Assert.Single(page.ModelState["PaymentId"]!.Errors).ErrorMessage);
+        if (input != null) Assert.Equal(input, page.ModelState["PaymentId"]!.AttemptedValue);
     }
 
     private static (CheckoutModel, StorefrontSessionAccessor) Page(CoreApiClient client)

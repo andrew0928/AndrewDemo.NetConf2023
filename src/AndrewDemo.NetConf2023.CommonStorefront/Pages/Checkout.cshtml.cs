@@ -19,9 +19,8 @@ public sealed class CheckoutModel : AuthenticatedPageModel
     }
 
     [BindProperty]
-    [Required]
-    [RegularExpression("^(normal|test)$", ErrorMessage = "請選擇一般示範付款或測試付款。")]
-    public string PaymentMode { get; set; } = "normal";
+    [Required(ErrorMessage = "請輸入 PaymentID（模擬卡號）。")]
+    public int? PaymentId { get; set; }
 
     public ApiOperationSummary? Operation { get; private set; }
 
@@ -63,16 +62,18 @@ public sealed class CheckoutModel : AuthenticatedPageModel
             return RedirectToLogin();
         }
 
-        if (!ModelState.IsValid)
+        if (!ModelState.IsValid || !PaymentId.HasValue)
         {
-            ErrorSummary.Errors.Add("請選擇一般示範付款或測試付款。");
+            const string message = "請輸入有效的整數 PaymentID（模擬卡號）。";
+            if (ModelState.TryGetValue(nameof(PaymentId), out var entry)) entry.Errors.Clear();
+            ModelState.AddModelError(nameof(PaymentId), message);
+            ErrorSummary.Errors.Add(message);
             return Page();
         }
 
         try
         {
-            var paymentId = PaymentMode == "test" ? 990001 : 0;
-            var createResult = await _coreApiClient.CreateCheckoutAsync(AccessToken, CurrentCartId.Value, paymentId, cancellationToken);
+            var createResult = await _coreApiClient.CreateCheckoutAsync(AccessToken, CurrentCartId.Value, PaymentId.Value, cancellationToken);
 
             var completeResult = await _coreApiClient.CompleteCheckoutAsync(AccessToken, new CompleteCheckoutRequestDto
             {
@@ -93,7 +94,7 @@ public sealed class CheckoutModel : AuthenticatedPageModel
         {
             Operation = error.Operation;
             ErrorSummary.Errors.Add(error.StatusCode == HttpStatusCode.Conflict && IsRecreateRequired(error.ResponseBody)
-                ? "這筆結帳資料已不適用，請重新確認購物車與付款選擇，再送出以建立新的結帳。"
+                ? "這筆結帳資料已不適用，請重新確認購物車與 PaymentID，再送出以建立新的結帳。"
                 : error.StatusCode == HttpStatusCode.BadRequest
                     ? "結帳遭拒絕，請確認商品與庫存後再試。"
                     : "結帳目前無法完成，請稍後再試。");

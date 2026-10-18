@@ -68,3 +68,5 @@ Green 階段實測：白名單與 Context 的 21 項案例全部轉綠；全套 
 已確認 create 時固定獨立金額與交易明細，終態完整移至 archived_checkout_transactions 並凍結；Schema 已補上 State、TotalPrice、ProductLines／DiscountLines，商品名稱／描述／規格不複製至 Checkout。正式 [生命週期規格](../../spec/tip-checkout-lifecycle.md) 與 [案例](../../spec/testcases/tip-checkout-lifecycle.md) 已同步，服務執行留 Phase 2。
 
 2026-10-18：Name 白名單規格、實作、測試與本機 API 部署已完成，見 [交付紀錄](member-name-allowlist-delivery.md)。
+
+付款 UI 後續改為直接輸入 PaymentID，見 [交付紀錄](payment-id-ui-delivery.md)。

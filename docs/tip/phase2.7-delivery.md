@@ -62,3 +62,7 @@ docker compose -f compose/common.site-dev.compose.yaml build common-api common-s
 - 若自行重建容器，仍需提供既有 `SHOP_ADMIN_ACCESS_TOKEN`；未設定時 admin API 依契約停用。一般交易測試已實際改變本機庫存，未回滾這些驗收資料。
 
 真實付款／出貨／事件統計 adapter 不存在，標示不適用；PetShop 的 AC-007／008／012／015 與 AppleBTS TiP 不在本輪。完整 AC 邊界見 [覆蓋對照](ac-test-coverage.md)。
+
+## 後續付款輸入調整
+
+上述 radio 操作為本階段交付時的歷史證據。使用者後續要求改為直接輸入 PaymentID，現行版本依 [PaymentID UI 交付](payment-id-ui-delivery.md)；既有用途判定與 HTTP 契約維持。

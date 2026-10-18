@@ -135,3 +135,18 @@
 ## TiP Phase 2.7 手機尺寸補驗（2026-10-18）
 
 依使用者指定使用 Edge，環境未提供 agent-browser，因此不宣稱執行該工具或重跑全套 baseline。Edge DevTools Responsive 400 × 611 CSS px 已完成 TC-CS-012 的主要任務：商品列表、詳細頁、購物車、付款選擇、送單及結果呈現，不需水平捲動。補驗數量輸入、付款 radio、Tab 到送單及 Return 提交；focus 可見，非 TC-CS-010 全站純鍵盤覆蓋。成功結果保留 test／succeeded／inventory.deduct，Checkout #9 與 Order #8 分別正確顯示。證據、資料核對及適用限制見 [TiP 2.7 交付](../../docs/tip/phase2.7-delivery.md)。
+
+## PaymentID 輸入調整（2026-10-18）
+
+以下取代付款 radio 的現行操作；前節手機紀錄保留為當時證據。
+
+| Case | 操作 | 預期 |
+|---|---|---|
+| TC-CS-PAY-001 | 開啟有商品的 checkout | 顯示空白、必填的 PaymentID（模擬卡號）輸入框，無 normal/test 選項；次要色提示預設測試 ID 與規則。 |
+| TC-CS-PAY-002 | 輸入 123456、0、990001 或 int 邊界值 | create 原值傳入，complete 不傳 PaymentId；用途只依 API 結果呈現。 |
+| TC-CS-PAY-003 | 未提供、空白、非整數、小數或 int 溢位 | 顯示繁中欄位錯誤及摘要，不呼叫 create／complete，不清除購物車；非法原文保留供修正。 |
+| TC-CS-PAY-004 | 會員為 test，輸入一般 ID；一般會員輸入 990001 | 沿用 Core 判定為測試交易，UI 不自行按 ID 推導／覆寫用途。 |
+| TC-CS-PAY-005 | 結帳被拒絕或 API 失敗 | 保留已輸入 PaymentID、購物車與操作結果，不自動換付款值或重試。 |
+| TC-CS-PAY-006 | 400px 手機寬度／鍵盤操作 | label 關聯輸入框、提示／錯誤由 aria-describedby 關聯，Tab 可到送單；輸入與按鈕不水平溢出。 |
+
+實作與驗證見 [PaymentID UI 交付](../../docs/tip/payment-id-ui-delivery.md)。

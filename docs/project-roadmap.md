@@ -893,3 +893,7 @@ API spec draft：
 2026-10-18 TiP Phase 2.6 完成：統一 OperationResult、HTTP headers／錯誤映射、CLI／事件結果及完整略過 log，移除 OAuth 明文 token／授權碼診斷輸出。solution 327 項通過，CLI build 成功；2.5 已提交為 `64ced22`。CommonStorefront／Docker／UI 驗收留待 2.7，本輪未重建部署。見 [交付紀錄](tip/phase2.6-delivery.md)。
 
 2026-10-18 TiP Phase 2.7 完成標準流程交付：CommonStorefront 明確一般／測試付款、操作結果與用途呈現；solution 335 項通過，Docker 已重建。Edge 四種會員／付款組合、庫存拒絕流程與 400px 手機主要任務通過，admin／一致性 LiteDB 快照確認正式統計排除 test、只有一般交易扣庫存。2.6／2.7 依使用者授權一併提交；實際驗證與不適用範圍見 [2.7 交付紀錄](tip/phase2.7-delivery.md)。
+
+## CommonStorefront PaymentID 輸入調整（2026-10-18）
+
+依使用者要求，付款改為直接輸入 PaymentID（模擬卡號），用途由既有系統規則判定，次要文字提示預設測試 ID 990001 與測試會員規則。不改動 Core／Abstract／API，與已提交的 AdminCLI 分開 commit；見 [決策](decisions/2026-10-18-storefront-payment-id-input.md) 與 [交付](tip/payment-id-ui-delivery.md)。
