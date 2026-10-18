@@ -1,5 +1,4 @@
-﻿using AndrewDemo.NetConf2023.Core;
-using AndrewDemo.NetConf2023.Core.Time;
+using AndrewDemo.NetConf2023.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,17 +12,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class MemberController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
-        private readonly TimeProvider _timeProvider;
+        private readonly MemberService _members;
 
         /// <summary>
         /// 建構函式
         /// </summary>
         /// <param name="database"></param>
-        /// <param name="timeProvider">目前系統的時間提供者。</param>
-        public MemberController(IShopDatabaseContext database, TimeProvider timeProvider)
+        /// <param name="members">會員與 Token 共用服務。</param>
+        public MemberController(IShopDatabaseContext database, MemberService members)
         {
             _database = database;
-            _timeProvider = timeProvider;
+            _members = members;
         }
 
         // remove useless api for register and login
@@ -89,20 +88,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
-            {
-                return Unauthorized();
-            }
-
-            var member = _database.Members.FindById(tokenRecord.MemberId);
+            var member = _members.ValidateToken(accessToken);
             if (member == null)
             {
                 return Unauthorized();
             }
 
             member.ShopNotes = request.ShopNotes;
-            _database.Members.Update(member);
+            _members.UpdateMember(member);
 
             return member;
         }
@@ -128,13 +121,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
-            {
-                return Unauthorized();
-            }
-
-            var member = _database.Members.FindById(tokenRecord.MemberId);
+            var member = _members.ValidateToken(accessToken);
             if (member == null)
             {
                 return Unauthorized();
@@ -161,16 +148,10 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             }
 
 
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
-            {
-                return Unauthorized();
-            }
-
-            var member = _database.Members.FindById(tokenRecord.MemberId);
+            var member = _members.ValidateToken(accessToken);
             if (member == null)
             {
-                return NotFound();
+                return Unauthorized();
             }
 
             int count = 0;

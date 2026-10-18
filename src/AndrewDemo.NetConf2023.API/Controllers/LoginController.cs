@@ -1,4 +1,4 @@
-﻿using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -18,18 +18,18 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [AllowAnonymous]
     public class LoginController : ControllerBase
     {
-        private static Dictionary<string, string> _codes = new Dictionary<string, string>();
-        private readonly IShopDatabaseContext _database;
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> _codes = new();
+        private readonly MemberService _members;
         private readonly IWebHostEnvironment _environment;
 
         /// <summary>
         /// 建構函式
         /// </summary>
-        /// <param name="database">商店資料庫內容。</param>
         /// <param name="environment">目前主機執行環境。</param>
-        public LoginController(IShopDatabaseContext database, IWebHostEnvironment environment)
+        /// <param name="members">會員與 Token 共用服務。</param>
+        public LoginController(IWebHostEnvironment environment, MemberService members)
         {
-            _database = database;
+            _members = members;
             _environment = environment;
         }
 
@@ -65,29 +65,9 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             [FromForm(Name = "redirect_uri"), Required] string redirectURL,
             [FromForm(Name = "state")] string? state)
         {
-            string token;
-            var member = _database.Members.FindOne(m => m.Name == (name ?? string.Empty));
-            
-            if (member == null)
-            {
-                if (string.IsNullOrWhiteSpace(name))
-                {
-                    Console.WriteLine($"[/oauth/authorize] Login failed: empty name");
-                    return BadRequest("Name is required");
-                }
-
-                Console.WriteLine($"[/oauth/authorize] User not found: {name}, registering...");
-                member = new Member { Name = name };
-                _database.Members.Insert(member);
-            }
-
-            token = Guid.NewGuid().ToString("N");
-            _database.MemberTokens.Upsert(new MemberAccessTokenRecord
-            {
-                Token = token,
-                MemberId = member.Id,
-                Expire = DateTime.MaxValue
-            });
+            if (string.IsNullOrWhiteSpace(name)) return BadRequest("Name is required");
+            var member = _members.GetOrCreate(name);
+            var token = _members.IssueToken(member.Id, DateTime.MaxValue).Token;
 
             string code = Guid.NewGuid().ToString("N");
             _codes[code] = token;
@@ -116,14 +96,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         {
             Console.WriteLine($"[/oauth/token] Request Form: [{request}]");
 
-            if (!_codes.ContainsKey(request.code))
+            if (!_codes.TryRemove(request.code, out var token))
             {
                 Console.WriteLine($"[/oauth/token] Invalid code: {request.code}");
                 return BadRequest();
             }
-
-            string token = _codes[request.code];
-            _codes.Remove(request.code);
 
             Console.WriteLine($"[/oauth/token] Return access-token: {token}");
 

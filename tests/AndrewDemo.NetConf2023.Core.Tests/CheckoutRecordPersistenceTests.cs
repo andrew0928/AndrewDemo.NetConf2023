@@ -36,7 +36,7 @@ public sealed class CheckoutRecordPersistenceTests : ShopDatabaseTestBase
         // 此處驗證兩個 collection 的資料結構，不宣稱服務已實作封存或凍結保護。
         restored.State = state;
         restored.ClosedAt = FixedUtcNow.AddMinutes(5);
-        Context.CheckoutTransactions.Update(restored);
+        Context.Database.GetCollection<CheckoutTransactionRecord>("checkout_transactions").Update(restored);
         var before = Context.Database.GetCollection("checkout_transactions").FindById(17).ToString();
         Context.ArchivedCheckoutTransactions.Insert(restored);
         Context.CheckoutTransactions.Delete(17);

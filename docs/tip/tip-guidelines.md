@@ -73,7 +73,7 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 [AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試會員操作 Cart 可正常新增、刪除商品明細並保存結果，Cart 不保存 test 用途且不承接會員，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
 
-`Member` 註冊時依預先指定的 MemberId 白名單自動標示用途，命中為 true、未命中為 false；Token.IsTest 在簽發時由 Member.IsTest 繼承保存。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位、關聯與傳遞規則見 [Phase 1 基準](../../spec/tip-phase1.md)。
+`Member` 註冊時依預先指定的 Member.Name 白名單自動標示用途，命中為 true、未命中為 false；Token.IsTest 在簽發時由 Member.IsTest 繼承保存。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位、關聯與傳遞規則見 [Phase 1 基準](../../spec/tip-phase1.md)。
 
 ### 第二類：受保護，測試行為不得異動
 
@@ -180,6 +180,6 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 ## 文件與實作邊界
 
-本版已收斂大原則、領域物件分類及架構規範。2026-10-17 使用者最後確認：既有資料 IsTest 一律為 false；Order 新增 nullable CheckoutTransactionId；無交易不給交易 header，物件中的交易為 null。白名單可定義於 code 或 database，第一版採 code 內集中定義 MemberId／PaymentId 清單。使用者指定先開始變更 code，再同步 `/spec` 與 `/spec/testcases`；本輪共享 contract 隨實作具體化。
+本版已收斂大原則、領域物件分類及架構規範。2026-10-17 使用者最後確認：既有資料 IsTest 一律為 false；Order 新增 nullable CheckoutTransactionId；無交易不給交易 header，物件中的交易為 null。白名單可定義於 code 或 database，第一版採 code 內集中定義 Member.Name／PaymentId 清單。使用者指定先開始變更 code，再同步 `/spec` 與 `/spec/testcases`；本輪共享 contract 隨實作具體化。
 
 本版不決定 API、資料欄位名稱與結構、儲存隔離方式或付款實作，也不以現有 PoC 尚未連接實際金流，作為「測試已成功隔離真實扣款」的驗證證據。盤點完整代表需求分類涵蓋現有物件，不代表現行實作已符合 TiP 規則。

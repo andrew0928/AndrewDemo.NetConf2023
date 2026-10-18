@@ -6,14 +6,14 @@ namespace AndrewDemo.NetConf2023.Core.Tests;
 public sealed class TestAllowlistTests
 {
     [Theory]
-    [InlineData(900001, true)]
-    [InlineData(990001, false)]
-    [InlineData(42, false)]
-    public void DefaultList_ClassifiesMemberIds(int memberId, bool expected)
+    [InlineData("test", true)]
+    [InlineData("900001", false)]
+    [InlineData("normal", false)]
+    public void DefaultList_ClassifiesMemberNames(string memberName, bool expected)
     {
         var allowlist = new TestAllowlist();
 
-        Assert.Equal(expected, allowlist.IsTestMember(memberId));
+        Assert.Equal(expected, allowlist.IsTestMember(memberName));
     }
 
     [Theory]
@@ -28,41 +28,41 @@ public sealed class TestAllowlistTests
     }
 
     [Fact]
-    public void ExplicitLists_ReplaceDefaultsAndKeepIdKindsSeparate()
+    public void ExplicitLists_ReplaceDefaultsAndKeepNameAndPaymentSeparate()
     {
-        var allowlist = new TestAllowlist(memberIds: [17], paymentIds: [23]);
+        var allowlist = new TestAllowlist(memberNames: ["17"], paymentIds: [23]);
 
-        Assert.True(allowlist.IsTestMember(17));
+        Assert.True(allowlist.IsTestMember("17"));
         Assert.False(allowlist.IsTestPayment(17));
         Assert.True(allowlist.IsTestPayment(23));
-        Assert.False(allowlist.IsTestMember(23));
-        Assert.False(allowlist.IsTestMember(900001));
+        Assert.False(allowlist.IsTestMember("23"));
+        Assert.False(allowlist.IsTestMember("test"));
         Assert.False(allowlist.IsTestPayment(990001));
     }
 
     [Fact]
-    public void EmptyLists_ClassifyAllIdsAsRegular()
+    public void EmptyLists_ClassifyAllNamesAndPaymentsAsRegular()
     {
-        var allowlist = new TestAllowlist(memberIds: [], paymentIds: []);
+        var allowlist = new TestAllowlist(memberNames: [], paymentIds: []);
 
-        Assert.False(allowlist.IsTestMember(900001));
+        Assert.False(allowlist.IsTestMember("test"));
         Assert.False(allowlist.IsTestPayment(990001));
     }
 
     [Fact]
     public void ListsAreSnapshots_UnchangedByCallerMutation()
     {
-        var memberIds = new HashSet<int> { 17 };
+        var memberNames = new HashSet<string> { "17" };
         var paymentIds = new HashSet<int> { 23 };
-        var allowlist = new TestAllowlist(memberIds, paymentIds);
+        var allowlist = new TestAllowlist(memberNames, paymentIds);
 
-        memberIds.Clear();
-        memberIds.Add(31);
+        memberNames.Clear();
+        memberNames.Add("31");
         paymentIds.Clear();
         paymentIds.Add(37);
 
-        Assert.True(allowlist.IsTestMember(17));
-        Assert.False(allowlist.IsTestMember(31));
+        Assert.True(allowlist.IsTestMember("17"));
+        Assert.False(allowlist.IsTestMember("31"));
         Assert.True(allowlist.IsTestPayment(23));
         Assert.False(allowlist.IsTestPayment(37));
     }
@@ -70,11 +70,11 @@ public sealed class TestAllowlistTests
     [Fact]
     public void DifferentInstances_DoNotShareCustomLists()
     {
-        var first = new TestAllowlist(memberIds: [17], paymentIds: [23]);
-        var second = new TestAllowlist(memberIds: [31], paymentIds: [37]);
+        var first = new TestAllowlist(memberNames: ["17"], paymentIds: [23]);
+        var second = new TestAllowlist(memberNames: ["31"], paymentIds: [37]);
 
-        Assert.True(first.IsTestMember(17));
-        Assert.False(second.IsTestMember(17));
+        Assert.True(first.IsTestMember("17"));
+        Assert.False(second.IsTestMember("17"));
         Assert.True(second.IsTestPayment(37));
         Assert.False(first.IsTestPayment(37));
     }

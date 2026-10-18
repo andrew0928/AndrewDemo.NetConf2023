@@ -10,6 +10,8 @@
 
 2026-10-18 使用者指定追加唯讀 admin API，用來驗證總訂單金額、訂單、結帳與會員清單；admin 使用獨立、預先設定的 `admin_` token，採 Bearer 與 SHOP_ADMIN_ACCESS_TOKEN，未設定即停用。沒有 Web UI，CLI 由使用者後續追加。本輪規格已定案，實作留待後續，正式入口為 [Phase 1.1](../spec/tip-phase1.1.md)，依據見 [決策](decisions/2026-10-18-tip-admin-query.md)。不取代既有 Phase 2.1～2.7，亦不將未交付階段視為完成。
 
+2026-10-18 使用者後續授權執行 Phase 1.1，管理查核 API 已完成實作、262 項 solution 回歸及真實 host 隔離驗證。CLI 由使用者後續追加，無 Web UI；Docker daemon 恢復後已成功重建 Common API 映像；使用者依 Compose 啟動與 curl 指令親自驗證正式訂單查詢通過，完整容器案例未重跑。見 [交付紀錄](tip/phase1.1-delivery.md)。
+
 ## TiP：Phase 1 規格與合約已定案
 
 最後記錄：2026-10-17。
@@ -54,7 +56,7 @@ Context 已進一步區分為 **current identity**（目前執行身分及其用
 
 2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，CheckoutService 採 scoped；兩者可在單次 HTTP 操作中共用 request scope，其他執行範圍依事件／CLI 等處理邊界決定。HTTP Items 與 Core 對各種 context 使用相同資料；middleware 以 endpoint metadata 明確指定交易／訂單 ID 來源，解析規則已納入 [HTTP 合約](../spec/tip-http-and-operation-results.md)。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
 
-2026-10-17 Core 欄位已確認：新增 Member／Checkout／Order.IsTest、Checkout.PaymentId 及建立時從 Member 繼承的 Token.IsTest。Create／Complete command 保留明確 RequestMember，API／CLI 自行組合；PaymentId 移至 create，complete 使用保存值。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 Order.PaymentId；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料 IsTest = false；無交易時不給交易 header，物件中的交易為 null。詳見 [Core 欄位決策](decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
+2026-10-17 Core 欄位已確認：新增 Member／Checkout／Order.IsTest、Checkout.PaymentId 及建立時從 Member 繼承的 Token.IsTest。Create／Complete command 保留明確 RequestMember，API／CLI 自行組合；PaymentId 移至 create，complete 使用保存值。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 Order.PaymentId；新增 nullable CheckoutTransactionId；Member.Name／PaymentId 白名單預設於 code 或 database，舊資料 IsTest = false；無交易時不給交易 header，物件中的交易為 null。詳見 [Core 欄位決策](decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
 
 TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指定先開始變更 code，再同步正式 spec 與 testcases；本輪不以先凍結 spec 作為開工前置條件。最小共用 contract 已具體化並定案；規格、案例與交付證據見 [Phase 1 基準](../spec/tip-phase1.md)。Phase 2 的用途傳遞與效果控制尚未交付。
 
@@ -67,6 +69,8 @@ TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指�
 2026-10-17 核帳需求追加：新增 Checkout.ClosedAt 與 Order.CreatedAt，歷史未知時間為 null；業績／核帳查詢預設依交易／訂單的 IsTest 排除測試資料。時間填值與移除 access token 明文 log 留 Phase 2，查詢功能後續再做。Checkout 終態與獨立金額明細後續已確認並補上 schema，create 時固定；見 [決策](decisions/2026-10-17-tip-accounting-timestamps.md) 與 [檢驗](tip/accounting-schema-review.md)。
 
 2026-10-17 Checkout 追加定案：保存 State 與獨立交易金額／明細，create 時固定，complete 沿用且不重算 Cart／現價；Completed／Cancelled 完整搬移至 archived_checkout_transactions 後凍結。Checkout 不保存商品名稱、描述或規格快照。正式 [生命週期規格](../spec/tip-checkout-lifecycle.md) 與案例已同步，執行流程留 Phase 2。
+
+2026-10-18 使用者確認會員白名單改以 Name（預設 `test`）判定，名稱比對沿用作用中資料庫 collation；PaymentId 保留 `990001`，既有會員用途不重新分類。規格與實作同步修訂，Abstract 不變。見 [決策](decisions/2026-10-18-tip-member-name-allowlist.md)。
 
 ## Milestone 1 - 基礎建設
 
@@ -869,3 +873,9 @@ API spec draft：
 ## TiP Phase 2 跨 Session 交接（2026-10-18）
 
 使用者確認以同一台機器、不同 chat session 依序執行 2.1～2.7；canonical 執行與進度入口為 [Phase 2 計畫](../spec/tip-phase2-plan.md)。每階段更新交付證據與剩餘工作；保持 Phase 1 與 Abstract 定案，不將資料模型或舊 Docker image 的可用性當作完整 TiP 驗收。
+
+2026-10-18 TiP Phase 2.1 完成：Core 會員／Token 共用服務接入標準 API 與 CLI，驗證最終 ID 分類、Token 繼承、舊資料不重分類、用途拒絕改寫與併發／失敗重試。solution 131 tests 通過；HTTP context 與完整出口仍待 2.2／2.6，Docker 未重建。詳見 [交付紀錄](tip/phase2.1-delivery.md)。
+
+2026-10-18 TiP Phase 2.2 完成：獨立 scoped contexts、HTTP 身分與 metadata 交易解析、CLI 每次操作 scope；solution 153 tests 通過。未來 `/api/orders/{id}/xxx` 後置處理須攜帶 Order transaction，現階段只留[確認註記](decisions/2026-10-18-tip-order-postprocessing-context.md)，不新增任務。詳見 [2.2 交付紀錄](tip/phase2.2-delivery.md)。
+
+2026-10-18 TiP Phase 2.3 完成：create 固定用途、付款與報價，complete 沿用保存內容並驗證商品／SKU／庫存；正式扣減、test 略過並留證據。Order、完整終態封存與作用中移除原子提交，補上用途／封存防寫、跨分區 ID、rollback 與併發驗證；solution 191 tests 通過，solution／CLI build 成功。Docker 未重建；後續接續 2.4 共用效果控制。詳見 [2.3 交付紀錄](tip/phase2.3-delivery.md)。

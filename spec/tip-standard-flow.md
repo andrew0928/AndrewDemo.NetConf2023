@@ -10,10 +10,10 @@
 
 ## 會員註冊與 Token
 
-1. 由 Core 共用建立流程配發最終 MemberId，依 TestAllowlist.IsTestMember 判定 IsTest。
+1. 由 Core 共用建立流程配發最終 MemberId，依 Name 呼叫 TestAllowlist.IsTestMember 判定 IsTest。
 2. ID 配發、用途初始化及會員首次保存必須在同一個資料庫交易邊界內完成，不可讓其他操作讀到先正式、後改成測試的會員。
-3. MemberId 不因失敗重試或白名單調整而改寫既有會員用途。已存在會員的登入直接使用保存值。
-4. 白名單內的固定 ID 只決定「此 ID 的會員用途」；不依使用者名稱猜測 ID。開發用測試會員可由受控初始化流程使用明確 ID 建立；公開 request 不接受任意 IsTest 或指定會員 ID 的新增能力。
+3. 失敗重試或白名單調整不得改寫既有會員用途。已存在會員的登入直接使用保存值。
+4. 白名單內的名稱決定首次建立的會員用途；以作用中資料庫 collation 比對 Name，不將數字名稱視為會員 ID。開發用測試會員可由受控初始化流程使用明確 ID 建立；公開 request 不接受任意 IsTest 或指定會員 ID 的新增能力。
 5. Token 簽發以已保存 Member 為來源，複製 MemberId 與 IsTest。驗證須檢查 Token 存在、有效期限與 Member 存在；若兩者用途不一致，依用途矛盾處理，不能以白名單補救。
 6. 既有會員與 Token 缺少 IsTest 時按已確認政策為 false，不重新分類。ID 配發機制、鎖定方式屬 Core 實作，驗收必須涵蓋併發及重試。
 

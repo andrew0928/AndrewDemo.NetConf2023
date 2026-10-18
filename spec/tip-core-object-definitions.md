@@ -13,7 +13,7 @@
 
 | 模型 | 新增欄位 | 型別 | 建立規則 |
 |---|---|---|---|
-| Member | IsTest | bool | 註冊時依 MemberId 白名單決定。 |
+| Member | IsTest | bool | 註冊時依 Member.Name 白名單決定。 |
 | MemberAccessTokenRecord | IsTest | bool | 簽發時複製 Member.IsTest。 |
 | CheckoutTransactionRecord | IsTest | bool | create 時依 Member.IsTest 或 PaymentId 測試清單命中結果決定。 |
 | CheckoutTransactionRecord | PaymentId | int | create 時提供並保存，供 complete 與封存使用。 |

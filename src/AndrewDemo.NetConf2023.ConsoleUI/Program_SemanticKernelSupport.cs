@@ -305,6 +305,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("清空購物車。購物車內的代結帳商品清單會完全歸零回復原狀")]
         public static void ShopFunction_EmptyCart()
         {
+            using var operation = BeginOperation();
             _cartId = CreateNewCart().Id;
         }
 
@@ -314,6 +315,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定加入購物車的商品ID")] int productId,
             [Description("指定加入購物車的商品數量")] int quanty)
         {
+            using var operation = BeginOperation();
             if (GetProductById(productId) == null)
             {
                 return false;
@@ -328,6 +330,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             [Description("指定要從購物車移除的商品ID")] int productId,
             [Description("指定要從購物車移除的商品數量")] int quanty)
         {
+            using var operation = BeginOperation();
             return UpdateCartItemQuantity(productId, -quanty);
         }
 
@@ -335,6 +338,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("試算目前購物車的結帳金額 (包含可能發生的折扣)")]
         public static decimal ShopFunction_EstimatePrice()
         {
+            using var operation = BeginOperation();
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             return EstimatePrice(cart);
         }
@@ -342,6 +346,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回目前購物車的內容狀態")]
         public static LineItem[] ShopFunction_ShowMyCartItems()
         {
+            using var operation = BeginOperation();
             var cart = GetCurrentCart() ?? throw new InvalidOperationException("cart not found");
             return cart.LineItems.ToArray();
         }
@@ -352,6 +357,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Order? ShopFunction_Checkout(
             [Description("建立 Checkout 時指定的付款來源代碼")] int paymentId)
         {
+            using var operation = BeginOperation();
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
                 int checkoutId = CreateCheckoutTransaction(_cartId, token, paymentId);
                 var response = CompleteCheckoutTransactionAsync(checkoutId);
@@ -373,6 +379,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回店內所有出售的商品品項資訊")]
         public static Product[] ShopFunction_ListProducts()
         {
+            using var operation = BeginOperation();
             return GetAllProducts().ToArray();
         }
 
@@ -381,6 +388,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         public static Product? ShopFunction_GetProduct(
             [Description("指定查詢的商品 ID")] int productId)
         {
+            using var operation = BeginOperation();
                 return GetProductById(productId);
         }
 
@@ -388,6 +396,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回我 (目前登入) 的個人資訊")]
         public static Member? ShopFunction_GetMyInfo()
         {
+            using var operation = BeginOperation();
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
             return GetMemberByToken(token);
         }
@@ -396,6 +405,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         [KernelFunction, Description("傳回我 (目前登入) 的過去訂購紀錄")]
         public static Order[] ShopFunction_GetMyOrders()
         {
+            using var operation = BeginOperation();
             var token = _access_token ?? throw new InvalidOperationException("access token not set");
             var member = GetMemberByToken(token) ?? throw new InvalidOperationException("member not found");
             return GetOrdersForMember(member.Id).ToArray();

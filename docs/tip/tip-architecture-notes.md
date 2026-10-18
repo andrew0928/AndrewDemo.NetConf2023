@@ -31,7 +31,7 @@
 
 | 模型／欄位 | 狀態與規則 |
 |---|---|
-| Member.IsTest | 已確認，bool，註冊時依 MemberId 白名單自動指定，建立後不可變。 |
+| Member.IsTest | 已確認，bool，註冊時依 Member.Name 白名單自動指定，建立後不可變。 |
 | CheckoutTransactionRecord.IsTest | 已確認，bool，建立時固定交易用途。 |
 | CheckoutTransactionRecord.PaymentId | 已確認，int，create 時提供並保存供 complete 使用。 |
 | Order.IsTest | 已確認，bool，承接 Checkout 用途。 |
@@ -117,7 +117,7 @@ Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付�
 | test | 否 | test |
 | test | 是 | test |
 
-已確認 PaymentId 隨 Checkout 保存，complete 移除重複輸入並讀取已保存值；CommonStorefront 的 PaymentId 產生移至 create 前，ConsoleUI 亦同步。Create／Complete command 保留 RequestMember，由呼叫端明確組合；不以注入 IdentityContext 取代必填輸入。MemberId／PaymentId 白名單可預先定義於 code 或 database，第一版採 code 內集中定義。Member 註冊時依 ID 是否命中自動設定 IsTest；PaymentId 僅為數值，不建立付款物件，Checkout create 當下查清單。白名單用於建立時分類；已建立 Checkout 與後續 Order／事件不因白名單變更而換用途。
+已確認 PaymentId 隨 Checkout 保存，complete 移除重複輸入並讀取已保存值；CommonStorefront 的 PaymentId 產生移至 create 前，ConsoleUI 亦同步。Create／Complete command 保留 RequestMember，由呼叫端明確組合；不以注入 IdentityContext 取代必填輸入。Member.Name／PaymentId 白名單可預先定義於 code 或 database，第一版採 code 內集中定義。Member 註冊時依 Name 是否命中自動設定 IsTest；PaymentId 僅為數值，不建立付款物件，Checkout create 當下查清單。白名單用於建立時分類；已建立 Checkout 與後續 Order／事件不因白名單變更而換用途。
 
 ### 事件處理器建立自己的範圍
 
@@ -234,7 +234,7 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 
 ## 開工前最後確認
 
-2026-10-17 已確認 MemberId／PaymentId 白名單、Order.CheckoutTransactionId nullable 關聯、無交易時省略交易 header／物件為 null，以及既有資料一律 IsTest = false。舊資料不因白名單重新分類；缺少歷史 Checkout 的 Order 不捏造封存紀錄。
+2026-10-17 已確認 Member.Name／PaymentId 白名單、Order.CheckoutTransactionId nullable 關聯、無交易時省略交易 header／物件為 null，以及既有資料一律 IsTest = false。舊資料不因白名單重新分類；缺少歷史 Checkout 的 Order 不捏造封存紀錄。
 
 使用者指定先開始變更 code，再落入 `/spec` 與 `/spec/testcases`，本輪不以先凍結 spec 作為前置條件。既有設計方向不變，具體介面成員與格式由實作收斂並同步文件。
 
@@ -257,8 +257,12 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 
 ## TDD 進度
 
-Core 白名單位置已定為 `Testing/TestAllowlist.cs`，預設 MemberId 900001、PaymentId 990001，清單建立後唯讀。紅燈階段確認 21 項新測試因 NotImplementedException 失敗；使用者確認後已補上白名單查詢與 Context 保存／綁定／清除，測試沿用原有行為斷言；參見 [白名單規格](../../spec/tip-test-allowlist.md) 與 [Context 合約](../../spec/tip-context-contracts.md)。後續 Phase 1 收尾已修改 Checkout command，付款前移並補舊交易 409；host 與 DI 接入仍留待 Phase 2。
+Core 白名單位置已定為 `Testing/TestAllowlist.cs`，預設 Member.Name test、PaymentId 990001，清單建立後唯讀。紅燈階段確認 21 項新測試因 NotImplementedException 失敗；使用者確認後已補上白名單查詢與 Context 保存／綁定／清除，測試沿用原有行為斷言；參見 [白名單規格](../../spec/tip-test-allowlist.md) 與 [Context 合約](../../spec/tip-context-contracts.md)。後續 Phase 1 收尾已修改 Checkout command，付款前移並補舊交易 409；host 與 DI 接入仍留待 Phase 2。
 
 ## 核帳 Schema 補充
 
 上述時間欄位由使用者明確追加，為本次有限範圍的 Phase 1 修訂。後續已確認 State、create 時固定的獨立金額／明細，以及終態完整封存後凍結；商品名稱／描述／規格不複製至 Checkout。詳見 [Schema 檢驗](accounting-schema-review.md) 與 [正式規格](../../spec/tip-checkout-lifecycle.md)，查詢功能後續再做。
+
+## 未來訂單後置處理（2026-10-18）
+
+未來擴充 `/api/orders/{id}/xxx` 進行出貨等 checkout 後置處理時，必須附帶 current transaction，從保存的 Order 恢復 Kind／Id／IsTest，並驗證存取權限。轉為事件／任務時也須在獨立 scope 恢復相同用途。目前沒有這些 endpoint／任務，本次僅記錄，不新增實作。詳見[確認決策](../decisions/2026-10-18-tip-order-postprocessing-context.md)。

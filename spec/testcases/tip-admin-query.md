@@ -77,3 +77,7 @@
 ## 交付要求
 
 後續實作需記錄實際測試命令、通過數與未覆蓋範圍；本文件的案例數不等於自動化測試數。API 的認證／統計／並行一致性是必要驗收，不能以 API 回 200 或 shell 能輸出 JSON 替代。
+
+## 2026-10-18 API 實作驗證
+
+新增 AdminQueryTests（22 項）與 AdminQueryHttpTests（44 項）全部通過；solution 共 262 項通過。另以真正 API Program、新程序及資料副本完成設定／停用／token 輪替驗證。驗收對應：AUTH-001～009（不含 CLI argv）、ORDER-001～007、LEGACY-001～006、CHECKOUT-001～003、MEMBER-001～003、READ-001～006；詳細手段與限制見 [交付紀錄](../../docs/tip/phase1.1-delivery.md)。CLI 六項案例留後續追加工具時驗證。Docker daemon 恢復後已成功重建 Common API 映像；使用者依 Compose 啟動及 curl 指令回報 `orders?purpose=normal` 手動測試通過；完整容器案例未重跑。

@@ -1,3 +1,5 @@
+using LiteDB;
+
 namespace AndrewDemo.NetConf2023.Core.Testing;
 
 /// <summary>
@@ -5,31 +7,33 @@ namespace AndrewDemo.NetConf2023.Core.Testing;
 /// </summary>
 public sealed class TestAllowlist
 {
-    // 標準示範站的預設清單；兩種 ID 各自判定，不共用同一個集合。
-    private static readonly int[] DefaultMemberIds = [900001];
+    // 標準示範站的預設清單；名稱與付款 ID 各自判定，不共用同一個集合。
+    private static readonly string[] DefaultMemberNames = ["test"];
     private static readonly int[] DefaultPaymentIds = [990001];
 
-    private readonly HashSet<int> _memberIds;
+    private readonly string[] _memberNames;
     private readonly HashSet<int> _paymentIds;
 
-    public TestAllowlist() : this(DefaultMemberIds, DefaultPaymentIds)
+    public TestAllowlist() : this(DefaultMemberNames, DefaultPaymentIds)
     {
     }
 
     /// <summary>
     /// 複製指定清單，避免呼叫端後續修改集合而改變正在使用的白名單。
     /// </summary>
-    public TestAllowlist(IEnumerable<int> memberIds, IEnumerable<int> paymentIds)
+    public TestAllowlist(IEnumerable<string> memberNames, IEnumerable<int> paymentIds)
     {
-        ArgumentNullException.ThrowIfNull(memberIds);
+        ArgumentNullException.ThrowIfNull(memberNames);
         ArgumentNullException.ThrowIfNull(paymentIds);
-        _memberIds = new HashSet<int>(memberIds);
+        _memberNames = memberNames.ToArray();
         _paymentIds = new HashSet<int>(paymentIds);
     }
 
-    public bool IsTestMember(int memberId)
+    /// <summary>會員服務傳入作用中資料庫的 collation，與名稱查找使用相同比對規則。</summary>
+    public bool IsTestMember(string memberName, Collation? collation = null)
     {
-        return _memberIds.Contains(memberId);
+        ArgumentNullException.ThrowIfNull(memberName);
+        return _memberNames.Any(name => (collation ?? Collation.Default).Compare(name, memberName) == 0);
     }
 
     public bool IsTestPayment(int paymentId)

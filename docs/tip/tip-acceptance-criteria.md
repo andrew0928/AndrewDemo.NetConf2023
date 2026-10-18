@@ -14,7 +14,7 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ### Given／前提
 
-- 註冊 Member 時，其 ID 命中預先指定的 MemberId 白名單，自動設定 IsTest = true，使用其有效 Token。
+- 註冊 Member 時，其 Name 命中預先指定的 Member.Name 白名單，自動設定 IsTest = true，使用其有效 Token。
 - 商品售價 100 元，對應 SKU 可用庫存為 10。
 - 購買 2 件，沒有折扣；其他權限與業務條件均符合。
 - 觀察期間沒有其他交易異動這筆庫存或待比對的商業統計。

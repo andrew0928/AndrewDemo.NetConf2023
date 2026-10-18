@@ -1,0 +1,380 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text;
+using AndrewDemo.NetConf2023.Abstract.Contexts;
+using AndrewDemo.NetConf2023.Abstract.Orders;
+using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.API.Controllers;
+using AndrewDemo.NetConf2023.API.Execution;
+using AndrewDemo.NetConf2023.Core;
+using AndrewDemo.NetConf2023.Core.Checkouts;
+using AndrewDemo.NetConf2023.Core.Contexts;
+using AndrewDemo.NetConf2023.Core.Discounts;
+using AndrewDemo.NetConf2023.Core.Orders;
+using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Testing;
+using LiteDB;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+
+namespace AndrewDemo.NetConf2023.WebContract.Tests;
+
+public sealed class ExecutionScopeTests : IAsyncLifetime
+{
+    private readonly string _path = Path.Combine(Path.GetTempPath(), $"tip22-{Guid.NewGuid():N}.db");
+    private WebApplication _app = null!;
+    private HttpClient _client = null!;
+    private ShopDatabaseContext _database = null!;
+    private string _normalToken = null!;
+    private string _testToken = null!;
+
+    public async Task InitializeAsync()
+    {
+        var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Development" });
+        builder.WebHost.UseUrls("http://127.0.0.1:0");
+        builder.Logging.ClearProviders();
+        builder.Host.UseDefaultServiceProvider(options => { options.ValidateScopes = true; options.ValidateOnBuild = true; });
+        _database = new ShopDatabaseContext(new ShopDatabaseOptions { ConnectionString = $"Filename={_path};Connection=Direct" });
+        builder.Services.AddSingleton<IShopDatabaseContext>(_database);
+        builder.Services.AddSingleton(TimeProvider.System);
+        builder.Services.AddSingleton(new TestAllowlist(["test"], []));
+        builder.Services.AddSingleton<MemberService>();
+        builder.Services.AddSingleton(new ShopManifest { ShopId = "test" });
+        builder.Services.AddSingleton(new DiscountEngine([]));
+        builder.Services.AddSingleton<IProductService, DefaultProductService>();
+        builder.Services.AddSingleton<IOrderEventDispatcher, DefaultOrderEventDispatcher>();
+        builder.Services.AddShopExecutionContexts();
+        builder.Services.AddControllers(options => options.Filters.Add<CheckoutTransactionFilter>())
+            .AddApplicationPart(typeof(CheckoutController).Assembly)
+            .AddApplicationPart(typeof(ContextProbeController).Assembly);
+        _app = builder.Build();
+        var members = _app.Services.GetRequiredService<MemberService>();
+        _normalToken = members.IssueToken(members.GetOrCreate("normal").Id, DateTime.MaxValue).Token;
+        _testToken = members.IssueToken(members.GetOrCreate("test").Id, DateTime.MaxValue).Token;
+        _database.CheckoutTransactions.Insert(new CheckoutTransactionRecord { TransactionId = 10, MemberId = 1, IsTest = false });
+        _database.CheckoutTransactions.Insert(new CheckoutTransactionRecord { TransactionId = 20, MemberId = 2, IsTest = true });
+        _app.UseRouting();
+        _app.Use(async (http, next) =>
+        {
+            // 測試出口觀測 scoped 快照，不新增正式 API headers。
+            http.Response.OnStarting(() =>
+            {
+                var snapshot = http.RequestServices.GetRequiredService<TransactionContext>().Current;
+                if (snapshot != null)
+                {
+                    http.Response.Headers["X-Test-Context-Id"] = snapshot.Id.ToString();
+                    http.Response.Headers["X-Test-Context-Kind"] = snapshot.Kind.ToString();
+                    http.Response.Headers["X-Test-Context-IsTest"] = snapshot.IsTest.ToString();
+                }
+                return Task.CompletedTask;
+            });
+            await next();
+        });
+        _app.UseMiddleware<ShopExecutionMiddleware>();
+        _app.MapControllers();
+        await _app.StartAsync();
+        _client = new HttpClient { BaseAddress = new Uri(_app.Urls.Single()) };
+    }
+
+    [Fact]
+    public async Task RealCheckoutEndpoints_BindCreateAndRetainCheckoutSnapshotAfterCompletion()
+    {
+        _database.Products.Insert(new Product { Id = "quote", Name = "商品", Price = 100m });
+        var cart = new Cart();
+        cart.AddProducts("quote", 2, DateTime.UtcNow);
+        _database.Carts.Insert(cart);
+        var created = await Send("/api/checkout/create", _testToken,
+            System.Text.Json.JsonSerializer.Serialize(new { cartId = cart.Id, paymentId = 0 }));
+        Assert.Equal(HttpStatusCode.OK, created.StatusCode);
+        var body = await created.Content.ReadFromJsonAsync<CheckoutController.CheckoutCreateResponse>();
+        Assert.Equal(body!.TransactionId.ToString(), created.Headers.GetValues("X-Test-Context-Id").Single());
+        Assert.Equal("True", created.Headers.GetValues("X-Test-Context-IsTest").Single());
+        _database.Carts.Delete(cart.Id);
+        var completed = await Send("/api/checkout/complete", _testToken,
+            System.Text.Json.JsonSerializer.Serialize(new { transactionId = body.TransactionId, paymentId = 999 }));
+        Assert.Equal(HttpStatusCode.OK, completed.StatusCode);
+        Assert.Equal(body.TransactionId.ToString(), completed.Headers.GetValues("X-Test-Context-Id").Single());
+        Assert.Equal("Checkout", completed.Headers.GetValues("X-Test-Context-Kind").Single());
+        using var result = System.Text.Json.JsonDocument.Parse(await completed.Content.ReadAsStringAsync());
+        Assert.Equal(0, result.RootElement.GetProperty("paymentId").GetInt32());
+        var order = result.RootElement.GetProperty("orderDetail");
+        Assert.Equal(200m, order.GetProperty("totalPrice").GetDecimal());
+        Assert.True(order.GetProperty("isTest").GetBoolean());
+        Assert.Equal(body.TransactionId, order.GetProperty("checkoutTransactionId").GetInt32());
+        Assert.Equal(CheckoutState.Completed, _database.ArchivedCheckoutTransactions.FindById(body.TransactionId).State);
+        Assert.Equal(result.RootElement.GetProperty("transactionCompleteAt").GetDateTime(),
+            _database.ArchivedCheckoutTransactions.FindById(body.TransactionId).ClosedAt!.Value.ToUniversalTime());
+        Assert.Equal(result.RootElement.GetProperty("transactionCompleteAt").GetDateTime(),
+            _database.Orders.FindById(order.GetProperty("id").GetInt32()).CreatedAt!.Value.ToUniversalTime());
+        var repeated = await Send("/api/checkout/complete", _testToken,
+            System.Text.Json.JsonSerializer.Serialize(new { transactionId = body.TransactionId }));
+        Assert.Equal(HttpStatusCode.BadRequest, repeated.StatusCode);
+        Assert.Single(_database.Orders.FindAll());
+    }
+
+    [Theory]
+    [InlineData("State")]
+    [InlineData("TotalPrice")]
+    [InlineData("ProductLines")]
+    public async Task LegacyQuoteViaHttp_Returns409AndKeepsOriginal(string missing)
+    {
+        var raw = new BsonDocument
+        {
+            ["_id"] = 30, ["MemberId"] = 2, ["PaymentId"] = 0, ["IsTest"] = true,
+            ["State"] = "Created", ["TotalPrice"] = 0m,
+            ["ProductLines"] = new BsonArray(), ["DiscountLines"] = new BsonArray()
+        };
+        raw.Remove(missing);
+        _database.Database.GetCollection("checkout_transactions").Insert(raw);
+        var response = await Send("/api/checkout/complete", _testToken, "{\"transactionId\":30}");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("checkout_recreate_required", await response.Content.ReadAsStringAsync());
+        Assert.Equal(raw.ToString(), _database.Database.GetCollection("checkout_transactions").FindById(30).ToString());
+        Assert.Empty(_database.Orders.FindAll());
+    }
+
+    [Fact]
+    public async Task CreateMissingProductViaHttp_Returns400WithoutBinding()
+    {
+        var cart = new Cart();
+        cart.AddProducts("missing", 1, DateTime.UtcNow);
+        _database.Carts.Insert(cart);
+        var response = await Send("/api/checkout/create", _normalToken,
+            System.Text.Json.JsonSerializer.Serialize(new { cartId = cart.Id, paymentId = 0 }));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(response.Headers.Contains("X-Test-Context-Id"));
+        Assert.Equal(2, _database.CheckoutTransactions.Count());
+    }
+
+    [Fact]
+    public async Task AnonymousProductsAndAuthenticatedNontransactionEndpoints_KeepTransactionNull()
+    {
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync("/api/products")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.GetAsync("/api/member")).StatusCode);
+        var response = await Send("/api/context-probe/20", _testToken);
+        var probe = await response.Content.ReadFromJsonAsync<ContextProbe>();
+        Assert.Equal(2, probe!.MemberId);
+        Assert.True(probe.IdentityIsTest);
+        Assert.Null(probe.TransactionId);
+        Assert.True(probe.SameInstances);
+        Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
+        Assert.Equal(HttpStatusCode.OK, (await Send("/api/member/orders", _testToken)).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("{\"transactionId\":20}")]
+    [InlineData("{\"TransactionId\":\"20\"}")]
+    [InlineData("{\"transactionId\":10,\"transactionId\":20}")]
+    public async Task CompleteMetadata_UsesExactlyTheMvcBoundId(string json)
+    {
+        var response = await Send("/api/context-probe/complete", _testToken, json);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var probe = await response.Content.ReadFromJsonAsync<ContextProbe>();
+        Assert.Equal(20, probe!.TransactionId);
+        Assert.Equal(probe.BoundRequestId, probe.TransactionId);
+        Assert.True(probe.TransactionIsTest);
+        Assert.True(probe.SameInstances);
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("null")]
+    [InlineData("{")]
+    [InlineData("{\"transactionId\":null}")]
+    [InlineData("{\"transactionId\":\"invalid\"}")]
+    [InlineData("{\"transactionId\":2147483648}")]
+    public async Task InvalidPayload_IsRejectedBeforeBindingOrEffects(string json)
+    {
+        var response = await Send("/api/context-probe/complete", _testToken, json);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
+        Assert.Empty(_database.Orders.FindAll());
+    }
+
+    [Fact]
+    public async Task OversizedAndUnsupportedPayloads_AreRejected()
+    {
+        var response = await Send("/api/context-probe/complete", _testToken,
+            "{\"transactionId\":20,\"shopComments\":\"" + new string('x', 70 * 1024) + "\"}");
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.BadRequest, HttpStatusCode.RequestEntityTooLarge });
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/context-probe/complete");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _testToken);
+        request.Content = new StringContent("transactionId=20", Encoding.UTF8, "text/plain");
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, (await _client.SendAsync(request)).StatusCode);
+    }
+
+    [Theory]
+    [InlineData("Basic secret")]
+    [InlineData("Bearer")]
+    [InlineData("Bearer unknown")]
+    [InlineData("x")]
+    public async Task InvalidAuthorization_Returns401WithoutExecutingAction(string authorization)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/context-probe/complete");
+        request.Headers.TryAddWithoutValidation("Authorization", authorization);
+        request.Content = JsonContent.Create(new { transactionId = 20 });
+        Assert.Equal(HttpStatusCode.Unauthorized, (await _client.SendAsync(request)).StatusCode);
+    }
+
+    [Fact]
+    public async Task UnauthorizedMissingAndContradictoryTransactions_DoNotLeakOrExecute()
+    {
+        Assert.Equal(HttpStatusCode.Forbidden, (await Send("/api/context-probe/complete", _normalToken, "{\"transactionId\":20}")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await Send("/api/context-probe/complete", _testToken, "{\"transactionId\":999}")).StatusCode);
+        _database.MemberTokens.Insert(new MemberAccessTokenRecord { Token = "bad-purpose", MemberId = 2, IsTest = false, Expire = DateTime.MaxValue });
+        var response = await Send("/api/context-probe/complete", "bad-purpose", "{\"transactionId\":20}");
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("execution_context_invalid", await response.Content.ReadAsStringAsync());
+        Assert.False(response.Headers.Contains("X-Shop-Behavior"));
+        Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
+        Assert.Empty(_database.Orders.FindAll());
+    }
+
+    [Fact]
+    public async Task LegacyCheckoutWithNullPayment_ReachesExisting409Mapping()
+    {
+        var raw = _database.Database.GetCollection("checkout_transactions");
+        var checkout = raw.FindById(20);
+        checkout["PaymentId"] = BsonValue.Null;
+        raw.Update(checkout);
+        var response = await Send("/api/checkout/complete", _testToken, "{\"transactionId\":20}");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("checkout_recreate_required", await response.Content.ReadAsStringAsync());
+        Assert.NotNull(raw.FindById(20));
+        Assert.Empty(_database.Orders.FindAll());
+    }
+
+    [Fact]
+    public async Task Utf16Json_UsesMvcEncodingAndTransactionBinding()
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/context-probe/complete");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _testToken);
+        request.Content = new StringContent("{\"transactionId\":20}", Encoding.Unicode, "application/json");
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var probe = await response.Content.ReadFromJsonAsync<ContextProbe>();
+        Assert.Equal(20, probe!.BoundRequestId);
+        Assert.Equal(20, probe.TransactionId);
+    }
+
+    [Fact]
+    public async Task CorruptStoredPurpose_ReturnsContextBugWithoutEffects()
+    {
+        var raw = _database.Database.GetCollection("checkout_transactions");
+        var checkout = raw.FindById(20);
+        checkout["IsTest"] = "unknown";
+        raw.Update(checkout);
+        var response = await Send("/api/context-probe/complete", _testToken, "{\"transactionId\":20}");
+        Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
+        Assert.Contains("execution_context_invalid", await response.Content.ReadAsStringAsync());
+        Assert.Empty(_database.Orders.FindAll());
+    }
+
+    [Fact]
+    public async Task ParallelCliOperations_DoNotShareContexts()
+    {
+        var factory = _app.Services.GetRequiredService<IServiceScopeFactory>();
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(async i =>
+        {
+            var test = i % 2 == 0;
+            using var operation = ShopOperationScope.Open(factory, test ? _testToken : _normalToken);
+            var id = test ? 20 : 10;
+            Assert.Equal(CheckoutContextStatus.Bound, operation.Services.GetRequiredService<CheckoutContextLoader>().Bind(id));
+            await Task.Delay(20);
+            Assert.Equal(test, operation.Services.GetRequiredService<IIdentityContext>().Current.IsTest);
+            Assert.Equal(id, operation.Services.GetRequiredService<ITransactionContext>().Current!.Id);
+        }));
+    }
+
+    [Fact]
+    public async Task ConcurrentAndSubsequentRequests_HaveIndependentContexts()
+    {
+        await Task.WhenAll(Enumerable.Range(0, 20).Select(async i =>
+        {
+            var test = i % 2 == 0;
+            var id = test ? 20 : 10;
+            var response = await Send("/api/context-probe/complete", test ? _testToken : _normalToken, $"{{\"transactionId\":{id}}}");
+            var probe = await response.Content.ReadFromJsonAsync<ContextProbe>();
+            Assert.Equal(id, probe!.TransactionId);
+            Assert.Equal(test, probe.IdentityIsTest);
+            Assert.Equal(test, probe.TransactionIsTest);
+        }));
+        var next = await (await Send("/api/context-probe/20", _normalToken)).Content.ReadFromJsonAsync<ContextProbe>();
+        Assert.Null(next!.TransactionId);
+        Assert.False(next.IdentityIsTest);
+    }
+
+    [Fact]
+    public void CliScopes_AreIndependentAndCheckoutIsScoped()
+    {
+        var factory = _app.Services.GetRequiredService<IServiceScopeFactory>();
+        using var outer = ShopOperationScope.Open(factory, _testToken);
+        var identity = outer.Services.GetRequiredService<IIdentityContext>();
+        var transaction = outer.Services.GetRequiredService<ITransactionContext>();
+        Assert.Same(identity, outer.Services.GetRequiredService<IdentityContext>());
+        Assert.Same(transaction, outer.Services.GetRequiredService<TransactionContext>());
+        Assert.Equal(CheckoutContextStatus.Bound, outer.Services.GetRequiredService<CheckoutContextLoader>().Bind(20));
+        var checkout = outer.Services.GetRequiredService<CheckoutService>();
+        Assert.Same(checkout, outer.Services.GetRequiredService<CheckoutService>());
+        using (var inner = ShopOperationScope.Open(factory, _normalToken))
+        {
+            Assert.Null(inner.Services.GetRequiredService<ITransactionContext>().Current);
+            Assert.NotSame(checkout, inner.Services.GetRequiredService<CheckoutService>());
+            Assert.False(inner.Services.GetRequiredService<IIdentityContext>().Current.IsTest);
+        }
+        Assert.True(identity.Current.IsTest);
+        Assert.Equal(20, transaction.Current!.Id);
+        Assert.Throws<UnauthorizedAccessException>(() => ShopOperationScope.Open(factory, "unknown"));
+        using var anonymous = ShopOperationScope.Open(factory, null);
+        Assert.Equal(IdentityKind.Anonymous, anonymous.Services.GetRequiredService<IIdentityContext>().Current.Kind);
+        Assert.Null(anonymous.Services.GetRequiredService<ITransactionContext>().Current);
+        Assert.Throws<ExecutionContextInvalidException>(() => anonymous.Services.GetRequiredService<CheckoutContextLoader>().Bind(20));
+        Assert.Throws<InvalidOperationException>(() => _app.Services.GetRequiredService<CheckoutService>());
+    }
+
+    private Task<HttpResponseMessage> Send(string path, string token, string? json = null)
+    {
+        var request = new HttpRequestMessage(json == null ? HttpMethod.Get : HttpMethod.Post, path);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (json != null) request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+        return _client.SendAsync(request);
+    }
+
+    public async Task DisposeAsync()
+    {
+        _client.Dispose();
+        await _app.DisposeAsync();
+        _database.Dispose();
+        File.Delete(_path);
+    }
+}
+
+public sealed record ContextProbe(int? MemberId, bool IdentityIsTest, int? TransactionId, bool? TransactionIsTest, int? BoundRequestId, bool SameInstances);
+
+[ApiController]
+[Route("api/context-probe")]
+public sealed class ContextProbeController(IIdentityContext identity, ITransactionContext transaction) : ControllerBase
+{
+    [HttpGet("{id}")]
+    public ContextProbe Get(int id) => Snapshot(null);
+
+    [HttpPost("complete")]
+    [CheckoutTransaction]
+    [RequestSizeLimit(64 * 1024)]
+    public async Task<ContextProbe> Complete(CheckoutController.CheckoutCompleteRequest request)
+    {
+        await Task.Delay(20);
+        return Snapshot(request.TransactionId);
+    }
+
+    private ContextProbe Snapshot(int? requestId) => new(identity.Current.MemberId, identity.Current.IsTest,
+        transaction.Current?.Id, transaction.Current?.IsTest, requestId,
+        ReferenceEquals(identity, HttpContext.Items[typeof(IdentityContext)]) && ReferenceEquals(transaction, HttpContext.Items[typeof(TransactionContext)]));
+}

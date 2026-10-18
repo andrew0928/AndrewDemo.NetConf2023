@@ -6,12 +6,16 @@
 
 | 文件 | 內容 |
 |---|---|
+| [Phase 1.1 API 實作交付](phase1.1-delivery.md) | 三個 admin 唯讀 API、獨立認證與 262 項回歸；真實 host 驗證完成，Docker 部署待 daemon 恢復。 |
 | [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案、實作留後續；沒有 Web UI，CLI 由使用者後續追加。 |
 | [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
+| [Phase 2.2 交付紀錄](phase2.2-delivery.md) | HTTP／CLI scoped context、22 筆新增驗證、153 項回歸及後置處理註記。 |
+| [Phase 2.3 交付紀錄](phase2.3-delivery.md) | 固定報價、原子 Order／庫存／完整封存、防寫與跨分區 ID；38 筆新增驗證、191 項回歸。 |
+| [Phase 2.1 交付紀錄](phase2.1-delivery.md) | 會員／Token 用途規則、API／CLI 接入、131 項回歸證據與後續階段邊界。 |
 | [業績與核帳 Schema 檢驗](accounting-schema-review.md) | 時間、State 與獨立交易金額明細已補齊；create 時固定、不含商品資訊快照，執行流程留 Phase 2。 |
 | [Phase 1 定案基準](../../spec/tip-phase1.md) | 正式規格、Abstract 合約、AC 對照、107 項測試證據與 Phase 2 邊界。 |
 | [舊 Checkout 409 與定案決策](../decisions/2026-10-17-tip-phase1-contract-baseline.md) | 缺少 PaymentId 明確回 409、要求重建，不處理相容；付款前移與合約定案。 |
-| [Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md) | 確認 IsTest 與 Checkout.PaymentId 欄位；command 保留明確會員輸入。Checkout 採作用中與封存分區保存，Order 關聯封存交易；新增 nullable CheckoutTransactionId；MemberId／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
+| [Core 欄位與明確會員輸入](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md) | 確認 IsTest 與 Checkout.PaymentId 欄位；command 保留明確會員輸入。Checkout 採作用中與封存分區保存，Order 關聯封存交易；新增 nullable CheckoutTransactionId；Member.Name／PaymentId 白名單預設於 code 或 database，舊資料用途為 false，無交易時省略交易 header／物件為 null。 |
 | [標準實作範圍與 Context 方向](../decisions/2026-10-17-tip-standard-scope-and-context.md) | 最新範圍：Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；PaymentId 白名單在建立 Checkout 時判定用途，事件處理器為 event／async 邊界；已接受 scoped injection，IdentityContext／TransactionContext 各自獨立，scope 依執行情境決定。 |
 | [TiP 設計原則](tip-guidelines.md) | 大前提、領域物件分類、略過紀錄與商業統計規則。 |
 | [TiP 接受條件](tip-acceptance-criteria.md) | 逐條確認的 AC 與驗收結果要求。目前已接受 AC-TIP-001、AC-TIP-003、AC-TIP-004、AC-TIP-005、AC-TIP-006、AC-TIP-007、AC-TIP-008、AC-TIP-009、AC-TIP-010、AC-TIP-011、AC-TIP-012、AC-TIP-013、AC-TIP-014、AC-TIP-015。 |
@@ -53,3 +57,5 @@ Green 階段實測：白名單與 Context 的 21 項案例全部轉綠；全套 
 ## Checkout 固定內容追加
 
 已確認 create 時固定獨立金額與交易明細，終態完整移至 archived_checkout_transactions 並凍結；Schema 已補上 State、TotalPrice、ProductLines／DiscountLines，商品名稱／描述／規格不複製至 Checkout。正式 [生命週期規格](../../spec/tip-checkout-lifecycle.md) 與 [案例](../../spec/testcases/tip-checkout-lifecycle.md) 已同步，服務執行留 Phase 2。
+
+2026-10-18：Name 白名單規格、實作、測試與本機 API 部署已完成，見 [交付紀錄](member-name-allowlist-delivery.md)。

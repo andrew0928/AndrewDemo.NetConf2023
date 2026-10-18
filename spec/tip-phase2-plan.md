@@ -13,11 +13,11 @@
 
 ## 階段與驗收
 
-下列階段均尚未交付。模型、白名單、Context 基礎實作與既有付款前移不等同完整流程完成。
+Phase 2.1～2.3 已於 2026-10-18 完成交付；2.4～2.7 尚未交付。模型、白名單、Context 基礎實作與既有付款前移不等同完整流程完成。
 
 | Phase | 相依 | 主要變更與完成條件 | 規格／案例 |
 |---|---|---|---|
-| 2.1 | Phase 1 | 會員建立以最終 ID 查白名單，首次保存即固定 IsTest；Token 繼承 Member；舊資料不重分類、禁止用途改寫、矛盾不得放行；驗證 ID 併發及失敗重試。 | [標準流程](tip-standard-flow.md)、[白名單](tip-test-allowlist.md)、[流程案例](testcases/tip-standard-flow.md) FLOW-001～005、401／402 |
+| 2.1 | Phase 1 | 會員建立以 Name 查白名單，首次保存即固定 IsTest；Token 繼承 Member；舊資料不重分類、禁止用途改寫、矛盾不得放行；驗證 ID 併發及失敗重試。 | [標準流程](tip-standard-flow.md)、[白名單](tip-test-allowlist.md)、[流程案例](testcases/tip-standard-flow.md) FLOW-001～005、401／402 |
 | 2.2 | 2.1 | 獨立 Identity／Transaction scoped 注入；CheckoutService lifetime 配合；HTTP token 初始化 identity、endpoint 明確解析交易 ID、Items 與 DI 同實例；CLI 每次操作獨立 scope；驗證匿名、權限、錯誤 payload 與跨請求隔離。 | [Context](tip-context-contracts.md)、[Context 案例](testcases/tip-context-contracts.md)、[HTTP](tip-http-and-operation-results.md)、[出口案例](testcases/tip-http-and-operation-results.md) |
 | 2.3 | 2.1、2.2 | create 固定用途、付款、金額與明細；complete 沿用保存內容及必要驗證；Order 用途／關聯／時間、Checkout 狀態／時間、跨分區 ID 唯一；庫存／Order／完整封存／刪除原子提交，封存防寫；驗證舊格式 409、rollback、重複與並行完成。 | [生命週期](tip-checkout-lifecycle.md)、[生命週期案例](testcases/tip-checkout-lifecycle.md)、[流程案例](testcases/tip-standard-flow.md) FLOW-101～210 |
 | 2.4 | 2.2、2.3 | 集中受保護寫入判斷，test 商品／SKU／庫存完成驗證後略過真實寫入；Cart 正常異動；驗證正式與 test 並行、實際略過明細。 | [標準流程](tip-standard-flow.md)、[庫存](core-product-sku-and-inventory.md)、[流程案例](testcases/tip-standard-flow.md) FLOW-301～303、307 |
@@ -39,7 +39,7 @@
 2026-10-18 追加範圍：[Phase 1.1 管理查核](tip-phase1.1.md) 獨立定義 admin 查詢，沒有 Web UI；CLI 由使用者後續追加，文件保留呼叫契約參考。原清單「正式報表／查詢 API 不在本輪」指原 Phase 2.1～2.7；新增範圍本輪只交付規格，實作與部署留待後續，不能併入既有階段的完成宣告。
 
 - Identity 與 Transaction 分開；Core command 明確接收 RequestMember，由 API／CLI 組合。
-- MemberId 白名單預設 900001、PaymentId 白名單預設 990001；只在建立時分類。Cart 不承接會員或 test 標記。
+- Member.Name 白名單預設 test、PaymentId 白名單預設 990001；只在建立時分類。Cart 不承接會員或 test 標記。
 - Checkout create 固定交易內容；complete 不按當前 Cart／價格／折扣重算；仍驗證可購買性、SKU 關聯與庫存。
 - 封存 canonical 名稱 `archived_checkout_transactions`，與作用中使用同一模型；終態完整保存後凍結。Order 關聯 Checkout，沒有 Order.PaymentId。
 - 舊 IsTest 缺值視為 false；未知時間／金額／狀態不補造；舊 Checkout 缺必要資料回 409，要求重建。
@@ -83,9 +83,9 @@ dotnet test src/AndrewDemo.NetConf2023.slnx --nologo
 
 | Phase | 狀態 | 交付證據／剩餘工作 |
 |---|---|---|
-| 2.1 | 尚未開始 | — |
-| 2.2 | 尚未開始 | — |
-| 2.3 | 尚未開始 | — |
+| 2.1 | 完成，待 review | [交付紀錄](../docs/tip/phase2.1-delivery.md)：MemberService、標準 API／CLI 接入、併發／rollback／用途防寫；solution 131 tests 通過，solution／CLI build 成功。Docker 未重建；HTTP context／完整錯誤出口接續 2.2／2.6。 |
+| 2.2 | 完成，待 review | [交付紀錄](../docs/tip/phase2.2-delivery.md)：獨立 scoped contexts、HTTP metadata／MVC 解析、CLI scope、權限與並行隔離；solution 153 tests 通過，solution／CLI build 成功。Docker 未重建；create 綁定與交易生命週期接續 2.3。 |
+| 2.3 | 完成，待 review | [交付紀錄](../docs/tip/phase2.3-delivery.md)：create 固定報價／用途與 context、complete 必要驗證、原子庫存／Order／完整封存、防寫與跨分區 ID；solution 191 tests 通過，solution／CLI build 成功。使用者後續授權重建 Common Docker，已備份並保留 DB，網站／API 200；共用效果控制接續 2.4，完整 UI 驗收仍待 2.7。 |
 | 2.4 | 尚未開始 | — |
 | 2.5 | 尚未開始 | — |
 | 2.6 | 尚未開始 | — |
@@ -101,3 +101,7 @@ dotnet test src/AndrewDemo.NetConf2023.slnx --nologo
 ```
 
 後續依序替換階段編號。每個 session 必須以工作樹及前階段交付紀錄為準，不依賴舊 chat context。
+
+2026-10-18：Name 白名單規格、實作、測試與本機 API 部署已完成，見 [交付紀錄](../docs/tip/member-name-allowlist-delivery.md)。
+
+2026-10-18 Phase 1.1 追加 API 已依後續授權實作，262 項回歸通過；Docker 映像重建成功，使用者依 Compose／curl 指令回報正式訂單查詢通過。此交付不改變 2.4～2.7 的狀態，見 [紀錄](../docs/tip/phase1.1-delivery.md)。

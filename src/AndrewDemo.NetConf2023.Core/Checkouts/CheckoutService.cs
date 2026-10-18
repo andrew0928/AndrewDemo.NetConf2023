@@ -1,274 +1,264 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using AndrewDemo.NetConf2023.Abstract.Carts;
+using AndrewDemo.NetConf2023.Abstract.Contexts;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Orders;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
+using AndrewDemo.NetConf2023.Core.Contexts;
 using AndrewDemo.NetConf2023.Core.Discounts;
 using AndrewDemo.NetConf2023.Core.Orders;
-using AndrewDemo.NetConf2023.Core.Products;
+using AndrewDemo.NetConf2023.Core.Testing;
 using AndrewDemo.NetConf2023.Core.Time;
+using LiteDB;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
-namespace AndrewDemo.NetConf2023.Core.Checkouts
+namespace AndrewDemo.NetConf2023.Core.Checkouts;
+
+/// <summary>已定案的業務拒絕，由 host 映射為 400；不改變 command／response 合約。</summary>
+public sealed class CheckoutRejectedException(string message) : InvalidOperationException(message);
+
+public sealed class CheckoutService
 {
-    public sealed class CheckoutService
+    private readonly IShopDatabaseContext _database;
+    private readonly DiscountEngine _discountEngine;
+    private readonly IOrderEventDispatcher _orderEventDispatcher;
+    private readonly IProductService _productService;
+    private readonly ShopManifest _shopManifest;
+    private readonly TimeProvider _timeProvider;
+    private readonly TestAllowlist _allowlist;
+    private readonly TransactionContext _transactionContext;
+    private readonly CheckoutEffects _effects;
+    private readonly ILogger<CheckoutService> _logger;
+
+    public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine,
+        IOrderEventDispatcher orderEventDispatcher, IProductService productService,
+        ShopManifest shopManifest, TimeProvider timeProvider, TestAllowlist? allowlist = null,
+        TransactionContext? transactionContext = null, CheckoutEffects? effects = null,
+        ILogger<CheckoutService>? logger = null)
     {
-        private readonly IShopDatabaseContext _database;
-        private readonly DiscountEngine _discountEngine;
-        private readonly IOrderEventDispatcher _orderEventDispatcher;
-        private readonly IProductService _productService;
-        private readonly ShopManifest _shopManifest;
-        private readonly TimeProvider _timeProvider;
+        _database = database;
+        _discountEngine = discountEngine;
+        _orderEventDispatcher = orderEventDispatcher;
+        _productService = productService;
+        _shopManifest = shopManifest;
+        _timeProvider = timeProvider;
+        _allowlist = allowlist ?? new TestAllowlist();
+        _transactionContext = transactionContext ?? new TransactionContext();
+        _effects = effects ?? new CheckoutEffects();
+        _logger = logger ?? NullLogger<CheckoutService>.Instance;
+    }
 
-        public CheckoutService(IShopDatabaseContext database, DiscountEngine discountEngine, IOrderEventDispatcher orderEventDispatcher, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
+    public CheckoutCreateResult Create(CheckoutCreateCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(command.RequestMember);
+        _transactionContext.Clear();
+        _effects.Clear();
+        var cart = _database.Carts.FindById(command.CartId);
+        if (cart == null) return CheckoutCreateResult.CreateCartNotFound("Cart not found");
+        var member = _database.Members.FindById(command.RequestMember.Id)
+            ?? throw new CheckoutRejectedException("會員不存在。");
+        ValidateMember(command.RequestMember, member);
+        var createdAt = BusinessTime();
+        var lines = new List<CheckoutProductLine>();
+        var pricingLines = new List<LineItem>();
+        foreach (var line in cart.LineItems)
         {
-            _database = database;
-            _discountEngine = discountEngine;
-            _orderEventDispatcher = orderEventDispatcher;
-            _productService = productService;
-            _shopManifest = shopManifest;
-            _timeProvider = timeProvider;
+            var product = _productService.GetProductById(line.ProductId)
+                ?? throw new CheckoutRejectedException($"商品 {line.ProductId} 不存在或不可購買。");
+            if (line.Quantity <= 0) throw new CheckoutRejectedException("商品數量必須大於零。");
+            var skuId = NormalizeSkuId(product.SkuId);
+            if (skuId != null && _database.Skus.FindById(skuId) == null)
+                throw new CheckoutRejectedException($"SKU {skuId} 不存在。");
+            lines.Add(new CheckoutProductLine
+            {
+                LineId = line.LineId, ParentLineId = line.ParentLineId, ProductId = line.ProductId,
+                SkuId = skuId, UnitPrice = product.Price, Quantity = line.Quantity,
+                LineAmount = product.Price * line.Quantity
+            });
+            pricingLines.Add(new LineItem
+            {
+                LineId = line.LineId, ParentLineId = line.ParentLineId, AddedAt = line.AddedAt,
+                ProductId = line.ProductId, ProductName = product.Name,
+                UnitPrice = product.Price, Quantity = line.Quantity
+            });
         }
-
-        public CheckoutCreateResult Create(CheckoutCreateCommand command)
+        var discounts = _discountEngine.Evaluate(new CartContext
         {
-            ArgumentNullException.ThrowIfNull(command);
-            ArgumentNullException.ThrowIfNull(command.RequestMember);
-
-            var cart = _database.Carts.FindById(command.CartId);
-            if (cart == null)
-            {
-                return CheckoutCreateResult.CreateCartNotFound("Cart not found");
-            }
-
-            var transactionStartAt = _timeProvider.GetUtcDateTime();
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = command.RequestMember.Id,
-                CreatedAt = transactionStartAt,
-                PaymentId = command.PaymentId
-            };
-
+            ShopId = _shopManifest.ShopId, ConsumerId = member.Id, ConsumerName = member.Name,
+            EvaluatedAt = createdAt, LineItems = pricingLines
+        }).Where(x => x.Kind == DiscountRecordKind.Discount).Select(x => new CheckoutDiscountLine
+        {
+            RuleId = x.RuleId, Name = x.Name, Description = x.Description, Amount = x.Amount,
+            RelatedLineIds = x.RelatedLineIds.ToList()
+        }).ToList();
+        var transaction = new CheckoutTransactionRecord
+        {
+            CartId = cart.Id, MemberId = member.Id, CreatedAt = createdAt,
+            PaymentId = command.PaymentId, IsTest = member.IsTest || _allowlist.IsTestPayment(command.PaymentId),
+            State = CheckoutState.Created, ProductLines = lines, DiscountLines = discounts,
+            TotalPrice = lines.Sum(x => x.LineAmount) + discounts.Sum(x => x.Amount)
+        };
+        CheckoutStoredContent.Validate(transaction);
+        BeginWrite();
+        try
+        {
+            transaction.TransactionId = checked(Math.Max(MaxId("checkout_transactions"), MaxId("archived_checkout_transactions")) + 1);
             _database.CheckoutTransactions.Insert(transaction);
-
-            return CheckoutCreateResult.CreateSucceeded(
-                transaction.TransactionId,
-                transactionStartAt,
-                command.RequestMember.Id,
-                command.RequestMember.Name);
+            _database.Database.Commit();
         }
+        catch { _database.Database.Rollback(); throw; }
+        Bind(transaction);
+        return CheckoutCreateResult.CreateSucceeded(transaction.TransactionId, createdAt, member.Id, member.Name);
+    }
 
-        public async Task<CheckoutCompleteResult> CompleteAsync(CheckoutCompleteCommand command)
+    public async Task<CheckoutCompleteResult> CompleteAsync(CheckoutCompleteCommand command)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        ArgumentNullException.ThrowIfNull(command.RequestMember);
+        _effects.Clear();
+        _transactionContext.Clear();
+        var ticket = new WaitingRoomTicket(_timeProvider);
+        await ticket.WaitUntilCanRunAsync();
+        // LiteDB transaction 為 thread-bound；此同步區段不可 await。
+        var result = CompleteTransaction(command);
+        if (result.Status != CheckoutCompleteStatus.Succeeded) return result;
+        var order = result.OrderDetail!;
+        try
         {
-            ArgumentNullException.ThrowIfNull(command);
-            ArgumentNullException.ThrowIfNull(command.RequestMember);
+            _orderEventDispatcher.Dispatch(OrderEventFactory.CreateCompletedEvent(_shopManifest, order, result.TransactionCompleteAt));
+            order.FulfillmentStatus = OrderFulfillmentStatus.Succeeded;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "訂單 {OrderId} 履約失敗；保留已提交的交易與封存。", order.Id);
+            order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
+        }
+        // 只改履約欄位，不以事件取得的可變 Order 覆寫用途或交易內容。
+        _database.Database.GetCollection("orders").UpdateMany(
+            BsonExpression.Create("{ FulfillmentStatus: @0 }", new BsonValue(order.FulfillmentStatus.ToString())),
+            BsonExpression.Create("_id = @0", new BsonValue(order.Id)));
+        return result;
+    }
 
-            var ticket = new WaitingRoomTicket(_timeProvider);
-            await ticket.WaitUntilCanRunAsync();
-
-            // 先檢查儲存欄位，避免舊資料的 null 在反序列化為 int 時失敗。
-            var storedTransaction = _database.Database.GetCollection("checkout_transactions").FindById(command.TransactionId);
-            if (storedTransaction == null)
-            {
-                return CheckoutCompleteResult.CreateTransactionNotFound("Transaction not found");
-            }
-
-            if (storedTransaction[nameof(CheckoutTransactionRecord.MemberId)].AsInt32 != command.RequestMember.Id)
-            {
-                return CheckoutCompleteResult.CreateBuyerMismatch("Transaction buyer mismatch");
-            }
-
-            // 舊紀錄未保存 PaymentId 時，明確要求重建；不能把 int 預設值當成付款來源。
-            if (!storedTransaction.ContainsKey(nameof(CheckoutTransactionRecord.PaymentId)) ||
-                storedTransaction[nameof(CheckoutTransactionRecord.PaymentId)].IsNull)
-            {
-                return CheckoutCompleteResult.CreateRecreateRequired("Checkout 未保存 PaymentId，請重新建立 Checkout。");
-            }
-
-            var transaction = _database.Database.Mapper.ToObject<CheckoutTransactionRecord>(storedTransaction);
-            var cart = _database.Carts.FindById(transaction.CartId);
-            if (cart == null)
-            {
-                return CheckoutCompleteResult.CreateCartNotFound("Cart not found");
-            }
-
+    private CheckoutCompleteResult CompleteTransaction(CheckoutCompleteCommand command)
+    {
+        BeginWrite();
+        try
+        {
+            var stored = _database.Database.GetCollection("checkout_transactions").FindById(command.TransactionId);
+            if (stored == null) return Reject(CheckoutCompleteResult.CreateTransactionNotFound("Transaction not found"));
+            if (stored["MemberId"].AsInt32 != command.RequestMember.Id)
+                return Reject(CheckoutCompleteResult.CreateBuyerMismatch("Transaction buyer mismatch"));
+            CheckoutStoredContent.ValidatePurpose(stored);
+            _transactionContext.Bind(new TransactionSnapshot(TransactionKind.Checkout, command.TransactionId,
+                stored.ContainsKey("IsTest") && stored["IsTest"].AsBoolean));
+            var legacyReason = CheckoutStoredContent.MissingContent(stored);
+            if (legacyReason != null) return Reject(CheckoutCompleteResult.CreateRecreateRequired(legacyReason));
+            var transaction = _database.Database.Mapper.ToObject<CheckoutTransactionRecord>(stored);
+            CheckoutStoredContent.Validate(transaction);
             var consumer = _database.Members.FindById(transaction.MemberId);
-            if (consumer == null)
+            if (consumer == null) return Reject(CheckoutCompleteResult.CreateConsumerNotFound("Consumer not found"));
+            ValidateMember(command.RequestMember, consumer);
+            var completedAt = BusinessTime();
+            var order = new Order(checked(MaxId("orders") + 1))
             {
-                return CheckoutCompleteResult.CreateConsumerNotFound("Consumer not found");
-            }
-
-            var order = new Order(command.TransactionId)
-            {
-                Buyer = consumer,
-                FulfillmentStatus = OrderFulfillmentStatus.Pending
+                Buyer = consumer, IsTest = transaction.IsTest, CheckoutTransactionId = transaction.TransactionId,
+                CreatedAt = completedAt, TotalPrice = transaction.TotalPrice!.Value,
+                ShopNotes = new Order.OrderShopNotes { BuyerSatisfaction = command.Satisfaction, Comments = command.ShopComments }
             };
-
-            decimal total = 0m;
-            var completedAt = _timeProvider.GetUtcDateTime();
-            var inventoryRequirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var lineitem in cart.LineItems)
+            var requirements = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            foreach (var line in transaction.ProductLines)
             {
-                var product = _productService.GetProductById(lineitem.ProductId);
-                if (product == null)
-                {
-                    return CheckoutCompleteResult.CreateProductNotFound($"Product {lineitem.ProductId} not found");
-                }
-
-                var skuId = NormalizeSkuId(product.SkuId);
-
-                total += product.Price * lineitem.Quantity;
-
+                var product = _productService.GetProductById(line.ProductId);
+                if (product == null || !string.Equals(NormalizeSkuId(product.SkuId), line.SkuId, StringComparison.OrdinalIgnoreCase)
+                    || (line.SkuId != null && _database.Skus.FindById(line.SkuId) == null))
+                    return Reject(CheckoutCompleteResult.CreateProductNotFound($"商品 {line.ProductId} 不可購買或 SKU 關聯已變更。"));
                 order.ProductLines.Add(new Order.OrderProductLine
                 {
-                    ProductId = product.Id,
-                    SkuId = skuId,
-                    ProductName = product.Name,
-                    UnitPrice = product.Price,
-                    Quantity = lineitem.Quantity,
-                    LineAmount = product.Price * lineitem.Quantity
+                    ProductId = line.ProductId, SkuId = line.SkuId, ProductName = product.Name,
+                    UnitPrice = line.UnitPrice, Quantity = line.Quantity, LineAmount = line.LineAmount
                 });
-
-                if (skuId == null)
+                if (line.SkuId != null)
                 {
+                    requirements.TryGetValue(line.SkuId, out var quantity);
+                    requirements[line.SkuId] = checked(quantity + line.Quantity);
+                }
+            }
+            order.DiscountLines = transaction.DiscountLines.Select(x => new Order.OrderDiscountLine
+            { RuleId = x.RuleId, Name = x.Name, Description = x.Description, Amount = x.Amount }).ToList();
+            var inventory = new Dictionary<string, Products.InventoryRecord>(StringComparer.OrdinalIgnoreCase);
+            foreach (var requirement in requirements)
+            {
+                var record = _database.InventoryRecords.Query().Where(x => x.SkuId == requirement.Key).ForUpdate().FirstOrDefault();
+                if (record == null || record.AvailableQuantity < requirement.Value)
+                    return Reject(CheckoutCompleteResult.CreateInventoryInsufficient($"SKU {requirement.Key} 庫存不足。"));
+                inventory.Add(requirement.Key, record);
+            }
+            foreach (var requirement in requirements)
+            {
+                if (transaction.IsTest)
+                {
+                    _effects.RecordInventoryDeduction(requirement.Key);
+                    _logger.LogInformation("TiP 略過 {EffectCode}，{TargetType}/{TargetId}，原因 {ReasonCode}，Checkout {TransactionId}",
+                        "inventory.deduct", "inventory", requirement.Key, "test_behavior", transaction.TransactionId);
                     continue;
                 }
-
-                inventoryRequirements.TryGetValue(skuId, out var currentQuantity);
-                inventoryRequirements[skuId] = currentQuantity + lineitem.Quantity;
+                var record = inventory[requirement.Key];
+                record.AvailableQuantity -= requirement.Value;
+                record.UpdatedAt = completedAt;
+                if (!_database.InventoryRecords.Update(record)) throw new InvalidOperationException("庫存更新失敗。");
             }
-
-            var discountContext = CartContextFactory.Create(_shopManifest, cart, consumer, _productService, _timeProvider);
-            foreach (var discount in _discountEngine.Evaluate(discountContext))
-            {
-                if (discount.Kind != Abstract.Discounts.DiscountRecordKind.Discount)
-                {
-                    continue;
-                }
-
-                order.DiscountLines.Add(new Order.OrderDiscountLine
-                {
-                    RuleId = discount.RuleId,
-                    Name = discount.Name,
-                    Description = discount.Description,
-                    Amount = discount.Amount
-                });
-
-                total += discount.Amount;
-            }
-
-            order.TotalPrice = total;
-            order.ShopNotes = new Order.OrderShopNotes
-            {
-                BuyerSatisfaction = command.Satisfaction,
-                Comments = command.ShopComments
-            };
-
-            var ownsTransaction = _database.Database.BeginTrans();
-            try
-            {
-                var inventoryResult = ValidateAndDeductInventory(inventoryRequirements, completedAt);
-                if (inventoryResult != null)
-                {
-                    if (ownsTransaction)
-                    {
-                        _database.Database.Rollback();
-                    }
-
-                    return inventoryResult;
-                }
-
-                _database.Orders.Upsert(order);
-                _database.CheckoutTransactions.Delete(command.TransactionId);
-
-                if (ownsTransaction)
-                {
-                    _database.Database.Commit();
-                }
-            }
-            catch
-            {
-                if (ownsTransaction)
-                {
-                    _database.Database.Rollback();
-                }
-
-                throw;
-            }
-
-            try
-            {
-                var orderEvent = OrderEventFactory.CreateCompletedEvent(_shopManifest, order, completedAt);
-                _orderEventDispatcher.Dispatch(orderEvent);
-                order.FulfillmentStatus = OrderFulfillmentStatus.Succeeded;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[checkout] order event dispatch failed for order {order.Id}: {ex}");
-                order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
-            }
-
-            _database.Orders.Upsert(order);
-
-            return CheckoutCompleteResult.CreateSucceeded(
-                command.TransactionId,
-                transaction.PaymentId,
-                completedAt,
-                command.RequestMember.Id,
-                command.RequestMember.Name,
-                order);
+            _database.Orders.Insert(order);
+            // 使用原 BSON，保留所有原欄位（包括未知的擴充欄位），只設定終態與時間。
+            stored["State"] = CheckoutState.Completed.ToString();
+            stored["ClosedAt"] = completedAt;
+            _database.Database.GetCollection("archived_checkout_transactions").Insert(stored);
+            if (!_database.CheckoutTransactions.Delete(command.TransactionId)) throw new InvalidOperationException("作用中交易移除失敗。");
+            _database.Database.Commit();
+            return CheckoutCompleteResult.CreateSucceeded(command.TransactionId, transaction.PaymentId, completedAt,
+                consumer.Id, consumer.Name, order);
         }
-
-        private CheckoutCompleteResult? ValidateAndDeductInventory(
-            IReadOnlyDictionary<string, int> inventoryRequirements,
-            DateTime updatedAt)
+        catch (Exception ex)
         {
-            if (inventoryRequirements.Count == 0)
-            {
-                return null;
-            }
-
-            var inventoryRecords = new Dictionary<string, InventoryRecord>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var requirement in inventoryRequirements)
-            {
-                var inventoryRecord = _database.InventoryRecords
-                    .Query()
-                    .Where(x => x.SkuId == requirement.Key)
-                    .ForUpdate()
-                    .FirstOrDefault();
-
-                if (inventoryRecord == null)
-                {
-                    return CheckoutCompleteResult.CreateInventoryInsufficient($"Inventory record not found for sku {requirement.Key}");
-                }
-
-                if (inventoryRecord.AvailableQuantity < requirement.Value)
-                {
-                    return CheckoutCompleteResult.CreateInventoryInsufficient(
-                        $"Inventory is insufficient for sku {requirement.Key}. required={requirement.Value}, available={inventoryRecord.AvailableQuantity}");
-                }
-
-                inventoryRecords[requirement.Key] = inventoryRecord;
-            }
-
-            foreach (var requirement in inventoryRequirements)
-            {
-                var inventoryRecord = inventoryRecords[requirement.Key];
-                inventoryRecord.AvailableQuantity -= requirement.Value;
-                inventoryRecord.UpdatedAt = updatedAt;
-                _database.InventoryRecords.Update(inventoryRecord);
-            }
-
-            return null;
-        }
-
-        private static string? NormalizeSkuId(string? skuId)
-        {
-            return string.IsNullOrWhiteSpace(skuId) ? null : skuId;
+            _database.Database.Rollback();
+            _logger.LogError(ex, "Checkout {TransactionId} 完成失敗，未提交交易。", command.TransactionId);
+            throw;
         }
     }
+
+    private CheckoutCompleteResult Reject(CheckoutCompleteResult result)
+    {
+        _database.Database.Rollback();
+        _logger.LogInformation("Checkout 拒絕：{Status}，{Reason}", result.Status, result.ErrorMessage);
+        return result;
+    }
+
+    private void BeginWrite()
+    {
+        if (!_database.Database.BeginTrans()) throw new InvalidOperationException("Checkout 不接受外層資料庫交易。");
+        try
+        {
+            // 先取得跨 instance／Shared connection 的寫入鎖，再讀取 ID 與交易狀態。
+            _database.Database.GetCollection("checkout_write_lock").Upsert(new BsonDocument { ["_id"] = 1 });
+        }
+        catch { _database.Database.Rollback(); throw; }
+    }
+
+    private int MaxId(string collection) => _database.Database.GetCollection(collection)
+        .Query().OrderByDescending("_id").FirstOrDefault()?["_id"].AsInt32 ?? 0;
+    private DateTime BusinessTime()
+    {
+        var utc = _timeProvider.GetUtcDateTime();
+        // LiteDB 時間精度為毫秒；回應與兩筆持久化時間採完全相同的 UTC 值。
+        return new DateTime(utc.Ticks - utc.Ticks % TimeSpan.TicksPerMillisecond, DateTimeKind.Utc);
+    }
+    private void Bind(CheckoutTransactionRecord transaction) => _transactionContext.Bind(
+        new TransactionSnapshot(TransactionKind.Checkout, transaction.TransactionId, transaction.IsTest));
+    private static void ValidateMember(Member supplied, Member stored)
+    {
+        if (supplied.IsTest != stored.IsTest) throw new ExecutionContextInvalidException("RequestMember 與保存的會員用途矛盾。");
+    }
+    private static string? NormalizeSkuId(string? skuId) => string.IsNullOrWhiteSpace(skuId) ? null : skuId;
 }

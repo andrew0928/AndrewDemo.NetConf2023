@@ -60,6 +60,8 @@
 | 日期 | 決策 |
 |---|---|
 | [2026-10-18](2026-10-18-tip-admin-query.md) | **TiP Phase 1.1 管理查核**。追加獨立 admin token、訂單總額與三種清單；未設定即停用、規格定案。需求僅有 API，沒有 Web UI，CLI 由使用者後續追加；實作留待後續。 |
+| [2026-10-18](2026-10-18-tip-member-name-allowlist.md) | **TiP 會員白名單改以 Name 判定**。使用者重新開啟此項 Phase 1 規格；預設名稱 test，比對沿用資料庫 collation，不重新分類既有資料。 |
+| [2026-10-18](2026-10-18-tip-order-postprocessing-context.md) | **TiP 訂單後置處理用途延續**。未來 `/api/orders/{id}/xxx` 與衍生任務必須附帶 Order transaction；目前只留註記，不新增功能。 |
 | [2026-10-18](2026-10-18-tip-phase2-session-handoff.md) | **TiP Phase 2 七階段交接**。同機器不同 chat 依序完成 2.1～2.7，統一範圍、相依與交付證據入口。 |
 | [2026-10-17](2026-10-17-common-local-database-bind-mount.md) | **Common 本機 DB 使用 bind mount**。common site-dev 資料存於 `.local/data/common-site-dev/`；保留既有資料，seed 不覆寫，方便本機查詢驗證。 |
 | [2026-10-17](2026-10-17-checkout-state-and-transaction-details.md) | **Checkout 狀態與獨立交易明細**。保存 State，終態完整移至 archived_checkout_transactions 後凍結；保留金額與交易明細，不保留商品資訊快照。金額／明細已確認在 create 時固定。 |

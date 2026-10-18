@@ -1,6 +1,6 @@
 # TiP 管理查核 API 規格
 
-日期：2026-10-18。歸屬：[Phase 1.1](tip-phase1.1.md)。狀態：Phase 1.1 規格定案；實作未開始。
+日期：2026-10-18。歸屬：[Phase 1.1](tip-phase1.1.md)。狀態：Phase 1.1 規格定案；API 已實作及驗證，Docker 映像已重建，使用者手動查詢通過，見 [交付紀錄](../docs/tip/phase1.1-delivery.md)。
 
 ## 目的與邊界
 

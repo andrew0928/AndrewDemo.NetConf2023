@@ -15,6 +15,7 @@ services:
     ports:
       - "5108:8080"
     environment:
+      - SHOP_ADMIN_ACCESS_TOKEN=${SHOP_ADMIN_ACCESS_TOKEN:-}
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
     restart: "no"

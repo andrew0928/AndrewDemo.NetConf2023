@@ -1,5 +1,7 @@
 # TiP 標準實作範圍與 Context 方向
 
+> 2026-10-18：本文會員 ID 白名單部分已由 [Name 白名單決策](2026-10-18-tip-member-name-allowlist.md) 取代，其他決策不變。
+
 ## 狀態
 
 accepted

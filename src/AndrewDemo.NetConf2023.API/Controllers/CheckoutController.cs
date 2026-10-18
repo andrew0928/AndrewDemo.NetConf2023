@@ -1,6 +1,5 @@
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
-using AndrewDemo.NetConf2023.Core.Time;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,21 +12,18 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     [ApiController]
     public class CheckoutController : ControllerBase
     {
-        private readonly IShopDatabaseContext _database;
+        private readonly MemberService _members;
         private readonly CheckoutService _checkoutService;
-        private readonly TimeProvider _timeProvider;
 
         /// <summary>
         /// 建構函式
         /// </summary>
-        /// <param name="database">商店資料庫內容。</param>
         /// <param name="checkoutService">結帳流程服務。</param>
-        /// <param name="timeProvider">目前系統的時間提供者。</param>
-        public CheckoutController(IShopDatabaseContext database, CheckoutService checkoutService, TimeProvider timeProvider)
+        /// <param name="members">會員與 Token 共用服務。</param>
+        public CheckoutController(CheckoutService checkoutService, MemberService members)
         {
-            _database = database;
+            _members = members;
             _checkoutService = checkoutService;
-            _timeProvider = timeProvider;
         }
 
         /// <summary>
@@ -42,7 +38,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <param name="request"></param>
         /// <returns></returns>
         [HttpPost("create", Name = "CreateCheckout")]
-        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status200OK)]
         public ActionResult<CheckoutCreateResponse> Create(
             //[FromHeader(Name = "Authorization")] string token,
             [FromBody] CheckoutCreateRequest request)
@@ -53,12 +49,17 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return Unauthorized();
             }
 
-            var result = _checkoutService.Create(new CheckoutCreateCommand
+            CheckoutCreateResult result;
+            try
             {
-                CartId = request.CartId,
-                PaymentId = request.PaymentId,
-                RequestMember = member
-            });
+                result = _checkoutService.Create(new CheckoutCreateCommand
+                {
+                    CartId = request.CartId,
+                    PaymentId = request.PaymentId,
+                    RequestMember = member
+                });
+            }
+            catch (CheckoutRejectedException ex) { return BadRequest(ex.Message); }
 
             if (result.Status != CheckoutCreateStatus.Succeeded)
             {
@@ -78,12 +79,14 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// 完成結帳。
         /// </summary>
         /// <remarks>
-        /// 完成結帳時，會將購物車內容轉換成訂單。
+        /// 完成結帳時，會將 create 保存的固定交易內容轉換成訂單。
         /// 呼叫時提供 TransactionId；付款來源使用 create 時保存的 PaymentId。
         /// 成功後會建立訂單，並且回傳交易的內容 (包含訂單)。
         /// </remarks>
         /// <param name="request"></param>
         /// <returns></returns>
+        [AndrewDemo.NetConf2023.API.Execution.CheckoutTransaction]
+        [RequestSizeLimit(64 * 1024)]
         [HttpPost("complete", Name = "CompleteCheckout")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -110,7 +113,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             {
                 if (result.Status == CheckoutCompleteStatus.BuyerMismatch)
                 {
-                    return Forbid();
+                    return StatusCode(StatusCodes.Status403Forbidden);
                 }
 
                 if (result.Status == CheckoutCompleteStatus.RecreateRequired)
@@ -140,13 +143,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return null;
             }
 
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
-            {
-                return null;
-            }
-
-            return _database.Members.FindById(tokenRecord.MemberId);
+            return _members.ValidateToken(accessToken);
         }
 
 
@@ -199,6 +196,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
             /// <summary>
             /// 指定要完成的交易 transactionId
             /// </summary>
+            [System.Text.Json.Serialization.JsonRequired]
             public int TransactionId { get; set; }
             //public string AccessToken { get; set; }
 

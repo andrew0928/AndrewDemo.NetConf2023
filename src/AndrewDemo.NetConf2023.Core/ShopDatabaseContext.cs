@@ -4,8 +4,10 @@ using System.IO;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Core.Products;
 using AndrewDemo.NetConf2023.Core.Checkouts;
+using AndrewDemo.NetConf2023.Core.Orders;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace AndrewDemo.NetConf2023.Core
 {
@@ -16,6 +18,7 @@ namespace AndrewDemo.NetConf2023.Core
         ILiteCollection<Product> Products { get; }
         ILiteCollection<SkuRecord> Skus { get; }
         ILiteCollection<InventoryRecord> InventoryRecords { get; }
+        // 基礎儲存入口；標準應用的會員／Token 寫入必須經過 MemberService。
         ILiteCollection<Member> Members { get; }
         ILiteCollection<Order> Orders { get; }
         ILiteCollection<MemberAccessTokenRecord> MemberTokens { get; }
@@ -37,7 +40,7 @@ namespace AndrewDemo.NetConf2023.Core
         private readonly ILiteCollection<CheckoutTransactionRecord> _archivedCheckoutTransactions;
         private bool _disposed;
 
-        public ShopDatabaseContext(ShopDatabaseOptions? options = null)
+        public ShopDatabaseContext(ShopDatabaseOptions? options = null, ILogger<ShopDatabaseContext>? logger = null)
         {
             var resolvedOptions = options ?? new ShopDatabaseOptions();
             var connection = ResolveConnection(resolvedOptions);
@@ -48,10 +51,11 @@ namespace AndrewDemo.NetConf2023.Core
             _skus = _database.GetCollection<SkuRecord>("skus");
             _inventoryRecords = _database.GetCollection<InventoryRecord>("inventory_records");
             _members = _database.GetCollection<Member>("members");
-            _orders = _database.GetCollection<Order>("orders");
+            _orders = OrderCollectionGuard.Wrap(_database.GetCollection<Order>("orders"), logger);
             _memberTokens = _database.GetCollection<MemberAccessTokenRecord>("member_tokens");
-            _checkoutTransactions = _database.GetCollection<CheckoutTransactionRecord>("checkout_transactions");
-            _archivedCheckoutTransactions = _database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions");
+            _checkoutTransactions = CheckoutCollectionGuard.Wrap(_database.GetCollection<CheckoutTransactionRecord>("checkout_transactions"),
+                _database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions"), logger);
+            _archivedCheckoutTransactions = CheckoutCollectionGuard.Wrap(_database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions"), logger: logger);
 
             EnsureIndexes(_database);
         }
@@ -244,6 +248,8 @@ namespace AndrewDemo.NetConf2023.Core
             }
 
             var context = Current;
+            if (entity is Member or MemberAccessTokenRecord or CheckoutTransactionRecord or Order)
+                throw new InvalidOperationException("用途固定物件必須透過對應 Core 服務建立。");
             var collection = GetCollection<T>(context);
             collection.Insert(entity);
             return entity;
@@ -272,7 +278,7 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 var options = new ShopDatabaseOptions();
                 configure?.Invoke(options);
-                var context = new ShopDatabaseContext(options);
+                var context = new ShopDatabaseContext(options, sp.GetService<ILogger<ShopDatabaseContext>>());
                 ShopDatabase.Use(context);
                 return context;
             });
@@ -285,7 +291,7 @@ namespace AndrewDemo.NetConf2023.Core
             services.AddSingleton<IShopDatabaseContext>(sp =>
             {
                 var options = configure(sp) ?? throw new InvalidOperationException("shop database options cannot be null");
-                var context = new ShopDatabaseContext(options);
+                var context = new ShopDatabaseContext(options, sp.GetService<ILogger<ShopDatabaseContext>>());
                 ShopDatabase.Use(context);
                 return context;
             });

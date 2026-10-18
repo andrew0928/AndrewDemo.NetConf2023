@@ -70,7 +70,7 @@ public sealed class CheckoutContractTests
             });
             var service = new CheckoutService(database, new DiscountEngine([]), new DefaultOrderEventDispatcher(),
                 new DefaultProductService(database), new ShopManifest { ShopId = "default" }, TimeProvider.System);
-            var controller = new CheckoutController(database, service, TimeProvider.System)
+            var controller = new CheckoutController(service, new MemberService(database, new AndrewDemo.NetConf2023.Core.Testing.TestAllowlist(), TimeProvider.System))
             {
                 ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
             };

@@ -10,12 +10,14 @@
 
 後續 Phase 2 不任意改動本清單中的正式規格與 `.Abstract`；若發現需要改變對外語意或契約，先停下來由使用者明確重新開啟規格階段。Core 內部類別、資料庫 ID 配發與 scope 建立方式可依既定規則實作。
 
+2026-10-18 使用者重新開啟並確認會員白名單改以 Name 判定，預設 `test`、比對沿用資料庫 collation；既有用途不重算，Abstract 不變。見 [決策](../docs/decisions/2026-10-18-tip-member-name-allowlist.md)。
+
 ## 正式文件與案例
 
 | 規格 | 測試案例 | 定案內容 |
 |---|---|---|
 | [Core 物件](tip-core-object-definitions.md) | [物件案例](testcases/tip-core-object-definitions.md) | IsTest、PaymentId、nullable Order 關聯、獨立封存區與舊資料預設值。 |
-| [白名單](tip-test-allowlist.md) | [白名單案例](testcases/tip-test-allowlist.md) | Core 唯讀清單；預設 MemberId 900001、PaymentId 990001；只在建立時分類。 |
+| [白名單](tip-test-allowlist.md) | [白名單案例](testcases/tip-test-allowlist.md) | Core 唯讀清單；預設 Member.Name test、PaymentId 990001；只在建立時分類。 |
 | [Context](tip-context-contracts.md) | [Context 案例](testcases/tip-context-contracts.md) | 獨立 Identity／Transaction、不可變快照、nullable transaction、scoped 邊界。 |
 | [Checkout 生命週期](tip-checkout-lifecycle.md) | [生命週期案例](testcases/tip-checkout-lifecycle.md) | State、create 固定交易金額與明細、終態完整封存與凍結。 |
 | [標準流程](tip-standard-flow.md) | [流程案例](testcases/tip-standard-flow.md) | 註冊／Token／Checkout／Order、原子封存、效果控制、事件、舊交易 409。 |

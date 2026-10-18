@@ -6,9 +6,9 @@
 
 | ID | Given／When | Then |
 |---|---|---|
-| TC-TIP-FLOW-001 | 新會員最終 ID 命中清單，完成註冊 | 首次可見紀錄 IsTest=true；未命中為 false，不能先以 false 提交再改 true。 |
+| TC-TIP-FLOW-001 | 新會員 Name 命中清單，完成註冊 | 首次可見紀錄 IsTest=true；未命中為 false，不能先以 false 提交再改 true。 |
 | TC-TIP-FLOW-002 | 對正式／測試會員簽發 Token | Token.IsTest 與保存的 Member 相同，不由 request 自行指定。 |
-| TC-TIP-FLOW-003 | 舊會員／Token 缺少用途，後來 ID 加入清單再登入 | 仍為 false；不重新分類既有資料。 |
+| TC-TIP-FLOW-003 | 舊會員／Token 缺少用途，後來 Name 加入清單再登入 | 仍為 false；不重新分類既有資料。 |
 | TC-TIP-FLOW-004 | 同時註冊多個會員，或註冊失敗後重試 | ID 唯一；無用途錯配或未完成的部分資料。 |
 | TC-TIP-FLOW-005 | Token 與 Member 保存的用途不一致 | 用途 BUG，停止後續效果，不以重新查白名單修復。 |
 

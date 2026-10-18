@@ -21,6 +21,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         [Fact]
         public void Create_WithExistingCart_CreatesCheckoutTransaction()
         {
+            Context.Products.Insert(new Product { Id = "1", Name = "商品", Price = 50m });
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
             cart.AddProducts("1", 1, FixedUtcNow);
@@ -62,16 +63,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts("1", 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -112,16 +107,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -147,22 +136,18 @@ namespace AndrewDemo.NetConf2023.Core.Tests
         [Fact]
         public async Task CompleteAsync_WhenProductMissing_KeepsTransactionForRetry()
         {
+            Context.Products.Insert(new Product { Id = "missing-product", Name = "暫時商品", Price = 50m });
             var (member, _) = TestDataFactory.RegisterMember(Context);
             var cart = new Cart();
             cart.AddProducts("missing-product", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
+            Context.Products.Delete("missing-product");
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transaction.TransactionId,
@@ -191,16 +176,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = buyer.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = buyer });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -222,16 +201,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts(productId, 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -255,16 +228,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts(productId, 2, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService();
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -294,16 +261,10 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             cart.AddProducts("1", 1, FixedUtcNow);
             Context.Carts.Insert(cart);
 
-            var transaction = new CheckoutTransactionRecord
-            {
-                CartId = cart.Id,
-                MemberId = member.Id,
-                CreatedAt = DateTime.UtcNow,
-                PaymentId = 9527
-            };
-            Context.CheckoutTransactions.Insert(transaction);
-
             var service = CreateCheckoutService(new HintOnlyDiscountRule());
+            var created = service.Create(new CheckoutCreateCommand
+            { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
+            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {

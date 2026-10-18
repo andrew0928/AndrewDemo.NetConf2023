@@ -34,3 +34,7 @@
 4. 使用者後續追加 shell CLI；文件中的 CLI 契約與案例供該次工作參考，不是 API 交付的前置條件。所有統計仍由 API 計算。
 
 本輪不執行部署、不設定實際秘密、不新增登入帳號，不宣稱新增 endpoints 可用。
+
+## 實作交付更新
+
+2026-10-18 使用者於定案後指示執行 Phase 1.1，API 已實作並完成 262 項 solution 回歸與真實 host 隔離驗證；沒有 Web UI，CLI 仍由使用者後續追加。Docker 首次建置因 daemon 中斷失敗，重啟 OrbStack 後已成功重建 Common API 映像；使用者後續依提供的 Compose 與 curl 命令回報正式訂單查詢通過，完整容器案例未重跑。上文「本輪只完成規格」描述定案時的階段邊界，最新實作與限制見 [交付紀錄](../docs/tip/phase1.1-delivery.md)。
