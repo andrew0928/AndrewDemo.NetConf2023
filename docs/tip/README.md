@@ -6,8 +6,12 @@
 
 | 文件 | 內容 |
 |---|---|
+| [Phase 1.2 Admin CLI](../../spec/tip-phase1.2.md) | .NET 唯讀 CLI、統計／明細、dotenv、help／skill topics 與三種輸出；已定案並實作，見 [交付紀錄](phase1.2-delivery.md) 與 [操作說明](admin-cli.md)。 |
+| [AdminCLI 操作說明](admin-cli.md) | 建置、預設 working directory `.env`、統計／明細、匯出與退出碼。 |
+| [Phase 1.2 交付紀錄](phase1.2-delivery.md) | CLI 測試、發佈與已部署 API 查核結果；工具取代與驗證限制。 |
+| [CLI 最後驗收流程](phase1.2-final-verification.md) | 後續使用者操作命令、匯出證據及標準 TiP 可驗證範圍。 |
 | [Phase 1.1 API 實作交付](phase1.1-delivery.md) | 三個 admin 唯讀 API、獨立認證與 262 項回歸；真實 host 驗證及 Docker 映像建置完成，使用者手動查詢通過。 |
-| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案且 API 已交付；沒有 Web UI，CLI 由使用者後續追加。 |
+| [Phase 1.1 管理查核](../../spec/tip-phase1.1.md) | 獨立 admin API、訂單總額與三種清單；未設定 token 即停用。規格定案且 API 已交付；沒有 Web UI，CLI 設計已追加至 Phase 1.2。 |
 | [Phase 2 執行與交接](../../spec/tip-phase2-plan.md) | **新 chat 接手入口**：2.1～2.7 範圍、相依、驗收、最新基準及同機器本地環境。 |
 | [Phase 2.2 交付紀錄](phase2.2-delivery.md) | HTTP／CLI scoped context、22 筆新增驗證、153 項回歸及後置處理註記。 |
 | [Phase 2.7 交付紀錄](phase2.7-delivery.md) | Storefront 付款／結果、Docker 重建、Edge 全流程與 admin／LiteDB 核對；335 項回歸。 |

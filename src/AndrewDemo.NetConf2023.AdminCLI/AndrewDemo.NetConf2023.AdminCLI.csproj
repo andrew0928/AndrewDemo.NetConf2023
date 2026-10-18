@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>shop-admin</AssemblyName>
+    <Version>1.2.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="../../spec/skills/admin-cli/SKILL.md" LogicalName="skills.index.md" />
+    <EmbeddedResource Include="../../spec/skills/admin-cli/references/*.md" LogicalName="skills.%(Filename).md" />
+    <None Update=".env" CopyToOutputDirectory="Never" CopyToPublishDirectory="Never" />
+    <InternalsVisibleTo Include="AndrewDemo.NetConf2023.AdminCLI.Tests" />
+  </ItemGroup>
+</Project>

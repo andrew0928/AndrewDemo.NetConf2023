@@ -870,6 +870,12 @@ API spec draft：
 - `spec/testcases/petshop-reservation-purchase-threshold-discount.md` 已固定 testcase。
 - extension tests 已覆蓋無預約、單筆預約、多筆預約、門檻邊界、只有預約與過期預約。
 
+## TiP Phase 1.2 Admin CLI（2026-10-18）
+
+使用者追加 .NET query-only CLI 作為最後查核入口：統計／明細、環境變數與預設 working directory `.env`、人用 --help、agent --skill 情境指引、TXT／CSV／JSON，以及 member／checkout／order 與 all／normal／test 篩選。會員不接受日期經使用者確認；訂單／結帳沿用既有起訖時間語意。這是 TiP 驗證主線的工具補齊，不改動 .Core、Abstract 或既有 API 契約。
+
+[Phase 1.2](../spec/tip-phase1.2.md) 已定案並授權實作；取代先前 shell CLI 參考。最後確認以 CLI 資料證據加上既有 Core／HTTP／事件測試，不把三個唯讀查詢當成所有 AC 的證明。見 [決策](decisions/2026-10-18-tip-admin-cli.md)、[實作交付](tip/phase1.2-delivery.md) 與 [使用者驗收流程](tip/phase1.2-final-verification.md)。
+
 ## TiP Phase 2 跨 Session 交接（2026-10-18）
 
 使用者確認以同一台機器、不同 chat session 依序執行 2.1～2.7；canonical 執行與進度入口為 [Phase 2 計畫](../spec/tip-phase2-plan.md)。每階段更新交付證據與剩餘工作；保持 Phase 1 與 Abstract 定案，不將資料模型或舊 Docker image 的可用性當作完整 TiP 驗收。

@@ -18,7 +18,7 @@
 
 這是 Phase 1 的追加規格，支援 TiP 正式／測試資料隔離驗證，並承接原已保留的核帳查詢方向；不取代 Phase 2.1～2.7，不將尚未完成的 Phase 2.4～2.7 視為完成。
 
-原交接所稱「正式報表／查詢 API 不在本輪」仍適用原 Phase 2 清單；此次追加以本文件獨立交接，後續獲授權再實作。既有離線 `query-litedb.sh` 是診斷工具，不是本次 admin CLI 的實作。
+原交接所稱「正式報表／查詢 API 不在本輪」仍適用原 Phase 2 清單；此次追加以本文件獨立交接，後續獲授權再實作。原離線診斷 `query-litedb.sh` 與 DatabaseQuery 已於 Phase 1.2 依使用者決策移除，後續以 AdminCLI＋Admin API 查核。
 
 ## 合約放置
 
@@ -38,3 +38,7 @@
 ## 實作交付更新
 
 2026-10-18 使用者於定案後指示執行 Phase 1.1，API 已實作並完成 262 項 solution 回歸與真實 host 隔離驗證；沒有 Web UI，CLI 仍由使用者後續追加。Docker 首次建置因 daemon 中斷失敗，重啟 OrbStack 後已成功重建 Common API 映像；使用者後續依提供的 Compose 與 curl 命令回報正式訂單查詢通過，完整容器案例未重跑。上文「本輪只完成規格」描述定案時的階段邊界，最新實作與限制見 [交付紀錄](../docs/tip/phase1.1-delivery.md)。
+
+## CLI 後續規格入口
+
+2026-10-18 使用者追加 [Phase 1.2](tip-phase1.2.md)，指定 .NET query-only CLI、環境變數與 dotenv、人用 help／agent topics、統計／明細與 TXT／CSV／JSON；取代前述 shell 參考方向。Phase 1.1 API 合約與實作不變，CLI 設計及後續交付由 1.2 獨立追蹤。

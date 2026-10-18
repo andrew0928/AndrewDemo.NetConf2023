@@ -63,7 +63,9 @@
 | ADMIN-READ-005 | 查詢前後比對業務集合，觀察事件與 skipped-effect log | 無業務資料改寫、用途重算、Token 建立、事件或 test 略過紀錄。 |
 | ADMIN-READ-006 | DB 讀取故障／資料不可判讀 | 非 2xx，明確錯誤碼；不回舊結果、空成功或秘密。 |
 
-## 後續 Shell CLI（參考案例）
+## 後續 CLI（Phase 1.1 歷史參考案例）
+
+2026-10-18：使用者於 Phase 1.2 改採 .NET CLI；下表保留原參考情境，文法／輸出及新案例以 [Phase 1.2 CLI 案例](tip-admin-cli.md) 為準，無 shell 實作交付。
 
 | ID | Given／When | Then |
 |---|---|---|

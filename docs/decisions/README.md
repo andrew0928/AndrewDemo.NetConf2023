@@ -59,6 +59,7 @@
 
 | 日期 | 決策 |
 |---|---|
+| [2026-10-18](2026-10-18-tip-admin-cli.md) | **TiP Phase 1.2 .NET Admin CLI**。query-only 統計／明細、環境變數與 dotenv、help／skill topics、TXT／CSV／JSON；會員不接受日期。規格已確認並授權實作；保留 ConsoleUI、移除 DatabaseQuery 與 query-litedb.sh，以 AdminCLI＋Admin API 替代。 |
 | [2026-10-18](2026-10-18-tip-admin-query.md) | **TiP Phase 1.1 管理查核**。追加獨立 admin token、訂單總額與三種清單；未設定即停用、規格定案。需求僅有 API，沒有 Web UI，CLI 由使用者後續追加；實作留待後續。 |
 | [2026-10-18](2026-10-18-tip-member-name-allowlist.md) | **TiP 會員白名單改以 Name 判定**。使用者重新開啟此項 Phase 1 規格；預設名稱 test，比對沿用資料庫 collation，不重新分類既有資料。 |
 | [2026-10-18](2026-10-18-tip-order-postprocessing-context.md) | **TiP 訂單後置處理用途延續**。未來 `/api/orders/{id}/xxx` 與衍生任務必須附帶 Order transaction；目前只留註記，不新增功能。 |

@@ -105,3 +105,7 @@ dotnet test src/AndrewDemo.NetConf2023.slnx --nologo
 2026-10-18：Name 白名單規格、實作、測試與本機 API 部署已完成，見 [交付紀錄](../docs/tip/member-name-allowlist-delivery.md)。
 
 2026-10-18 Phase 1.1 追加 API 已依後續授權實作，262 項回歸通過；Docker 映像重建成功，使用者依 Compose／curl 指令回報正式訂單查詢通過。此交付不改變 2.4～2.7 的狀態，見 [紀錄](../docs/tip/phase1.1-delivery.md)。
+
+## Phase 1.2 後續查核入口
+
+2026-10-18 使用者另開 [Phase 1.2](tip-phase1.2.md) 設計 .NET query-only Admin CLI，用於標準 TiP 最後確認；CLI 已依定案規格實作，見 [交付紀錄](../docs/tip/phase1.2-delivery.md)；不回溯改寫上述 2.1～2.7 的測試結果。新規格與案例獨立追蹤，HTTP／Abstract 定案維持。
