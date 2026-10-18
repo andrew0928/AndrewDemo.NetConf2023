@@ -6,6 +6,10 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
+## TiP Phase 1.1：管理查核追加規格
+
+2026-10-18 使用者指定追加唯讀 admin 查詢與 shell CLI，用來驗證總訂單金額、訂單、結帳與會員清單；admin 使用獨立、預先設定的 `admin_` token。本輪明確只做規格，實作留待後續。認證傳遞與設定方式待確認，正式入口為 [Phase 1.1](../spec/tip-phase1.1.md)，依據見 [決策](decisions/2026-10-18-tip-admin-query.md)。不取代既有 Phase 2.1～2.7，亦不將未交付階段視為完成。
+
 ## TiP：Phase 1 規格與合約已定案
 
 最後記錄：2026-10-17。
