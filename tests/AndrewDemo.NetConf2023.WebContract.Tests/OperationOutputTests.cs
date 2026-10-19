@@ -82,8 +82,8 @@ public sealed partial class ExecutionScopeTests
         var response = await Send("/api/checkout/complete", token, $"{{\"transactionId\":{id}}}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         AssertHeaders(response, test ? "test" : "normal", "succeeded", id, test, test ? "inventory.deduct" : null);
-        Assert.Null(_database.CheckoutTransactions.FindById(id));
-        Assert.Equal(test, _database.ArchivedCheckoutTransactions.FindById(id).IsTest);
+        Assert.Null(_database.Transactions.Checkout(id));
+        Assert.Equal(test, _database.Transactions.Checkout(id, true)!.IsTest);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(payment, body.GetProperty("paymentId").GetInt32());
         Assert.Equal(test, body.GetProperty("orderDetail").GetProperty("isTest").GetBoolean());
@@ -119,7 +119,7 @@ public sealed partial class ExecutionScopeTests
         var response = await Send("/api/checkout/complete", _testToken, $"{{\"transactionId\":{id}}}");
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         AssertHeaders(response, "test", "rejected", id, true);
-        Assert.Empty(_database.Orders.FindAll()); Assert.NotNull(_database.CheckoutTransactions.FindById(id));
+        Assert.Empty(_database.Transactions.Orders("all")); Assert.NotNull(_database.Transactions.Checkout(id));
         Assert.Empty(_executions.Last().Result!.SkippedEffects);
         Assert.DoesNotContain(_logs.Entries, x => x.Fields.ContainsKey("EffectCode"));
         var missing = await Send("/api/checkout/create", _testToken, $"{{\"cartId\":{cart.Id}}}");
@@ -127,9 +127,9 @@ public sealed partial class ExecutionScopeTests
     }
 
     [Theory]
-    [InlineData("ok", 200, "succeeded", "product.update,sku.update")]
+    [InlineData("ok", 200, "succeeded", "sku.update")]
     [InlineData("reject", 403, "rejected", null)]
-    [InlineData("fail", 500, "failed", "product.update,sku.update")]
+    [InlineData("fail", 500, "failed", "sku.update")]
     [InlineData("bug", 500, "failed", null)]
     public async Task MaintenanceOutput_PreservesActualEffectsEvenWhenLaterStepFails(string mode, int status, string outcome, string? skipped)
     {
@@ -153,6 +153,26 @@ public sealed partial class ExecutionScopeTests
     }
 
     [Fact]
+    public async Task TestIdentityPriceChange_ReturnsExplicit403_AndLaterCheckoutKeepsOriginalPrice()
+    {
+        _database.Products.Insert(new Product { Id = "p", Price = 100m });
+        var denied = await Send("/api/output-probe/maintenance/price", _testToken, "{}");
+        Assert.Equal(HttpStatusCode.Forbidden, denied.StatusCode);
+        Assert.Equal("test_identity_forbidden", (await denied.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        AssertHeaders(denied, "test", "rejected");
+        Assert.Empty(_executions.Last().Result!.SkippedEffects);
+        Assert.Equal(100m, _database.Products.FindById("p").Price);
+        var denialLog = Assert.Single(_logs.Entries, x => x.Fields.TryGetValue("ReasonCode", out var reason) && Equals(reason, "test_identity_forbidden"));
+        Assert.Equal("p", denialLog.Fields["TargetId"]);
+        var cart = new Cart(); cart.AddProducts("p", 1, DateTime.UtcNow); _database.Carts.Insert(cart);
+        var id = await CreateCheckout(cart, _testToken, 0);
+        Assert.Equal(100m, _database.Transactions.Checkout(id)!.TotalPrice);
+        var allowed = await Send("/api/output-probe/maintenance/price", _normalToken, "{}");
+        Assert.Equal(HttpStatusCode.OK, allowed.StatusCode); AssertHeaders(allowed, "normal", "succeeded");
+        Assert.Equal(80m, _database.Products.FindById("p").Price);
+    }
+
+    [Fact]
     public async Task NormalMaintenanceFailure_DoesNotPretendToSkipOrRollback()
     {
         _database.Products.Insert(new Product { Id = "p", Price = 100m });
@@ -160,8 +180,8 @@ public sealed partial class ExecutionScopeTests
         var response = await Send("/api/output-probe/maintenance/fail", _normalToken, "{}");
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         AssertHeaders(response, "normal", "failed");
-        Assert.Equal(60m, _database.Products.FindById("p").Price);
-        Assert.Equal("新規格", _database.Skus.FindById("s").SpecificationSummary);
+        Assert.Equal(100m, _database.Products.FindById("p").Price);
+        Assert.Equal("第三次規格", _database.Skus.FindById("s").SpecificationSummary);
         Assert.Empty(_executions.Last().Result!.SkippedEffects);
         Assert.DoesNotContain(_logs.Entries, x => x.Fields.ContainsKey("EffectCode"));
     }
@@ -171,11 +191,24 @@ public sealed partial class ExecutionScopeTests
     {
         AssertHeaders(await _client.GetAsync("/api/products"), "normal", "succeeded");
         AssertHeaders(await Send("/api/carts/create", _testToken, "{}"), "test", "succeeded");
-        _database.Orders.Insert(new Order(50) { Buyer = new() { Id = 2 }, IsTest = true });
+        _database.Transactions.InsertOrder(new Order(50) { Buyer = new() { Id = 2 }, IsTest = true });
         var response = await Send("/api/member/orders", _testToken);
         AssertHeaders(response, "test", "succeeded");
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.True(Assert.Single(body.GetProperty("orders").EnumerateArray()).GetProperty("isTest").GetBoolean());
+    }
+
+    [Fact]
+    public async Task NormalMemberHistory_IncludesOwnBothPurposesAndExcludesOtherBuyers()
+    {
+        foreach (var (id, buyer, test) in new[] { (50, 1, false), (51, 1, true), (52, 2, false), (53, 2, true) })
+            _database.Transactions.InsertOrder(new Order(id) { Buyer = new() { Id = buyer }, IsTest = test });
+        var response = await Send("/api/member/orders", _normalToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode); AssertHeaders(response, "normal", "succeeded");
+        var orders = (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("orders").EnumerateArray().ToArray();
+        Assert.Equal(new[] { 50, 51 }, orders.Select(x => x.GetProperty("id").GetInt32()).Order());
+        Assert.Contains(orders, x => x.GetProperty("isTest").GetBoolean());
+        Assert.Contains(orders, x => !x.GetProperty("isTest").GetBoolean());
     }
 
     [Fact]
@@ -206,7 +239,8 @@ public sealed partial class ExecutionScopeTests
         _database.Products.Insert(new Product() { Id = "p", Price = 100m });
         using var scope = ShopOperationScope.Open(_app.Services.GetRequiredService<IServiceScopeFactory>(), _testToken);
         var service = scope.Services.GetRequiredService<ProductMaintenanceService>();
-        if (mode != "reject") service.UpdatePrice("p", 50m, _ => { });
+        _database.Skus.Insert(new SkuRecord { SkuId = "cli-sku" });
+        if (mode != "reject") service.UpdateSpecification("cli-sku", "新規格", _ => { });
         var result = mode == "success" ? scope.Complete() : scope.Fail(mode == "reject"
             ? new UnauthorizedAccessException("拒絕") : new IOException("失敗"));
         Assert.NotNull(result); Assert.True(result.IsTestBehavior); Assert.Equal(outcome, result.Outcome);
@@ -260,10 +294,11 @@ public sealed class OperationOutputProbeController(ProductMaintenanceService pro
     [HttpPost("maintenance/{mode}")]
     public IActionResult Maintain(string mode)
     {
+        if (mode == "price") { products.UpdatePrice("p", 80m, _ => { }); return Ok(); }
         if (mode == "bug") throw new ExecutionContextInvalidException("用途無效");
         products.UpdateSpecification("s", "新規格", _ => { if (mode == "reject") throw new UnauthorizedAccessException(); });
-        products.UpdatePrice("p", 50m, _ => { });
-        products.UpdatePrice("p", 60m, _ => { });
+        products.UpdateSpecification("s", "第二次規格", _ => { });
+        products.UpdateSpecification("s", "第三次規格", _ => { });
         if (mode == "fail") throw new IOException("稍後步驟失敗");
         return Ok(new { changed = true });
     }

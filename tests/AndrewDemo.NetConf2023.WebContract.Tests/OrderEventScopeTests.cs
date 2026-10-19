@@ -54,12 +54,13 @@ public sealed class OrderEventScopeTests : IDisposable
         return services;
     }
 
-    private void Seed(int id, bool isTest) => _database.Orders.Insert(new Order(id)
+    private void Seed(int id, bool isTest) => _database.Transactions.InsertOrder(new Order(id)
     {
         IsTest = isTest, Buyer = new Member { Id = 91, Name = "opposite", IsTest = !isTest },
         TotalPrice = 100m, CheckoutTransactionId = null
     });
-    private string StoredOrders() => string.Join("\n", _database.Database.GetCollection("orders").FindAll().Select(x => x.ToString()));
+    private string StoredOrders() => string.Join("\n", new[] { "orders", "test_orders" }
+        .SelectMany(name => _database.Database.GetCollection(name).FindAll().Select(x => name + ":" + x.ToString())));
     private void Send(int id, bool cancelled = false)
     {
         if (cancelled) Dispatcher.Dispatch(new OrderCancelledEvent { OrderId = id, ShopId = "test" });
@@ -106,7 +107,7 @@ public sealed class OrderEventScopeTests : IDisposable
         Assert.Equal(isTest ? 0 : 4, _state.RealEffects);
         Assert.Equal(4, _state.Validations);
         Assert.Equal(before, StoredOrders());
-        Assert.Empty(_database.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(_database.Transactions.Checkouts("all", true));
         Assert.Equal(isTest ? 4 : 0, _logs.Entries.Count(x => x.Fields.ContainsKey("EffectCode")));
         Assert.All(_logs.Entries.Where(x => x.Fields.ContainsKey("EffectCode")), entry =>
         {
@@ -210,7 +211,7 @@ public sealed class OrderEventScopeTests : IDisposable
         var before = StoredOrders(); Send(1);
         Assert.False(Assert.Single(_state.Handlers).Transaction.Current!.IsTest);
         Assert.Equal(2, _state.RealEffects); Assert.Equal(before, StoredOrders());
-        Assert.Empty(_database.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(_database.Transactions.Checkouts("all", true));
     }
 
     [Theory]
@@ -279,12 +280,12 @@ public sealed class OrderEventScopeTests : IDisposable
             Assert.Equal(isTest ? 1 : 0, outerEffects.Skipped.Count);
             Assert.All(outerEffects.Skipped, effect => Assert.Equal("inventory.deduct", effect.EffectCode));
         }
-        var archive = _database.Database.GetCollection("archived_checkout_transactions").FindById(checkoutId).ToString();
+        var archive = _database.Database.GetCollection(isTest ? "test_archived_checkout_transactions" : "archived_checkout_transactions").FindById(checkoutId).ToString();
         var orderBefore = StoredOrders();
         _state.Process = null; Send(order.Id);
-        Assert.Null(_database.CheckoutTransactions.FindById(checkoutId));
-        Assert.Equal(CheckoutState.Completed, _database.ArchivedCheckoutTransactions.FindById(checkoutId).State);
-        Assert.Equal(archive, _database.Database.GetCollection("archived_checkout_transactions").FindById(checkoutId).ToString());
+        Assert.Null(_database.Transactions.Checkout(checkoutId));
+        Assert.Equal(CheckoutState.Completed, _database.Transactions.Checkout(checkoutId, true)!.State);
+        Assert.Equal(archive, _database.Database.GetCollection(isTest ? "test_archived_checkout_transactions" : "archived_checkout_transactions").FindById(checkoutId).ToString());
         Assert.Equal(orderBefore, StoredOrders());
         Assert.Equal(isTest ? 10 : 8, _database.InventoryRecords.FindById("s").AvailableQuantity);
         Assert.Equal(isTest ? 0 : 4, _state.RealEffects);
@@ -321,6 +322,25 @@ public sealed class OrderEventScopeTests : IDisposable
         Assert.All(logs, entry => Assert.Equal(OperationOutcome.Failed, entry.Fields["Outcome"]));
         Assert.Equal(OperationOutcome.Succeeded, result.Outcome);
         Assert.Equal(0, _state.RealEffects);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void TestOrderSystemHandler_CannotEscapeThroughIndependentMaintenance(bool clear)
+    {
+        Seed(1, true); Seed(2, false);
+        _state.Process = (handler, _) =>
+        {
+            if (clear) ((TransactionContext)handler.Transaction).Clear();
+            handler.Writes.ForIdentity("sku.update", "sku", "s", "繞道",
+                _ => { }, () => Interlocked.Increment(ref _state.RealEffects));
+        };
+        Assert.Throws<ExecutionContextInvalidException>(() => Send(1));
+        Assert.Equal(0, _state.RealEffects);
+        Assert.Empty(Assert.Single(_state.Handlers).Effects.Skipped);
+        _state.Process = null; Send(2);
+        Assert.Equal(2, _state.RealEffects);
     }
 
     private sealed class State

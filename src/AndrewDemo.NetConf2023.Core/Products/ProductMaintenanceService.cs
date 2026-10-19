@@ -16,9 +16,8 @@ public sealed class ProductMaintenanceService(IShopDatabaseContext database, Pro
         effects.Clear();
         ArgumentException.ThrowIfNullOrWhiteSpace(productId);
         ArgumentNullException.ThrowIfNull(authorize);
-        writes.ForIdentity("product.update", "product", productId, price, identity =>
+        writes.ForPrice(productId, price, authorize, () =>
         {
-            authorize(identity);
             ArgumentOutOfRangeException.ThrowIfNegative(price);
             if (database.Products.FindById(productId) == null) throw new KeyNotFoundException("商品不存在。");
         }, () => Update("products", productId, "{ Price: @0 }", new BsonValue(price)));

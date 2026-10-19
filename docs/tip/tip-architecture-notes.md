@@ -1,6 +1,8 @@
 # TiP 架構設計筆記
 
-更新日期：2026-10-17。
+更新日期：2026-10-19。
+
+最新實作：Phase 3 已完成六個交易 collections 與交易擁有者協調，見 [架構圖](phase3.1-delivery.md)、[原子操作 sequence](phase3.2-delivery.md)、[整體驗收](phase3.6-delivery.md)。以下研究過程與階段建議保留為歷史脈絡；現行入口是 `ShopDatabaseContext.Transactions`，不再暴露舊的可寫交易 collection 屬性。
 
 本文件收錄已確認規範、標準實作範圍及 context 實作評估。2026-10-17 最新決策確認 Member／Checkout／Order 標記，Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 排除；建立 Checkout 時提供 PaymentId 並固定用途。同日已確認採用 scoped injection；標準流程的具體 contract 已整理為 [Phase 1 定案基準](../../spec/tip-phase1.md)。Context／結果模型、Core 欄位、白名單與付款前移已交付；host、封存與效果控制留待 Phase 2。下列研究筆記以正式規格為準。
 
@@ -49,7 +51,7 @@ Member 用途不可變，Order.Buyer 為其快照；正式會員使用測試付�
 
 已確認作用中的 Checkout 與封存交易紀錄分區保存，Order 可透過關聯查回封存的 CheckoutTransactionRecord；封存保留原交易 ID、IsTest 與 PaymentId。現行程式成功後直接刪除 Checkout，仍須改版達成此方向。
 
-實作建議為同一 shop database 的不同 collection，將 Order 建立、依用途處理庫存、封存及移除作用中紀錄一起提交或回滾。Complete 僅處理作用中紀錄；成立前失敗保留作用中 Checkout，成立後 fulfillment 失敗保留 Order 與封存紀錄。Order 透過 nullable CheckoutTransactionId 關聯；封存入口已定義為 ArchivedCheckoutTransactions／archived_checkout_transactions，保留原 CreatedAt，重複 complete 維持 TransactionNotFound／400；須避免交易 ID 因移出作用中區而被重用。
+實作建議為同一 shop database 的不同 collection，將 Order 建立、依用途處理庫存、封存及移除作用中紀錄一起提交或回滾。Complete 僅處理作用中紀錄；成立前失敗保留作用中 Checkout，成立後 fulfillment 失敗保留 Order 與封存紀錄。Order 透過 nullable CheckoutTransactionId 關聯；現行封存透過 TransactionStore，依用途寫入 archived_checkout_transactions／test_archived_checkout_transactions，保留原 CreatedAt，重複 complete 維持 TransactionNotFound／400；須避免交易 ID 因移出作用中區而被重用。
 
 <a id="standard-context-evaluation"></a>
 

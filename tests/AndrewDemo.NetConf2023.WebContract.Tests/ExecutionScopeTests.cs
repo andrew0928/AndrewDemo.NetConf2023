@@ -66,8 +66,8 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         var members = _app.Services.GetRequiredService<MemberService>();
         _normalToken = members.IssueToken(members.GetOrCreate("normal").Id, DateTime.MaxValue).Token;
         _testToken = members.IssueToken(members.GetOrCreate("test").Id, DateTime.MaxValue).Token;
-        _database.CheckoutTransactions.Insert(new CheckoutTransactionRecord { TransactionId = 10, MemberId = 1, IsTest = false });
-        _database.CheckoutTransactions.Insert(new CheckoutTransactionRecord { TransactionId = 20, MemberId = 2, IsTest = true });
+        _database.Database.GetCollection<CheckoutTransactionRecord>("checkout_transactions").Insert(new CheckoutTransactionRecord { TransactionId = 10, MemberId = 1, IsTest = false });
+        _database.Database.GetCollection<CheckoutTransactionRecord>("test_checkout_transactions").Insert(new CheckoutTransactionRecord { TransactionId = 20, MemberId = 2, IsTest = true });
         _app.UseRouting();
         _app.Use(async (http, next) =>
         {
@@ -118,15 +118,15 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         Assert.Equal(200m, order.GetProperty("totalPrice").GetDecimal());
         Assert.True(order.GetProperty("isTest").GetBoolean());
         Assert.Equal(body.TransactionId, order.GetProperty("checkoutTransactionId").GetInt32());
-        Assert.Equal(CheckoutState.Completed, _database.ArchivedCheckoutTransactions.FindById(body.TransactionId).State);
+        Assert.Equal(CheckoutState.Completed, _database.Transactions.Checkout(body.TransactionId, true)!.State);
         Assert.Equal(result.RootElement.GetProperty("transactionCompleteAt").GetDateTime(),
-            _database.ArchivedCheckoutTransactions.FindById(body.TransactionId).ClosedAt!.Value.ToUniversalTime());
+            _database.Transactions.Checkout(body.TransactionId, true)!.ClosedAt!.Value.ToUniversalTime());
         Assert.Equal(result.RootElement.GetProperty("transactionCompleteAt").GetDateTime(),
-            _database.Orders.FindById(order.GetProperty("id").GetInt32()).CreatedAt!.Value.ToUniversalTime());
+            _database.Transactions.Order(order.GetProperty("id").GetInt32())!.CreatedAt!.Value.ToUniversalTime());
         var repeated = await Send("/api/checkout/complete", _testToken,
             System.Text.Json.JsonSerializer.Serialize(new { transactionId = body.TransactionId }));
         Assert.Equal(HttpStatusCode.BadRequest, repeated.StatusCode);
-        Assert.Single(_database.Orders.FindAll());
+        Assert.Single(_database.Transactions.Orders("all"));
     }
 
     [Theory]
@@ -142,15 +142,15 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
             ["ProductLines"] = new BsonArray(), ["DiscountLines"] = new BsonArray()
         };
         raw.Remove(missing);
-        _database.Database.GetCollection("checkout_transactions").Insert(raw);
+        _database.Database.GetCollection("test_checkout_transactions").Insert(raw);
         var response = await Send("/api/checkout/complete", _testToken, "{\"transactionId\":30}");
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("checkout_recreate_required", await response.Content.ReadAsStringAsync());
         Assert.Equal("rejected", response.Headers.GetValues("X-Shop-Outcome").Single());
         Assert.Equal("test", response.Headers.GetValues("X-Shop-Behavior").Single());
         Assert.False(response.Headers.Contains("X-Shop-Skipped-Effects"));
-        Assert.Equal(raw.ToString(), _database.Database.GetCollection("checkout_transactions").FindById(30).ToString());
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Equal(raw.ToString(), _database.Database.GetCollection("test_checkout_transactions").FindById(30).ToString());
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -163,7 +163,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
             System.Text.Json.JsonSerializer.Serialize(new { cartId = cart.Id, paymentId = 0 }));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.False(response.Headers.Contains("X-Test-Context-Id"));
-        Assert.Equal(2, _database.CheckoutTransactions.Count());
+        Assert.Equal(2, _database.Transactions.Checkouts("all").Length);
     }
 
     [Fact]
@@ -209,7 +209,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         var response = await Send("/api/context-probe/complete", _testToken, json);
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         AssertHeaders(response, "test", "rejected");
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -251,13 +251,13 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         AssertHeaders(response, null, "failed");
         Assert.False(response.Headers.Contains("X-Shop-Behavior"));
         Assert.False(response.Headers.Contains("X-Shop-Transaction-Id"));
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     [Fact]
     public async Task LegacyCheckoutWithNullPayment_ReachesExisting409Mapping()
     {
-        var raw = _database.Database.GetCollection("checkout_transactions");
+        var raw = _database.Database.GetCollection("test_checkout_transactions");
         var checkout = raw.FindById(20);
         checkout["PaymentId"] = BsonValue.Null;
         raw.Update(checkout);
@@ -268,7 +268,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         Assert.Equal("test", response.Headers.GetValues("X-Shop-Behavior").Single());
         Assert.False(response.Headers.Contains("X-Shop-Skipped-Effects"));
         Assert.NotNull(raw.FindById(20));
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -287,7 +287,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
     [Fact]
     public async Task CorruptStoredPurpose_ReturnsContextBugWithoutEffects()
     {
-        var raw = _database.Database.GetCollection("checkout_transactions");
+        var raw = _database.Database.GetCollection("test_checkout_transactions");
         var checkout = raw.FindById(20);
         checkout["IsTest"] = "unknown";
         raw.Update(checkout);
@@ -295,7 +295,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.InternalServerError, response.StatusCode);
         Assert.Contains("execution_context_invalid", await response.Content.ReadAsStringAsync());
         AssertHeaders(response, null, "failed");
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -409,7 +409,7 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
             System.Text.Json.JsonSerializer.Serialize(new { cartId = cart.Id, paymentId = 0 }));
         Assert.Equal(HttpStatusCode.OK, created.StatusCode);
         var checkoutId = (await created.Content.ReadFromJsonAsync<CheckoutController.CheckoutCreateResponse>())!.TransactionId;
-        var checkoutBefore = _database.Database.GetCollection("checkout_transactions").FindById(checkoutId).ToString();
+        var checkoutBefore = _database.Database.GetCollection("test_checkout_transactions").FindById(checkoutId).ToString();
         var cartBefore = _database.Database.GetCollection("carts").FindById(cart.Id).ToString();
         var protectedBefore = ProtectedDocuments();
         var response = await Send("/api/checkout/complete", token, $"{{\"transactionId\":{checkoutId}}}");
@@ -417,8 +417,8 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
         AssertHeaders(response, "test", "rejected");
         Assert.False(response.Headers.Contains("X-Test-Context-Id"));
         Assert.Equal("0", response.Headers.GetValues("X-Test-Skipped-Count").Single());
-        Assert.Empty(_database.Orders.FindAll()); Assert.Empty(_database.ArchivedCheckoutTransactions.FindAll());
-        Assert.Equal(checkoutBefore, _database.Database.GetCollection("checkout_transactions").FindById(checkoutId).ToString());
+        Assert.Empty(_database.Transactions.Orders("all")); Assert.Empty(_database.Transactions.Checkouts("all", true));
+        Assert.Equal(checkoutBefore, _database.Database.GetCollection("test_checkout_transactions").FindById(checkoutId).ToString());
         Assert.Equal(cartBefore, _database.Database.GetCollection("carts").FindById(cart.Id).ToString());
         Assert.Equal(protectedBefore, ProtectedDocuments());
     }
@@ -433,15 +433,15 @@ public sealed partial class ExecutionScopeTests : IAsyncLifetime
             using var operation = ShopOperationScope.Open(factory, token);
             var effects = operation.Services.GetRequiredService<OperationEffects>();
             var service = operation.Services.GetRequiredService<ProductMaintenanceService>();
-            service.UpdatePrice("maintenance", token == _testToken ? 80m : 90m, identity =>
-            {
-                Assert.Equal(token == _testToken, identity.IsTest);
-            });
+            Action update = () => service.UpdatePrice("maintenance", token == _testToken ? 80m : 90m, identity =>
+                Assert.Equal(token == _testToken, identity.IsTest));
+            if (token == _testToken) Assert.Throws<TestIdentityForbiddenException>(update);
+            else update();
             Assert.Null(operation.Services.GetRequiredService<ITransactionContext>().Current);
             return effects;
         })));
         Assert.NotSame(results[0], results[1]);
-        Assert.Empty(results[0].Skipped); Assert.Single(results[1].Skipped);
+        Assert.Empty(results[0].Skipped); Assert.Empty(results[1].Skipped);
         Assert.Equal(90m, _database.Products.FindById("maintenance").Price);
         using var next = ShopOperationScope.Open(factory, _testToken);
         Assert.Empty(next.Services.GetRequiredService<OperationEffects>().Skipped);

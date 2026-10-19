@@ -74,8 +74,8 @@ public sealed class MemberFlowTests : IDisposable
         };
         controller.HttpContext.Items["access-token"] = "contradictory";
         Assert.Throws<ExecutionContextInvalidException>(() => controller.Create(new CheckoutController.CheckoutCreateRequest { CartId = 1, PaymentId = 0 }));
-        Assert.Empty(_database.CheckoutTransactions.FindAll());
-        Assert.Empty(_database.Orders.FindAll());
+        Assert.Empty(_database.Transactions.Checkouts("all"));
+        Assert.Empty(_database.Transactions.Orders("all"));
     }
 
     public void Dispose() { _database.Dispose(); File.Delete(_path); }

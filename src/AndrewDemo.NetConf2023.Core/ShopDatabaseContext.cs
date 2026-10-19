@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -21,10 +22,8 @@ namespace AndrewDemo.NetConf2023.Core
         ILiteCollection<InventoryRecord> InventoryRecords { get; }
         // 基礎儲存入口；標準應用的會員／Token 寫入必須經過 MemberService。
         ILiteCollection<Member> Members { get; }
-        ILiteCollection<Order> Orders { get; }
+        TransactionStore Transactions { get; }
         ILiteCollection<MemberAccessTokenRecord> MemberTokens { get; }
-        ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions { get; }
-        ILiteCollection<CheckoutTransactionRecord> ArchivedCheckoutTransactions { get; }
     }
 
     public sealed class ShopDatabaseContext : IShopDatabaseContext
@@ -35,10 +34,7 @@ namespace AndrewDemo.NetConf2023.Core
         private readonly ILiteCollection<SkuRecord> _skus;
         private readonly ILiteCollection<InventoryRecord> _inventoryRecords;
         private readonly ILiteCollection<Member> _members;
-        private readonly ILiteCollection<Order> _orders;
         private readonly ILiteCollection<MemberAccessTokenRecord> _memberTokens;
-        private readonly ILiteCollection<CheckoutTransactionRecord> _checkoutTransactions;
-        private readonly ILiteCollection<CheckoutTransactionRecord> _archivedCheckoutTransactions;
         private bool _disposed;
 
         public ShopDatabaseContext(ShopDatabaseOptions? options = null, ILogger<ShopDatabaseContext>? logger = null)
@@ -46,17 +42,15 @@ namespace AndrewDemo.NetConf2023.Core
             var resolvedOptions = options ?? new ShopDatabaseOptions();
             var connection = ResolveConnection(resolvedOptions);
             _database = new LiteDatabase(connection);
+            try { TransactionStorageSchema.InitializeOrRequireReady(_database); }
+            catch { _database.Dispose(); throw; }
 
             _carts = _database.GetCollection<Cart>("carts");
             _products = _database.GetCollection<Product>("products");
             _skus = _database.GetCollection<SkuRecord>("skus");
             _inventoryRecords = _database.GetCollection<InventoryRecord>("inventory_records");
             _members = _database.GetCollection<Member>("members");
-            _orders = OrderCollectionGuard.Wrap(_database.GetCollection<Order>("orders"), logger);
             _memberTokens = _database.GetCollection<MemberAccessTokenRecord>("member_tokens");
-            _checkoutTransactions = CheckoutCollectionGuard.Wrap(_database.GetCollection<CheckoutTransactionRecord>("checkout_transactions"),
-                _database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions"), logger);
-            _archivedCheckoutTransactions = CheckoutCollectionGuard.Wrap(_database.GetCollection<CheckoutTransactionRecord>("archived_checkout_transactions"), logger: logger);
 
             EnsureIndexes(_database);
         }
@@ -114,14 +108,7 @@ namespace AndrewDemo.NetConf2023.Core
             }
         }
 
-        public ILiteCollection<Order> Orders
-        {
-            get
-            {
-                ThrowIfDisposed();
-                return _orders;
-            }
-        }
+        public TransactionStore Transactions => new(Database);
 
         public ILiteCollection<MemberAccessTokenRecord> MemberTokens
         {
@@ -129,24 +116,6 @@ namespace AndrewDemo.NetConf2023.Core
             {
                 ThrowIfDisposed();
                 return _memberTokens;
-            }
-        }
-
-        public ILiteCollection<CheckoutTransactionRecord> CheckoutTransactions
-        {
-            get
-            {
-                ThrowIfDisposed();
-                return _checkoutTransactions;
-            }
-        }
-
-        public ILiteCollection<CheckoutTransactionRecord> ArchivedCheckoutTransactions
-        {
-            get
-            {
-                ThrowIfDisposed();
-                return _archivedCheckoutTransactions;
             }
         }
 
@@ -193,9 +162,7 @@ namespace AndrewDemo.NetConf2023.Core
             database.GetCollection<Product>("products").EnsureIndex(x => x.Id);
             database.GetCollection<SkuRecord>("skus").EnsureIndex(x => x.SkuId, unique: true);
             database.GetCollection<InventoryRecord>("inventory_records").EnsureIndex(x => x.SkuId, unique: true);
-            database.GetCollection<Order>("orders").EnsureIndex(x => x.Buyer.Id);
             database.GetCollection<MemberAccessTokenRecord>("member_tokens").EnsureIndex(x => x.MemberId);
-            database.GetCollection<CheckoutTransactionRecord>("checkout_transactions").EnsureIndex(x => x.MemberId);
         }
     }
 
@@ -264,9 +231,7 @@ namespace AndrewDemo.NetConf2023.Core
             if (typeof(T) == typeof(SkuRecord)) return (ILiteCollection<T>)context.Skus;
             if (typeof(T) == typeof(InventoryRecord)) return (ILiteCollection<T>)context.InventoryRecords;
             if (typeof(T) == typeof(Member)) return (ILiteCollection<T>)context.Members;
-            if (typeof(T) == typeof(Order)) return (ILiteCollection<T>)context.Orders;
             if (typeof(T) == typeof(MemberAccessTokenRecord)) return (ILiteCollection<T>)context.MemberTokens;
-            if (typeof(T) == typeof(CheckoutTransactionRecord)) return (ILiteCollection<T>)context.CheckoutTransactions;
 
             return context.Database.GetCollection<T>();
         }

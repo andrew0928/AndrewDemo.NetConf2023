@@ -12,9 +12,11 @@
 
 2026-10-18 使用者後續授權執行 Phase 1.1，管理查核 API 已完成實作、262 項 solution 回歸及真實 host 隔離驗證。CLI 由使用者後續追加，無 Web UI；Docker daemon 恢復後已成功重建 Common API 映像；使用者依 Compose 啟動與 curl 指令親自驗證正式訂單查詢通過，完整容器案例未重跑。見 [交付紀錄](tip/phase1.1-delivery.md)。
 
-## TiP：Phase 1 規格與合約已定案
+## TiP：Phase 3 交易 collection 隔離已完成
 
-最後記錄：2026-10-17。
+最後記錄：2026-10-19。Phase 3.1～3.6 已完成標準流程重構與隔離 DB 驗證，包含六區儲存、test identity 改價拒絕、事件效果限制、查詢與離線遷移。使用者另建議外層啟動 transaction、內層檢驗；已採 Core 同步原子操作邊界。見 [整體交付](tip/phase3.6-delivery.md) 與 [交易擁有者決策](decisions/2026-10-19-tip-storage-transaction-ownership.md)。現有部署 DB 未遷移；使用者已授權提交與推送。
+
+以下保留本次規格形成過程：
 
 2026-10-19 使用者確認本專案為 PoC，拆 collection 已足以代表本次研究所需的隔離性；本輪僅評估同一 shop-local LiteDB 內拆 collection 的變更範圍，不展開 database 分離，不修改 code、spec 或 Abstract。此為評估範圍確認，尚未定案拆分對象、命名或實作方案，也未重新開啟 Phase 1。見 [評估範圍決策](decisions/2026-10-19-tip-collection-isolation-assessment-scope.md)。
 

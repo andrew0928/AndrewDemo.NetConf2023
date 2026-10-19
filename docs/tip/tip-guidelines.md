@@ -1,6 +1,6 @@
 # TiP 設計原則
 
-2026-10-19 最新邊界：嚴格隔離交易用途與 storage；認證及非交易資訊共用。test identity 商品改價明確拒絕，test transaction 無任何實際業務效果；SKU 維持既有略過政策。詳見 [交易規格](../../spec/tip-transaction-storage.md) 與 [Phase 3 review](phase3-spec-review.md)，尚未實作。
+2026-10-19 最新邊界：嚴格隔離交易用途與 storage；認證及非交易資訊共用。test identity 商品改價明確拒絕，test transaction 無任何實際業務效果；SKU 維持既有略過政策。詳見 [交易規格](../../spec/tip-transaction-storage.md) 與 [Phase 3.6 交付](phase3.6-delivery.md)，標準流程已實作驗證，現有部署 DB 未遷移。
 
 更新日期：2026-10-19。
 
@@ -22,7 +22,7 @@
 - 沿用正常 log 機制，由 context 與判定結果決定對應紀錄內容。
 - 在 database schema 明確定義各類物件的正式／測試用途及適用規則，資料使用依此處理；既有受保護物件分類不變。
 
-Context 已區分為 current identity（目前執行身分及其用途）與 current transaction（目前處理交易及其用途）。架構保證資訊正確傳遞，應用端各環節依 context 執行政策，在商業效果發生前完成判定；改價等操作可依身分判定，交易用途則須在後續處理中保留。使用者已確認支撐 TiP 體系的設計涵蓋完成，本輪原則收斂；標準流程政策與具體 contract 已納入 [Phase 1 基準](../../spec/tip-phase1.md)，標準 runtime 已於 Phase 2 接入，collection 分流與改價拒絕列入 Phase 3，詳見[架構設計筆記](tip-architecture-notes.md)。已先將物件定義、白名單與 Context 合約落入 `/spec`，並建立 `.Abstract` 的獨立 Context 介面；Core 白名單查詢與 Context 基礎行為已在紅燈檢查確認後補上，Phase 2 已有標準流程交付證據，新版 Phase 3 要求仍待實作。
+Context 已區分為 current identity（目前執行身分及其用途）與 current transaction（目前處理交易及其用途）。架構保證資訊正確傳遞，應用端各環節依 context 執行政策，在商業效果發生前完成判定；改價等操作可依身分判定，交易用途則須在後續處理中保留。使用者已確認支撐 TiP 體系的設計涵蓋完成，本輪原則收斂；標準流程政策與具體 contract 已納入 [Phase 1 基準](../../spec/tip-phase1.md)，標準 runtime 已於 Phase 2 接入，collection 分流與改價拒絕列入 Phase 3，詳見[架構設計筆記](tip-architecture-notes.md)。已先將物件定義、白名單與 Context 合約落入 `/spec`，並建立 `.Abstract` 的獨立 Context 介面；Core 白名單查詢與 Context 基礎行為已在紅燈檢查確認後補上，Phase 2 已有標準流程交付證據，新版 Phase 3 要求已完成標準流程實作與驗證，見 [整體交付](phase3.6-delivery.md)。
 
 此方向對齊 [project roadmap](../project-roadmap.md)：共用交易流程、DiscountRule、ProductService 與不同業務模組，都需要遵守一致的測試邊界。
 
@@ -93,14 +93,14 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 ### `.Core` 持久化領域物件完整清單
 
-依目前 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類。新設計已確認 Checkout 的作用中與封存紀錄分區保存，封存延續同一交易的 ID、用途與付款來源，不新增用途分類；Phase 2 已實作同庫封存；Phase 3 將 Order／active Checkout／archive 各拆 normal／test，完整命名見 [交易儲存規格](../../spec/tip-transaction-storage.md)。下表為尚未重構的 Phase 2 實作配置，不是 Phase 3 目標：
+依目前 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類。新設計已確認 Checkout 的作用中與封存紀錄分區保存，封存延續同一交易的 ID、用途與付款來源，不新增用途分類；Phase 2 已實作同庫封存；Phase 3 已將 Order／active Checkout／archive 各拆 normal／test，完整命名見 [交易儲存規格](../../spec/tip-transaction-storage.md)。下表為目前實作配置：
 
 | 領域物件 | 實際型別 | Collection | 已確認分類 |
 |---|---|---|---|
-| Order | `Order` | `orders` | 第一類：用途不可變 |
+| Order | `Order` | `orders`、`test_orders` | 第一類：用途不可變 |
 | Member | `Member` | `members` | 第一類：用途不可變 |
 | Cart | `Cart` | `carts` | 排除用途分類，不承接會員、不保存 test 標記 |
-| Checkout | `CheckoutTransactionRecord` | `checkout_transactions`、`archived_checkout_transactions` | 第一類：用途不可變 |
+| Checkout | `CheckoutTransactionRecord` | `checkout_transactions`、`test_checkout_transactions`、`archived_checkout_transactions`、`test_archived_checkout_transactions` | 第一類：用途不可變 |
 | Token | `MemberAccessTokenRecord` | `member_tokens` | 第一類：IsTest 建立時繼承 Member，保存後用途不可變 |
 | Inventory | `InventoryRecord` | `inventory_records` | 第二類：受保護 |
 | Product | `Product` | `products` | 第二類：受保護 |

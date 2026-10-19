@@ -33,9 +33,9 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
     public void ExplicitSource_DoesNotOrIdentityAndTransaction(bool identityTest, bool transactionTest)
     {
         _identity.Initialize(IdentitySnapshot.ForMember(1, identityTest));
-        _transaction.Bind(new TransactionSnapshot(TransactionKind.Checkout, 12, transactionTest));
         var validated = 0; var written = 0;
-        Writes.ForIdentity("product.update", "product", "p", 80m, _ => validated++, () => written++);
+        Writes.ForIdentity("sku.update", "sku", "s", "新規格", _ => validated++, () => written++);
+        _transaction.Bind(new TransactionSnapshot(TransactionKind.Checkout, 12, transactionTest));
         Writes.ForCheckout(12, "inventory.deduct", "inventory", "s", 2, () => written++);
         Assert.Equal(1, validated);
         Assert.Equal((identityTest ? 0 : 1) + (transactionTest ? 0 : 1), written);
@@ -83,7 +83,8 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         var service = Maintenance(database);
         var authorizations = 0;
         void Authorize(IdentitySnapshot identity) { Assert.Equal(isTest, identity.IsTest); authorizations++; }
-        service.UpdatePrice(productId, 80, Authorize);
+        if (isTest) Assert.Throws<TestIdentityForbiddenException>(() => service.UpdatePrice(productId, 80, Authorize));
+        else service.UpdatePrice(productId, 80, Authorize);
         var priceEffects = _effects.Skipped.ToArray();
         service.UpdateSpecification(skuId, "白色／256GB", Authorize);
         Assert.Equal(2, authorizations);
@@ -95,7 +96,7 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         if (isTest)
         {
             Assert.Equal(products, Snapshot("products")); Assert.Equal(skus, Snapshot("skus"));
-            Assert.Equal("product.update", Assert.Single(priceEffects).EffectCode);
+            Assert.Empty(priceEffects);
             Assert.Equal("sku.update", Assert.Single(_effects.Skipped).EffectCode);
             Assert.Contains(_logger.Entries, x => Equals(x.Fields["RequestedChange"], 80m) && Equals(x.Fields["TargetId"], productId));
             Assert.Contains(_logger.Entries, x => Equals(x.Fields["RequestedChange"], "白色／256GB") && Equals(x.Fields["TargetId"], skuId));
@@ -122,11 +123,15 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         var service = Maintenance();
         Assert.Throws<UnauthorizedAccessException>(() => service.UpdatePrice(productId, 80, _ => throw new UnauthorizedAccessException()));
         Assert.Throws<UnauthorizedAccessException>(() => service.UpdateSpecification(skuId, "白色", _ => throw new UnauthorizedAccessException()));
-        Assert.Throws<ArgumentOutOfRangeException>(() => service.UpdatePrice(productId, -1, Allow));
+        if (isTest) Assert.Throws<TestIdentityForbiddenException>(() => service.UpdatePrice(productId, -1, Allow));
+        else Assert.Throws<ArgumentOutOfRangeException>(() => service.UpdatePrice(productId, -1, Allow));
         Assert.Throws<ArgumentException>(() => service.UpdateSpecification(skuId, " ", Allow));
-        Assert.Throws<KeyNotFoundException>(() => service.UpdatePrice("missing", 80, Allow));
+        if (isTest) Assert.Throws<TestIdentityForbiddenException>(() => service.UpdatePrice("missing", 80, Allow));
+        else Assert.Throws<KeyNotFoundException>(() => service.UpdatePrice("missing", 80, Allow));
         Assert.Throws<KeyNotFoundException>(() => service.UpdateSpecification("missing", "白色", Allow));
-        Assert.Empty(_effects.Skipped); Assert.Empty(_logger.Entries);
+        Assert.Empty(_effects.Skipped);
+        if (!isTest) Assert.Empty(_logger.Entries);
+        else Assert.All(_logger.Entries, x => Assert.Equal("test_identity_forbidden", x.Fields["ReasonCode"]));
         Assert.Equal(before, Snapshot("products") + Snapshot("skus") + Snapshot("inventory_records"));
     }
 
@@ -136,7 +141,7 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         _identity.Initialize(IdentitySnapshot.ForMember(1, true));
         var (productId, skuId) = TestDataFactory.CreateStockTrackedProduct(Context, 100, 10);
         var service = Maintenance();
-        service.UpdatePrice(productId, 80, Allow);
+        service.UpdateSpecification(skuId, "新規格", Allow);
         var snapshot = new OperationResult(true, OperationOutcome.Succeeded, _effects.Skipped);
         Assert.Throws<KeyNotFoundException>(() => service.UpdateSpecification("missing", "白色", Allow));
         Assert.Empty(_effects.Skipped);
@@ -179,8 +184,8 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         Assert.Equal(7, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
         Assert.Equal(normalId, normalTransaction.Current!.Id); Assert.False(normalTransaction.Current.IsTest);
         Assert.Equal(testId, testTransaction.Current!.Id); Assert.True(testTransaction.Current.IsTest);
-        Assert.False(Context.ArchivedCheckoutTransactions.FindById(normalId).IsTest);
-        Assert.True(Context.ArchivedCheckoutTransactions.FindById(testId).IsTest);
+        Assert.False(Context.Transactions.Checkout(normalId, true)!.IsTest);
+        Assert.True(Context.Transactions.Checkout(testId, true)!.IsTest);
         Assert.Empty(normalEffects.Skipped);
         Assert.Equal(skuId, Assert.Single(testEffects.Skipped).TargetId);
         var report = new AdminQueryService(Context, FixedTimeProvider).GetOrders(new AdminQueryOptions());
@@ -220,9 +225,9 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         if (insufficient)
         {
             Assert.Equal(CheckoutCompleteStatus.InventoryInsufficient, result.Status);
-            Assert.Empty(_effects.Skipped); Assert.Empty(Context.Orders.FindAll());
-            Assert.NotNull(Context.CheckoutTransactions.FindById(id));
-            Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
+            Assert.Empty(_effects.Skipped); Assert.Empty(Context.Transactions.Orders("all"));
+            Assert.NotNull(Context.Transactions.Checkout(id));
+            Assert.Empty(Context.Transactions.Checkouts("all", true));
             Assert.DoesNotContain(_logger.Entries, x => x.Fields.ContainsKey("EffectCode"));
         }
         else
@@ -253,7 +258,7 @@ public sealed class ProtectedWriteTests : ShopDatabaseTestBase
         var result = await service.CompleteAsync(new() { TransactionId = id, RequestMember = other });
         Assert.Equal(CheckoutCompleteStatus.BuyerMismatch, result.Status);
         Assert.Equal(before, Data());
-        Assert.Empty(Context.Orders.FindAll()); Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all")); Assert.Empty(Context.Transactions.Checkouts("all", true));
         Assert.Equal(0, dispatcher.CompletedCount); Assert.Empty(_effects.Skipped);
         Assert.Contains(_logger.Entries, x => Equals(x.Fields.GetValueOrDefault("Status"), CheckoutCompleteStatus.BuyerMismatch));
         Assert.DoesNotContain(_logger.Entries, x => x.Fields.ContainsKey("EffectCode"));

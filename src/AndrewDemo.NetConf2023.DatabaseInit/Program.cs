@@ -9,6 +9,12 @@ namespace AndrewDemo.NetConf2023.DatabaseInit
     {
         static void Main(string[] args)
         {
+            // 明確命令在 destructive seed 之前分流；未知參數也不得掉回刪檔初始化。
+            if (args.Length > 0)
+            {
+                Environment.ExitCode = TipStorageMigrationCommand.Run(args);
+                return;
+            }
             Console.WriteLine("AndrewDemo Shop Database Initializer");
             Console.WriteLine("=====================================");
             Console.WriteLine();

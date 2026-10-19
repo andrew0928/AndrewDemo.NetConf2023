@@ -18,7 +18,9 @@ public sealed class OrderContextLoader(IShopDatabaseContext database, IIdentityC
         if (identity.Current.Kind != IdentityKind.System)
             throw Invalid(orderId, "訂單事件缺少 System identity。");
         if (orderId <= 0) throw Invalid(orderId, "訂單事件 ID 無效。");
-        var stored = database.Database.GetCollection("orders").FindById(orderId);
+        LiteDB.BsonDocument? stored;
+        try { stored = database.Transactions.FindOrder(orderId); }
+        catch (ExecutionContextInvalidException error) { throw Invalid(orderId, error.Message); }
         if (stored == null) throw Invalid(orderId, "訂單事件找不到保存的 Order。");
         var purpose = stored[nameof(Order.IsTest)];
         if (stored.ContainsKey(nameof(Order.IsTest)) && !purpose.IsBoolean)

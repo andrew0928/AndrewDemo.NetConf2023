@@ -21,6 +21,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\AndrewDemo.NetConf2023.Core\AndrewDemo.NetConf2023.Core.csproj" />
+    <ProjectReference Include="../AndrewDemo.NetConf2023.StorageProbe/AndrewDemo.NetConf2023.StorageProbe.csproj" ReferenceOutputAssembly="false" />
+    <ProjectReference Include="../../src/AndrewDemo.NetConf2023.DatabaseInit/AndrewDemo.NetConf2023.DatabaseInit.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>

@@ -14,13 +14,23 @@ public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransacti
 {
     private readonly ILogger _logger = logger ?? NullLogger.Instance;
 
+    public void ForPrice(string productId, decimal price, Action<IdentitySnapshot> authorize, Action validate, Action write)
+    {
+        var snapshot = RequireIdentity();
+        authorize(snapshot);
+        RejectTestPrice(snapshot, productId, price);
+        RequireIndependentMaintenance();
+        validate();
+        write();
+    }
+
     public void ForIdentity(string effectCode, string targetType, string targetId, object requestedChange,
         Action<IdentitySnapshot> validate, Action write)
     {
         ArgumentNullException.ThrowIfNull(validate);
-        var snapshot = identity.Current;
-        if (snapshot.Kind == IdentityKind.Anonymous || (snapshot.Kind == IdentityKind.Member && snapshot.MemberId is not > 0))
-            throw ContextError("受保護維護操作缺少已初始化的執行身分。");
+        var snapshot = RequireIdentity();
+        RequireIndependentMaintenance();
+        if (effectCode == "product.update") RejectTestPrice(snapshot, targetId, requestedChange);
         Execute(snapshot.IsTest, snapshot, null, effectCode, targetType, targetId, requestedChange,
             () => validate(snapshot), write);
     }
@@ -76,4 +86,28 @@ public sealed class ProtectedWriteExecutor(IIdentityContext identity, ITransacti
         _logger.LogError("execution_context_invalid：{Reason}", message);
         return new ExecutionContextInvalidException(message);
     }
+
+    private IdentitySnapshot RequireIdentity()
+    {
+        var snapshot = identity.Current;
+        if (snapshot.Kind == IdentityKind.Anonymous || (snapshot.Kind == IdentityKind.Member && snapshot.MemberId is not > 0))
+            throw ContextError("受保護維護操作缺少已初始化的執行身分。");
+        return snapshot;
+    }
+
+    private void RequireIndependentMaintenance()
+    {
+        if (transaction.Current?.IsTest == true || transaction is TransactionContext { HasObservedTestTransaction: true })
+            throw ContextError("test transaction 不可借用獨立維護入口產生實際業務效果。");
+    }
+
+    private void RejectTestPrice(IdentitySnapshot snapshot, string targetId, object requestedChange)
+    {
+        if (!snapshot.IsTest) return;
+        _logger.LogInformation("商品改價遭拒絕 ReasonCode={ReasonCode} TargetType={TargetType} TargetId={TargetId} RequestedChange={RequestedChange} MemberId={MemberId}",
+            "test_identity_forbidden", "product", targetId, requestedChange, snapshot.MemberId);
+        throw new TestIdentityForbiddenException();
+    }
 }
+
+public sealed class TestIdentityForbiddenException() : UnauthorizedAccessException("測試身分不可變更商品價格。");

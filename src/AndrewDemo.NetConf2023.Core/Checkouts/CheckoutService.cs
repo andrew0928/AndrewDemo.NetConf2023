@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using AndrewDemo.NetConf2023.Core.Effects;
 using AndrewDemo.NetConf2023.Abstract.Carts;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
@@ -22,6 +23,7 @@ public sealed class CheckoutRejectedException(string message) : InvalidOperation
 public sealed class CheckoutService
 {
     private readonly IShopDatabaseContext _database;
+    private readonly TransactionStore _transactions;
     private readonly DiscountEngine _discountEngine;
     private readonly IOrderEventDispatcher _orderEventDispatcher;
     private readonly IProductService _productService;
@@ -40,6 +42,7 @@ public sealed class CheckoutService
         ILogger<CheckoutService>? logger = null, ProtectedWriteExecutor? writes = null)
     {
         _database = database;
+        _transactions = new TransactionStore(database.Database);
         _discountEngine = discountEngine;
         _orderEventDispatcher = orderEventDispatcher;
         _productService = productService;
@@ -104,14 +107,9 @@ public sealed class CheckoutService
             TotalPrice = lines.Sum(x => x.LineAmount) + discounts.Sum(x => x.Amount)
         };
         CheckoutStoredContent.Validate(transaction);
-        BeginWrite();
-        try
-        {
-            transaction.TransactionId = checked(Math.Max(MaxId("checkout_transactions"), MaxId("archived_checkout_transactions")) + 1);
-            _database.CheckoutTransactions.Insert(transaction);
-            _database.Database.Commit();
-        }
-        catch { _database.Database.Rollback(); throw; }
+        using var scope = _transactions.BeginWrite();
+        _transactions.InsertCheckout(transaction);
+        scope.Commit();
         Bind(transaction);
         return CheckoutCreateResult.CreateSucceeded(transaction.TransactionId, createdAt, member.Id, member.Name);
     }
@@ -139,18 +137,16 @@ public sealed class CheckoutService
             order.FulfillmentStatus = OrderFulfillmentStatus.Failed;
         }
         // 只改履約欄位，不以事件取得的可變 Order 覆寫用途或交易內容。
-        _database.Database.GetCollection("orders").UpdateMany(
-            BsonExpression.Create("{ FulfillmentStatus: @0 }", new BsonValue(order.FulfillmentStatus.ToString())),
-            BsonExpression.Create("_id = @0", new BsonValue(order.Id)));
+        _transactions.UpdateFulfillment(order.Id, order.FulfillmentStatus);
         return result;
     }
 
     private CheckoutCompleteResult CompleteTransaction(CheckoutCompleteCommand command)
     {
-        BeginWrite();
+        using var scope = _transactions.BeginWrite();
         try
         {
-            var stored = _database.Database.GetCollection("checkout_transactions").FindById(command.TransactionId);
+            var stored = _transactions.FindActiveCheckout(command.TransactionId);
             if (stored == null) return Reject(CheckoutCompleteResult.CreateTransactionNotFound("Transaction not found"));
             if (stored["MemberId"].AsInt32 != command.RequestMember.Id)
                 return Reject(CheckoutCompleteResult.CreateBuyerMismatch("Transaction buyer mismatch"));
@@ -165,7 +161,7 @@ public sealed class CheckoutService
             if (consumer == null) return Reject(CheckoutCompleteResult.CreateConsumerNotFound("Consumer not found"));
             ValidateMember(command.RequestMember, consumer);
             var completedAt = BusinessTime();
-            var order = new Order(checked(MaxId("orders") + 1))
+            var order = new Order(_transactions.NextOrderId())
             {
                 Buyer = consumer, IsTest = transaction.IsTest, CheckoutTransactionId = transaction.TransactionId,
                 CreatedAt = completedAt, TotalPrice = transaction.TotalPrice!.Value,
@@ -210,19 +206,14 @@ public sealed class CheckoutService
                         if (!_database.InventoryRecords.Update(record)) throw new InvalidOperationException("庫存更新失敗。");
                     });
             }
-            _database.Orders.Insert(order);
-            // 使用原 BSON，保留所有原欄位（包括未知的擴充欄位），只設定終態與時間。
-            stored["State"] = CheckoutState.Completed.ToString();
-            stored["ClosedAt"] = completedAt;
-            _database.Database.GetCollection("archived_checkout_transactions").Insert(stored);
-            if (!_database.CheckoutTransactions.Delete(command.TransactionId)) throw new InvalidOperationException("作用中交易移除失敗。");
-            _database.Database.Commit();
+            _transactions.InsertOrder(order);
+            _transactions.ArchiveCheckout(transaction.TransactionId, completedAt);
+            scope.Commit();
             return CheckoutCompleteResult.CreateSucceeded(command.TransactionId, transaction.PaymentId, completedAt,
                 consumer.Id, consumer.Name, order);
         }
         catch (Exception ex)
         {
-            _database.Database.Rollback();
             _logger.LogError(ex, "Checkout {TransactionId} 完成失敗，未提交交易。", command.TransactionId);
             throw;
         }
@@ -230,24 +221,11 @@ public sealed class CheckoutService
 
     private CheckoutCompleteResult Reject(CheckoutCompleteResult result)
     {
-        _database.Database.Rollback();
         _logger.LogInformation("Checkout 拒絕：{Status}，{Reason}", result.Status, result.ErrorMessage);
         return result;
     }
 
-    private void BeginWrite()
-    {
-        if (!_database.Database.BeginTrans()) throw new InvalidOperationException("Checkout 不接受外層資料庫交易。");
-        try
-        {
-            // 先取得跨 instance／Shared connection 的寫入鎖，再讀取 ID 與交易狀態。
-            _database.Database.GetCollection("checkout_write_lock").Upsert(new BsonDocument { ["_id"] = 1 });
-        }
-        catch { _database.Database.Rollback(); throw; }
-    }
 
-    private int MaxId(string collection) => _database.Database.GetCollection(collection)
-        .Query().OrderByDescending("_id").FirstOrDefault()?["_id"].AsInt32 ?? 0;
     private DateTime BusinessTime()
     {
         var utc = _timeProvider.GetUtcDateTime();

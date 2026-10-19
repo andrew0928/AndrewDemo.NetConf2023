@@ -165,7 +165,7 @@ public sealed class AdminQueryHttpTests
         await using var host = await Host.Start(AdminToken);
         var now = new DateTime(2026, 10, 18, 0, 0, 0, DateTimeKind.Utc);
         foreach (var (id, amount, isTest, date) in new[] { (1, 100, false, now), (2, 200, false, now), (3, 900, true, now), (4, 800, false, now.AddDays(1)) })
-            host.Database.Orders.Insert(new Order(id) { Buyer = new Member { Id = 1, Name = "saved" }, TotalPrice = amount, IsTest = isTest, CreatedAt = date });
+            host.Database.Transactions.InsertOrder(new Order(id) { Buyer = new Member { Id = 1, Name = "saved" }, TotalPrice = amount, IsTest = isTest, CreatedAt = date });
         var response = await host.Send("/api/admin/orders?pageSize=1&from=2026-10-18T08:00:00%2B08:00&to=2026-10-19T00:00:00Z", AdminToken);
         var body = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(300, body.GetProperty("totalAmount").GetDecimal()); Assert.Equal(2, body.GetProperty("totalCount").GetInt32());

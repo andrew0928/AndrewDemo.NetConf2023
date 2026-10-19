@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using AndrewDemo.NetConf2023.Core.Effects;
 using System.Reflection;
 using AndrewDemo.NetConf2023.Abstract.Carts;
@@ -41,7 +42,8 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         new() { CartId = cart.Id, RequestMember = member, PaymentId = payment };
     private static CheckoutCompleteCommand CompleteCommand(Member member, int id) =>
         new() { TransactionId = id, RequestMember = member };
-    private BsonDocument Raw(int id, string collection = "checkout_transactions") => Context.Database.GetCollection(collection).FindById(id);
+    private BsonDocument Raw(int id, string collection = "checkout_transactions") => Context.Database.GetCollection(collection).FindById(id)
+        ?? Context.Database.GetCollection("test_" + collection).FindById(id);
 
     [Theory]
     [InlineData(false, 0, false)]
@@ -55,7 +57,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var effects = new OperationEffects();
         var service = Service(transaction: context, effects: effects);
         var created = service.Create(CreateCommand(member, cart, payment));
-        var quote = Context.CheckoutTransactions.FindById(created.TransactionId);
+        var quote = Context.Transactions.Checkout(created.TransactionId)!;
         Assert.Equal(CheckoutState.Created, quote.State);
         Assert.Equal(180m, quote.TotalPrice);
         Assert.Equal(expectedTest, quote.IsTest);
@@ -69,7 +71,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var original = Raw(created.TransactionId);
         // 額外欄位也必須原封保存；此為資料完整性測試的基礎層注入。
         original["ExtensionField"] = "保留";
-        Context.Database.GetCollection("checkout_transactions").Update(original);
+        Context.Database.GetCollection(TransactionCollections.Checkouts(expectedTest)).Update(original);
         Context.Carts.Delete(cart.Id);
         var product = Context.Products.FindById(productId);
         product.Price = 999m;
@@ -97,7 +99,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         Assert.Equal(original.ToString(), Raw(created.TransactionId, "archived_checkout_transactions").ToString());
         Assert.Null(Raw(created.TransactionId));
         order.ProductLines[0].Quantity = 99;
-        Assert.Equal(2, Context.ArchivedCheckoutTransactions.FindById(created.TransactionId).ProductLines.Single().Quantity);
+        Assert.Equal(2, Context.Transactions.Checkout(created.TransactionId, true)!.ProductLines.Single().Quantity);
         Assert.Single(_events.Completed);
     }
 
@@ -127,8 +129,8 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var result = await service.CompleteAsync(CompleteCommand(member, id));
         Assert.NotEqual(CheckoutCompleteStatus.Succeeded, result.Status);
         Assert.Equal(before, Raw(id).ToString());
-        Assert.Empty(Context.Orders.FindAll());
-        Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all"));
+        Assert.Empty(Context.Transactions.Checkouts("all", true));
         Assert.Empty(_events.Completed);
         Assert.Empty(effects.Skipped);
         Assert.DoesNotContain(_logger.Entries, x => x.Message.Contains("TiP 略過"));
@@ -144,11 +146,11 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         Context.Products.Delete(productId);
         Assert.Throws<CheckoutRejectedException>(() => service.Create(CreateCommand(member, cart)));
         Assert.Null(context.Current);
-        Assert.Empty(Context.CheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Checkouts("all"));
         Context.Products.Insert(new AndrewDemo.NetConf2023.Abstract.Products.Product() { Id = productId, Price = 100m });
         _rule.Fail = true;
         Assert.Throws<InvalidOperationException>(() => service.Create(CreateCommand(member, cart)));
-        Assert.Empty(Context.CheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Checkouts("all"));
         Assert.Null(context.Current);
     }
 
@@ -173,7 +175,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         Assert.Equal(CheckoutCompleteStatus.RecreateRequired, result.Status);
         Assert.Equal(raw.ToString(), Raw(id).ToString());
         Assert.Equal(20, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
-        Assert.Empty(Context.Orders.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -187,60 +189,70 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CompleteAsync(CompleteCommand(member, id)));
         Assert.Equal(raw.ToString(), Raw(id).ToString());
         Assert.Equal(20, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
-        Assert.Empty(Context.Orders.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all"));
         Assert.Contains(_logger.Entries, x => x.Level == LogLevel.Error);
     }
 
     [Theory]
-    [InlineData("inventory")]
-    [InlineData("order")]
-    [InlineData("archive")]
-    [InlineData("delete")]
-    [InlineData("commit")]
-    public async Task FailureAtEveryWrite_RollsBackAndAllowsRetry(string stage)
+    [InlineData(false, "inventory")]
+    [InlineData(false, "order")]
+    [InlineData(false, "archive")]
+    [InlineData(false, "delete")]
+    [InlineData(false, "commit")]
+    [InlineData(true, "order")]
+    [InlineData(true, "archive")]
+    [InlineData(true, "delete")]
+    [InlineData(true, "commit")]
+    public async Task FailureAtEveryWrite_RollsBackAndAllowsRetry(bool test, string stage)
     {
-        var (member, cart, _, skuId) = Seed();
+        var (member, cart, _, skuId) = Seed(test);
+        var prefix = test ? "test_" : "";
         var id = Service().Create(CreateCommand(member, cart)).TransactionId;
         var before = Raw(id).ToString();
-        var orders = AfterFailure(Context.Orders, "Insert", stage == "order");
+        var orders = AfterFailure(Context.Database.GetCollection(prefix + "orders"), "Insert", stage == "order");
         var inventory = AfterFailure(Context.InventoryRecords, "Update", stage == "inventory");
-        var active = AfterFailure(Context.CheckoutTransactions, "Delete", stage == "delete");
-        var archive = AfterFailure(Context.Database.GetCollection("archived_checkout_transactions"), "Insert", stage == "archive");
+        var active = AfterFailure(Context.Database.GetCollection(prefix + "checkout_transactions"), "Delete", stage == "delete");
+        var archive = AfterFailure(Context.Database.GetCollection(prefix + "archived_checkout_transactions"), "Insert", stage == "archive");
         var database = Intercept<ILiteDatabase>(Context.Database, (method, args) =>
         {
             if (method.Name == "Commit" && stage == "commit") throw new IOException("提交前故障");
-            if (method.Name == "GetCollection" && args![0] as string == "archived_checkout_transactions") return (true, archive);
+            if (method.Name == "GetCollection" && args![0] as string == prefix + "archived_checkout_transactions") return (true, archive);
+            if (method.Name == "GetCollection" && args![0] as string == prefix + "checkout_transactions") return (true, active);
+            if (method.Name == "GetCollection" && args![0] as string == prefix + "orders") return (true, orders);
             return (false, null);
         });
         var context = Intercept<IShopDatabaseContext>(Context, (method, _) => method.Name switch
         {
-            "get_Database" => (true, database), "get_Orders" => (true, orders),
-            "get_InventoryRecords" => (true, inventory), "get_CheckoutTransactions" => (true, active), _ => (false, null)
+            "get_Database" => (true, database), "get_InventoryRecords" => (true, inventory), _ => (false, null)
         });
         await Assert.ThrowsAsync<IOException>(() => Service(database: context).CompleteAsync(CompleteCommand(member, id)));
         Assert.Equal(before, Raw(id).ToString());
         Assert.Equal(20, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
-        Assert.Empty(Context.Orders.FindAll());
-        Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all"));
+        Assert.Empty(Context.Transactions.Checkouts("all", true));
         Assert.Empty(_events.Completed);
         Assert.Equal(CheckoutCompleteStatus.Succeeded, (await Service().CompleteAsync(CompleteCommand(member, id))).Status);
         Assert.Single(_events.Completed);
     }
 
-    [Fact]
-    public async Task ConcurrentCompletionAndCreate_UseUniqueIdsAndDoNotOverwriteUnrelatedOrders()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ConcurrentCompletionAndCreate_UseUniqueIdsAndDoNotOverwriteUnrelatedOrders(bool test)
     {
-        var (member, cart, _, skuId) = Seed();
-        Context.Orders.Insert(new Order(70) { Buyer = member, TotalPrice = 777m });
+        var (member, cart, _, skuId) = Seed(test);
+        Context.Transactions.InsertOrder(new Order(70) { Buyer = member, TotalPrice = 777m });
+        Context.Transactions.InsertOrder(new Order(90) { Buyer = member, TotalPrice = 888m, IsTest = true });
         var id = Service().Create(CreateCommand(member, cart)).TransactionId;
         var results = await Task.WhenAll(Enumerable.Range(0, 12).Select(_ => Service().CompleteAsync(CompleteCommand(member, id))));
         var success = Assert.Single(results, x => x.Status == CheckoutCompleteStatus.Succeeded);
         Assert.All(results.Where(x => x != success), x => Assert.Equal(CheckoutCompleteStatus.TransactionNotFound, x.Status));
-        Assert.Equal(71, success.OrderDetail!.Id);
-        Assert.Equal(777m, Context.Orders.FindById(70).TotalPrice);
-        Assert.Equal(18, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
+        Assert.Equal(91, success.OrderDetail!.Id);
+        Assert.Equal(888m, Context.Transactions.Order(90)!.TotalPrice);
+        Assert.Equal(777m, Context.Transactions.Order(70)!.TotalPrice);
+        Assert.Equal(test ? 20 : 18, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
         Assert.Single(_events.Completed);
-        Assert.Single(Context.ArchivedCheckoutTransactions.FindAll());
+        Assert.Single(Context.Transactions.Checkouts("all", true));
         var ids = await Task.WhenAll(Enumerable.Range(0, 16).Select(_ => Task.Run(() => Service().Create(CreateCommand(member, cart)).TransactionId)));
         Assert.Equal(16, ids.Distinct().Count());
         Assert.DoesNotContain(id, ids);
@@ -257,7 +269,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         Assert.False(results[0].OrderDetail!.IsTest);
         Assert.True(results[1].OrderDetail!.IsTest);
         Assert.Equal(18, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
-        Assert.Equal(2, Context.ArchivedCheckoutTransactions.Count());
+        Assert.Equal(2, Context.Transactions.Checkouts("all", true).Length);
     }
 
     [Fact]
@@ -266,25 +278,20 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var (member, cart, _, _) = Seed();
         var service = Service();
         var id = service.Create(CreateCommand(member, cart)).TransactionId;
-        var active = Context.CheckoutTransactions.FindById(id);
-        Assert.Throws<InvalidOperationException>(() => Context.CheckoutTransactions.Update(active));
-        Assert.Throws<InvalidOperationException>(() => Context.CheckoutTransactions.Upsert(active));
+        var active = Context.Transactions.Checkout(id)!;
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertCheckout(active!));
         await service.CompleteAsync(CompleteCommand(member, id));
         var original = Raw(id, "archived_checkout_transactions").ToString();
-        var archived = Context.ArchivedCheckoutTransactions.FindById(id);
+        var archived = Context.Transactions.Checkout(id, true)!;
         archived.State = CheckoutState.Created;
         archived.ClosedAt = null;
         archived.ProductLines.Clear();
         archived.DiscountLines.Clear();
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.Update(archived));
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.Upsert(archived));
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.Delete(id));
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.DeleteAll());
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.DeleteMany(x => true));
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.UpdateMany("{State: 'Created'}", "true"));
-        Assert.Throws<InvalidOperationException>(() => Context.CheckoutTransactions.Insert(archived));
-        Assert.Throws<InvalidOperationException>(() => Context.CheckoutTransactions.Insert(new CheckoutTransactionRecord()));
-        Assert.Throws<LiteException>(() => Context.ArchivedCheckoutTransactions.Insert(archived));
+        // 公開 storage 不提供 Update／Delete／Upsert；重送新增也不能改寫或重新啟用。
+        Assert.DoesNotContain(typeof(TransactionStore).GetMethods(), x =>
+            x.Name.Contains("Delete") || x.Name.Contains("Upsert") || x.Name.Contains("Update"));
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertCheckout(archived!));
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertCheckout(new CheckoutTransactionRecord()));
         Assert.Equal(original, Raw(id, "archived_checkout_transactions").ToString());
         Assert.Equal(CheckoutCompleteStatus.TransactionNotFound, (await service.CompleteAsync(CompleteCommand(member, id))).Status);
         Assert.Single(_events.Completed);
@@ -300,7 +307,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         _events.Fail = true;
         var result = await service.CompleteAsync(CompleteCommand(member, id));
         Assert.Equal(CheckoutCompleteStatus.Succeeded, result.Status);
-        Assert.Equal(OrderFulfillmentStatus.Failed, Context.Orders.FindById(result.OrderDetail!.Id).FulfillmentStatus);
+        Assert.Equal(OrderFulfillmentStatus.Failed, Context.Transactions.Order(result.OrderDetail!.Id)!.FulfillmentStatus);
         Assert.Equal(expected.ToString(), Raw(id, "archived_checkout_transactions").ToString());
     }
 
@@ -334,8 +341,8 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
             var results = await Task.WhenAll(Enumerable.Range(0, 8).Select(i =>
                 Service(database: i % 2 == 0 ? first : second).CompleteAsync(CompleteCommand(member, ids[0]))));
             Assert.Single(results, x => x.Status == CheckoutCompleteStatus.Succeeded);
-            Assert.Equal(1, first.Orders.Count());
-            Assert.Equal(1, first.ArchivedCheckoutTransactions.Count());
+            Assert.Single(first.Transactions.Orders("all"));
+            Assert.Single(first.Transactions.Checkouts("all", true));
             Assert.Single(_events.Completed);
         }
         finally { File.Delete(path); }
@@ -354,11 +361,11 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var context = Intercept<IShopDatabaseContext>(Context, (method, _) =>
             method.Name == "get_Database" ? (true, database) : (false, null));
         Assert.Throws<IOException>(() => Service(database: context, transaction: transaction).Create(CreateCommand(member, cart)));
-        Assert.Empty(Context.CheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Checkouts("all"));
         Assert.Null(transaction.Current);
         var created = Service(transaction: transaction).Create(CreateCommand(member, cart));
         Assert.Equal(created.TransactionId, transaction.Current!.Id);
-        Assert.True(Context.CheckoutTransactions.FindById(created.TransactionId).IsTest);
+        Assert.True(Context.Transactions.Checkout(created.TransactionId)!.IsTest);
     }
 
     [Theory]
@@ -372,23 +379,19 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var activeBefore = Raw(id).ToString();
         var altered = new CheckoutTransactionRecord { TransactionId = id, MemberId = member.Id,
             IsTest = !isTest, PaymentId = 123, TotalPrice = 999m };
-        Assert.Throws<InvalidOperationException>(() => Context.CheckoutTransactions.Upsert(altered));
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertCheckout(altered));
         Assert.Equal(activeBefore, Raw(id).ToString());
         var result = await service.CompleteAsync(CompleteCommand(member, id));
         var order = result.OrderDetail!;
-        var orderBefore = Context.Database.GetCollection("orders").FindById(order.Id).ToString();
+        var orderBefore = Context.Database.GetCollection(TransactionCollections.Orders(order.IsTest)).FindById(order.Id).ToString();
         var replacement = new Order(order.Id) { Buyer = member, IsTest = !isTest, TotalPrice = 1m };
-        Assert.Throws<InvalidOperationException>(() => Context.Orders.Update(replacement));
-        Assert.Throws<InvalidOperationException>(() => Context.Orders.Upsert(replacement));
-        Assert.Throws<InvalidOperationException>(() => Context.Orders.UpdateMany("{IsTest: true}", "true"));
-        Assert.Throws<InvalidOperationException>(() => Context.Orders.Delete(order.Id));
-        Assert.Equal(orderBefore, Context.Database.GetCollection("orders").FindById(order.Id).ToString());
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertOrder(replacement));
+        Assert.Equal(orderBefore, Context.Database.GetCollection(TransactionCollections.Orders(order.IsTest)).FindById(order.Id).ToString());
         var archiveBefore = Raw(id, "archived_checkout_transactions").ToString();
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.Update(altered));
-        Assert.Throws<InvalidOperationException>(() => Context.ArchivedCheckoutTransactions.Upsert(altered));
+        Assert.ThrowsAny<InvalidOperationException>(() => Context.Transactions.InsertCheckout(altered));
         Assert.Equal(archiveBefore, Raw(id, "archived_checkout_transactions").ToString());
-        Assert.Equal(isTest, Context.Orders.FindById(order.Id).IsTest);
-        Assert.Equal(OrderFulfillmentStatus.Succeeded, Context.Orders.FindById(order.Id).FulfillmentStatus);
+        Assert.Equal(isTest, Context.Transactions.Order(order.Id)!.IsTest);
+        Assert.Equal(OrderFulfillmentStatus.Succeeded, Context.Transactions.Order(order.Id)!.FulfillmentStatus);
     }
 
     [Fact]
@@ -400,7 +403,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         var effects = new OperationEffects();
         var service = Service(effects: effects);
         var id = service.Create(CreateCommand(member, cart)).TransactionId;
-        var quote = Context.CheckoutTransactions.FindById(id);
+        var quote = Context.Transactions.Checkout(id)!;
         Assert.Equal(2, quote.ProductLines.Count);
         Assert.Equal(quote.ProductLines[0].LineId, quote.ProductLines[1].ParentLineId);
         Assert.Equal(2, quote.DiscountLines.Single().RelatedLineIds.Count);
@@ -409,7 +412,7 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
         Assert.Equal(CheckoutCompleteStatus.InventoryInsufficient, result.Status);
         Assert.Equal(3, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
         Assert.Empty(effects.Skipped);
-        Assert.Empty(Context.Orders.FindAll());
+        Assert.Empty(Context.Transactions.Orders("all"));
     }
 
     [Fact]
@@ -417,18 +420,20 @@ public sealed class CheckoutLifecycleTests : ShopDatabaseTestBase
     {
         var (member, cart, _, skuId) = Seed(true);
         var id = Service().Create(CreateCommand(member, cart)).TransactionId;
-        var orders = AfterFailure(Context.Orders, "Insert", true);
+        var orders = AfterFailure(Context.Database.GetCollection("test_orders"), "Insert", true);
+        var raw = Intercept<ILiteDatabase>(Context.Database, (method, args) =>
+            method.Name == "GetCollection" && Equals(args?[0], "test_orders") ? (true, orders) : (false, null));
         var database = Intercept<IShopDatabaseContext>(Context, (method, _) =>
-            method.Name == "get_Orders" ? (true, orders) : (false, null));
+            method.Name == "get_Database" ? (true, raw) : (false, null));
         var effects = new OperationEffects();
         await Assert.ThrowsAsync<IOException>(() => Service(database: database, effects: effects).CompleteAsync(CompleteCommand(member, id)));
         var effect = Assert.Single(effects.Skipped);
         Assert.Equal("inventory.deduct", effect.EffectCode);
         Assert.Equal(skuId, effect.TargetId);
         Assert.Equal(20, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
-        Assert.Empty(Context.Orders.FindAll());
-        Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
-        Assert.Equal(CheckoutState.Created, Context.CheckoutTransactions.FindById(id).State);
+        Assert.Empty(Context.Transactions.Orders("all"));
+        Assert.Empty(Context.Transactions.Checkouts("all", true));
+        Assert.Equal(CheckoutState.Created, Context.Transactions.Checkout(id)!.State);
     }
 
     private static T AfterFailure<T>(T target, string name, bool enabled) where T : class => Intercept(target, (method, args) =>

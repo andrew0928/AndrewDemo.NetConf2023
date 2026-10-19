@@ -1,6 +1,6 @@
 # TiP 研究文件
 
-2026-10-19：已依最新交易邊界補齊規格與 testcase，追加 Phase 3，使用者已確認並要求提交文件，實作尚未開始；程式與 DB 尚未變更。優先閱讀 [Phase 3 review](phase3-spec-review.md)、[重構計畫](../../spec/tip-phase3-plan.md)、[交易儲存規格](../../spec/tip-transaction-storage.md) 及 [隔離案例](../../spec/testcases/tip-transaction-storage.md)。以下 Phase 1／2 交付為歷史基準。
+2026-10-19：Phase 3.1～3.6 已完成實作與自我驗證，使用者已授權提交與推送。先讀 [整體交付與 STORE 覆蓋](phase3.6-delivery.md)、[遷移手冊](phase3.5-delivery.md) 與 [交易擁有者決策](../decisions/2026-10-19-tip-storage-transaction-ownership.md)。現有部署 DB 未遷移，Abstract／spec 保持凍結；以下 Phase 1／2 為歷史交付。
 
 本目錄集中收錄 AndrewShop 的 Testing in Production（TiP）說明、接受條件與架構設計筆記；相關決策統一收錄於 `docs/decisions`，由下方索引連結。文件供需求討論與確認使用。標準實作的 [Phase 1 規格與合約](../../spec/tip-phase1.md) 已定案；標準 TiP 流程已完成 Phase 2.1～2.7 交付，實際證據與不適用範圍見各階段紀錄。
 

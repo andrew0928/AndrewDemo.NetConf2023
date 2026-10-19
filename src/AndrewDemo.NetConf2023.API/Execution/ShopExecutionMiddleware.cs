@@ -5,6 +5,7 @@ using System.Net.Http.Headers;
 using AndrewDemo.NetConf2023.Abstract.Contexts;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Contexts;
+using AndrewDemo.NetConf2023.Core.Effects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Controllers;
 
@@ -79,6 +80,11 @@ public sealed class ShopExecutionMiddleware(RequestDelegate next)
             }
             purposeReady = true;
             await next(http);
+        }
+        catch (TestIdentityForbiddenException) when (!http.Response.HasStarted)
+        {
+            http.Response.StatusCode = StatusCodes.Status403Forbidden;
+            await http.Response.WriteAsJsonAsync(new { code = "test_identity_forbidden", message = "測試身分不可變更商品價格。" });
         }
         catch (ExecutionContextInvalidException) when (!http.Response.HasStarted)
         {

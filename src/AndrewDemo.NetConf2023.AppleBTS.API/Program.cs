@@ -70,6 +70,8 @@ namespace AndrewDemo.NetConf2023.AppleBTS.API
             });
 
             var app = builder.Build();
+            // 在接收請求前檢查交易 storage，拒絕未遷移或不相容的資料庫。
+            _ = app.Services.GetRequiredService<IShopDatabaseContext>();
 
             app.Use((context, next) =>
             {

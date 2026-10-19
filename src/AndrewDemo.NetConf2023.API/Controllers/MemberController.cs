@@ -156,7 +156,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
 
             int count = 0;
             decimal amount = 0;
-            var orders = _database.Orders.Find(o => o.Buyer.Id == member.Id).ToList();
+            var orders = _database.Transactions.Orders("all").Where(o => o.Buyer.Id == member.Id).ToList();
             
             foreach (var order in orders)
             {

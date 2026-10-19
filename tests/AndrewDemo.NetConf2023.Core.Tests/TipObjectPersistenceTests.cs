@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using AndrewDemo.NetConf2023.Core;
 using LiteDB;
 
@@ -28,21 +29,21 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
             IsTest = isTest,
             PaymentId = 9527
         };
-        Context.CheckoutTransactions.Insert(checkout);
+        TestDataFactory.InsertCheckoutFixture(Context, checkout);
         var order = new Order(101)
         {
             Buyer = member,
             IsTest = checkout.IsTest,
             CheckoutTransactionId = checkout.TransactionId
         };
-        Context.Orders.Insert(order);
+        Context.Transactions.InsertOrder(order);
 
         Assert.Equal(isTest, Context.Members.FindById(member.Id).IsTest);
         Assert.Equal(isTest, Context.MemberTokens.FindById(token.Token).IsTest);
-        var restoredCheckout = Context.CheckoutTransactions.FindById(checkout.TransactionId);
+        var restoredCheckout = Context.Transactions.Checkout(checkout.TransactionId)!;
         Assert.Equal(isTest, restoredCheckout.IsTest);
         Assert.Equal(9527, restoredCheckout.PaymentId);
-        var restoredOrder = Context.Orders.FindById(order.Id);
+        var restoredOrder = Context.Transactions.Order(order.Id)!;
         Assert.Equal(isTest, restoredOrder.IsTest);
         Assert.Equal(isTest, restoredOrder.Buyer.IsTest);
         Assert.Equal(checkout.TransactionId, restoredOrder.CheckoutTransactionId);
@@ -50,8 +51,8 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
         // 確認用途確實寫入文件，不是只在記憶體保留。
         Assert.Equal(isTest, Context.Database.GetCollection("members").FindById(member.Id)["IsTest"].AsBoolean);
         Assert.Equal(isTest, Context.Database.GetCollection("member_tokens").FindById(token.Token)["IsTest"].AsBoolean);
-        Assert.Equal(isTest, Context.Database.GetCollection("checkout_transactions").FindById(checkout.TransactionId)["IsTest"].AsBoolean);
-        Assert.Equal(isTest, Context.Database.GetCollection("orders").FindById(order.Id)["IsTest"].AsBoolean);
+        Assert.Equal(isTest, Context.Database.GetCollection(TransactionCollections.Checkouts(checkout.IsTest)).FindById(checkout.TransactionId)["IsTest"].AsBoolean);
+        Assert.Equal(isTest, Context.Database.GetCollection(TransactionCollections.Orders(order.IsTest)).FindById(order.Id)["IsTest"].AsBoolean);
     }
 
     [Fact]
@@ -66,9 +67,9 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
             IsTest = true,
             PaymentId = 9527
         };
-        Context.CheckoutTransactions.Insert(checkout);
-        Context.ArchivedCheckoutTransactions.Insert(checkout);
-        Context.CheckoutTransactions.Delete(checkout.TransactionId);
+        TestDataFactory.InsertCheckoutFixture(Context, checkout);
+        TestDataFactory.InsertArchivedCheckoutFixture(Context, checkout);
+        Context.Database.GetCollection(TransactionCollections.Checkouts(checkout.IsTest)).Delete(checkout.TransactionId);
 
         // 正式會員可持有測試交易；Order ID 與 Checkout ID 可不同。
         var order = new Order(42)
@@ -77,20 +78,20 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
             IsTest = checkout.IsTest,
             CheckoutTransactionId = checkout.TransactionId
         };
-        Context.Orders.Insert(order);
+        Context.Transactions.InsertOrder(order);
 
-        Assert.Null(Context.CheckoutTransactions.FindById(checkout.TransactionId));
-        var restoredOrder = Context.Orders.FindById(order.Id);
+        Assert.Null(Context.Transactions.Checkout(checkout.TransactionId));
+        var restoredOrder = Context.Transactions.Order(order.Id)!;
         Assert.True(restoredOrder.IsTest);
         Assert.False(restoredOrder.Buyer.IsTest);
-        var archived = Context.ArchivedCheckoutTransactions.FindById(restoredOrder.CheckoutTransactionId!.Value);
+        var archived = Context.Transactions.Checkout(restoredOrder.CheckoutTransactionId!.Value, true)!;
         Assert.Equal(checkout.TransactionId, archived.TransactionId);
         Assert.Equal(checkout.CartId, archived.CartId);
         Assert.Equal(checkout.MemberId, archived.MemberId);
         Assert.Equal(checkout.CreatedAt, archived.CreatedAt.ToUniversalTime());
         Assert.Equal(checkout.IsTest, archived.IsTest);
         Assert.Equal(checkout.PaymentId, archived.PaymentId);
-        Assert.NotNull(Context.Database.GetCollection("archived_checkout_transactions").FindById(checkout.TransactionId));
+        Assert.NotNull(Context.Database.GetCollection(TransactionCollections.Checkouts(checkout.IsTest, true)).FindById(checkout.TransactionId));
     }
 
     [Fact]
@@ -106,8 +107,8 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
             ClosedAt = closedAt,
             PaymentId = 9527
         };
-        Context.ArchivedCheckoutTransactions.Insert(checkout);
-        Context.Orders.Insert(new Order(42)
+        TestDataFactory.InsertArchivedCheckoutFixture(Context, checkout);
+        Context.Transactions.InsertOrder(new Order(42)
         {
             Buyer = new Member { Id = 31, Name = "buyer" },
             CheckoutTransactionId = checkout.TransactionId,
@@ -124,8 +125,8 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
             }]
         });
 
-        var order = Context.Orders.FindById(42);
-        var archived = Context.ArchivedCheckoutTransactions.FindById(order.CheckoutTransactionId!.Value);
+        var order = Context.Transactions.Order(42)!;
+        var archived = Context.Transactions.Checkout(order.CheckoutTransactionId!.Value, true)!;
         Assert.Equal(closedAt, order.CreatedAt!.Value.ToUniversalTime());
         Assert.Equal(closedAt, archived.ClosedAt!.Value.ToUniversalTime());
         Assert.Equal(FixedUtcNow, archived.CreatedAt.ToUniversalTime());
@@ -142,32 +143,32 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
         {
             CartId = 23, MemberId = 31, CreatedAt = FixedUtcNow, PaymentId = 9527
         };
-        Context.CheckoutTransactions.Insert(checkout);
+        TestDataFactory.InsertCheckoutFixture(Context, checkout);
 
-        Assert.Null(Context.CheckoutTransactions.FindById(checkout.TransactionId).ClosedAt);
+        Assert.Null(Context.Transactions.Checkout(checkout.TransactionId)!.ClosedAt);
     }
 
     [Fact]
     public void StoredPurpose_CanExcludeTestOrdersForTheSameRegularBuyer()
     {
         var buyer = new Member { Id = 31, Name = "regular-buyer", IsTest = false };
-        Context.Orders.Insert(new Order(41) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 100m });
-        Context.Orders.Insert(new Order(42) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 900m, IsTest = true });
+        Context.Transactions.InsertOrder(new Order(41) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 100m });
+        Context.Transactions.InsertOrder(new Order(42) { Buyer = buyer, CreatedAt = FixedUtcNow, TotalPrice = 900m, IsTest = true });
 
-        // 驗證儲存欄位可作為過濾條件；查詢服務與預設政策留在 Phase 2。
-        var regularOrders = Context.Orders.Find(order => order.IsTest == false).ToList();
+        // 正式分區直接排除 test 資料，不靠漏掉就會混入的 row filter。
+        var regularOrders = Context.Transactions.Orders("normal").ToList();
         Assert.Equal(41, Assert.Single(regularOrders).Id);
         Assert.Equal(100m, regularOrders.Sum(order => order.TotalPrice));
-        Assert.Equal(2, Context.Orders.FindAll().Count());
+        Assert.Equal(2, Context.Transactions.Orders("all").Count());
     }
 
     [Fact]
     public void OrderWithoutCheckout_PreservesNullRelationship()
     {
         var order = new Order(42) { Buyer = new Member { Name = "external-buyer" } };
-        Context.Orders.Insert(order);
+        Context.Transactions.InsertOrder(order);
 
-        var restored = Context.Orders.FindById(order.Id);
+        var restored = Context.Transactions.Order(order.Id)!;
         Assert.Null(restored.CheckoutTransactionId);
         Assert.False(restored.IsTest);
     }
@@ -196,14 +197,14 @@ public sealed class TipObjectPersistenceTests : ShopDatabaseTestBase
 
         Assert.False(Context.Members.FindById(7).IsTest);
         Assert.False(Context.MemberTokens.FindById("legacy-token").IsTest);
-        var checkout = Context.CheckoutTransactions.FindById(42);
+        var checkout = Context.Transactions.Checkout(42)!;
         Assert.False(checkout.IsTest);
         Assert.Null(checkout.ClosedAt);
-        var order = Context.Orders.FindById(42);
+        var order = Context.Transactions.Order(42)!;
         Assert.False(order.IsTest);
         Assert.False(order.Buyer.IsTest);
         Assert.Null(order.CheckoutTransactionId);
         Assert.Null(order.CreatedAt);
-        Assert.Empty(Context.ArchivedCheckoutTransactions.FindAll());
+        Assert.Empty(Context.Transactions.Checkouts("all", true));
     }
 }

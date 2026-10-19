@@ -83,8 +83,8 @@ public sealed class CheckoutContractTests
             var body = JsonSerializer.SerializeToElement(conflict.Value, JsonOptions);
             Assert.Equal("checkout_recreate_required", body.GetProperty("code").GetString());
             Assert.Contains("重新建立", body.GetProperty("message").GetString());
-            Assert.NotNull(database.CheckoutTransactions.FindById(42));
-            Assert.Empty(database.Orders.FindAll());
+            Assert.NotNull(database.Transactions.Checkout(42));
+            Assert.Empty(database.Transactions.Orders("all"));
         }
         finally
         {

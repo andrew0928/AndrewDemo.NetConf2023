@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 using LiteDB;
 
@@ -9,7 +10,7 @@ public sealed class AdminQueryService(IShopDatabaseContext database, TimeProvide
     public AdminOrderResult GetOrders(AdminQueryOptions options) => Read(() =>
     {
         var queriedAt = timeProvider.GetUtcNow().UtcDateTime;
-        var candidates = database.Database.GetCollection("orders").FindAll().Select(OrderRow)
+        var candidates = new TransactionStore(database.Database).ReadOrders(options.Purpose).Select(OrderRow)
             .Where(x => MatchesPurpose(x.IsTest, options) && MatchesMember(x.MemberId, options)).ToArray();
         var excluded = candidates.Count(x => HasTimeFilter(options) && x.CreatedAt == null);
         var rows = candidates.Where(x => MatchesTime(x.CreatedAt, options)).OrderByDescending(x => x.Id).ToArray();
@@ -22,18 +23,9 @@ public sealed class AdminQueryService(IShopDatabaseContext database, TimeProvide
 
     public AdminPage<AdminCheckoutRow> GetCheckouts(AdminQueryOptions options) => Read(() =>
     {
-        // LiteDB 5.0.17 每個 collection 分別取得 read version；僅 BeginTrans 不足以協調封存搬移。
-        // ForUpdate 在未建立 collection 時仍取得名稱鎖，且 addIfNotExists=false；不 Upsert 或建立文件。
-        // 與 CheckoutService.BeginWrite 使用相同鎖，直到本次讀取結束才釋放。
-        database.Database.GetCollection("checkout_write_lock").Query().ForUpdate().ToList();
         var queriedAt = timeProvider.GetUtcNow().UtcDateTime;
-        var active = database.Database.GetCollection("checkout_transactions").FindAll()
-            .Select(x => CheckoutRow(x, "active")).ToArray();
-        var archived = database.Database.GetCollection("archived_checkout_transactions").FindAll()
-            .Select(x => CheckoutRow(x, "archived")).ToArray();
-        var all = active.Concat(archived).ToArray();
-        if (all.Select(x => x.TransactionId).Distinct().Count() != all.Length)
-            throw new AdminDataInvalidException("Checkout 分區存在重複識別碼。");
+        var all = new TransactionStore(database.Database).ReadCheckouts(options.Purpose)
+            .Select(x => CheckoutRow(x.Document, x.Archived ? "archived" : "active")).ToArray();
         var candidates = all.Where(x => MatchesPurpose(x.IsTest, options) && MatchesMember(x.MemberId, options)
             && (options.State == "all" || x.State == options.State)).ToArray();
         DateTime? Time(AdminCheckoutRow row) => options.TimeField == "closedAt" ? row.ClosedAt : row.CreatedAt;
@@ -57,9 +49,9 @@ public sealed class AdminQueryService(IShopDatabaseContext database, TimeProvide
     private T Read<T>(Func<T> read)
     {
         var db = database.Database;
-        if (!db.BeginTrans()) throw new InvalidOperationException("管理查詢不可參與外層交易。");
+        using var scope = StorageTransaction.Begin(db, requireNew: true);
         try { return read(); }
-        finally { db.Rollback(); } // 釋放快照與協調鎖；查詢沒有寫入可提交。
+        catch (ExecutionContextInvalidException error) { throw new AdminDataInvalidException(error.Message); }
     }
 
     private static AdminPage<T> Page<T>(T[] rows, AdminQueryOptions options, DateTime time, int excluded)

@@ -1,3 +1,4 @@
+using AndrewDemo.NetConf2023.Core.Storage;
 using AndrewDemo.NetConf2023.Core;
 using AndrewDemo.NetConf2023.Core.Checkouts;
 
@@ -28,20 +29,20 @@ public sealed class CheckoutRecordPersistenceTests : ShopDatabaseTestBase
                 Amount = -20m, RelatedLineIds = ["line-1"]
             }]
         };
-        Context.CheckoutTransactions.Insert(record);
-        var restored = Context.CheckoutTransactions.FindById(17);
+        TestDataFactory.InsertCheckoutFixture(Context, record);
+        var restored = Context.Transactions.Checkout(17)!;
         Assert.Equal(CheckoutState.Created, restored.State);
         Assert.Null(restored.ClosedAt);
 
         // 此處驗證兩個 collection 的資料結構，不宣稱服務已實作封存或凍結保護。
         restored.State = state;
         restored.ClosedAt = FixedUtcNow.AddMinutes(5);
-        Context.Database.GetCollection<CheckoutTransactionRecord>("checkout_transactions").Update(restored);
-        var before = Context.Database.GetCollection("checkout_transactions").FindById(17).ToString();
-        Context.ArchivedCheckoutTransactions.Insert(restored);
-        Context.CheckoutTransactions.Delete(17);
+        Context.Database.GetCollection<CheckoutTransactionRecord>(TransactionCollections.Checkouts(isTest)).Update(restored);
+        var before = Context.Database.GetCollection(TransactionCollections.Checkouts(isTest)).FindById(17).ToString();
+        TestDataFactory.InsertArchivedCheckoutFixture(Context, restored);
+        Context.Database.GetCollection(TransactionCollections.Checkouts(isTest)).Delete(17);
 
-        var archived = Context.ArchivedCheckoutTransactions.FindById(17);
+        var archived = Context.Transactions.Checkout(17, true)!;
         Assert.Equal(state, archived.State);
         Assert.Equal(isTest, archived.IsTest);
         Assert.Equal(9527, archived.PaymentId);
@@ -61,9 +62,9 @@ public sealed class CheckoutRecordPersistenceTests : ShopDatabaseTestBase
         Assert.Equal("rule-1", discount.RuleId);
         Assert.Equal(-20m, discount.Amount);
         Assert.Equal("line-1", Assert.Single(discount.RelatedLineIds));
-        var document = Context.Database.GetCollection("archived_checkout_transactions").FindById(17);
+        var document = Context.Database.GetCollection(TransactionCollections.Checkouts(isTest, true)).FindById(17);
         Assert.Equal(before, document.ToString());
-        Assert.Null(Context.CheckoutTransactions.FindById(17));
+        Assert.Null(Context.Transactions.Checkout(17));
         Assert.Null(Context.Carts.FindById(23));
 
         // 持久化明細只有交易數值與識別，沒有商品名稱、描述、規格或整份 Product。
@@ -75,14 +76,14 @@ public sealed class CheckoutRecordPersistenceTests : ShopDatabaseTestBase
     [Fact]
     public void ExplicitZeroAmount_IsDifferentFromLegacyMissingAmount()
     {
-        Context.CheckoutTransactions.Insert(new CheckoutTransactionRecord
+        TestDataFactory.InsertCheckoutFixture(Context, new CheckoutTransactionRecord
         {
             TransactionId = 17, State = CheckoutState.Created, TotalPrice = 0m
         });
         Context.Database.GetCollection("checkout_transactions").Insert(new LiteDB.BsonDocument { ["_id"] = 18 });
 
-        var current = Context.CheckoutTransactions.FindById(17);
-        var legacy = Context.CheckoutTransactions.FindById(18);
+        var current = Context.Transactions.Checkout(17)!;
+        var legacy = Context.Transactions.Checkout(18)!;
         Assert.Equal(0m, current.TotalPrice);
         Assert.Equal(CheckoutState.Created, current.State);
         Assert.Null(legacy.TotalPrice);
@@ -100,22 +101,22 @@ public sealed class CheckoutRecordPersistenceTests : ShopDatabaseTestBase
             new() { LineId = "parent", ProductId = "p1", UnitPrice = 100m, Quantity = 1, LineAmount = 100m },
             new() { LineId = "child", ParentLineId = "parent", ProductId = "p2", UnitPrice = 0m, Quantity = 1 }
         };
-        Context.CheckoutTransactions.Insert(new CheckoutTransactionRecord
+        TestDataFactory.InsertCheckoutFixture(Context, new CheckoutTransactionRecord
         {
             TransactionId = 17, State = CheckoutState.Created, TotalPrice = 100m, ProductLines = products
         });
         products.Clear();
-        Context.Orders.Insert(new Order(42)
+        Context.Transactions.InsertOrder(new Order(42)
         {
             Buyer = new Member { Name = "buyer" }, CheckoutTransactionId = 17, TotalPrice = 100m,
             ProductLines = [new Order.OrderProductLine { ProductId = "p1", ProductName = "訂單顯示名稱", Quantity = 1, UnitPrice = 100m, LineAmount = 100m }]
         });
 
-        var record = Context.CheckoutTransactions.FindById(17);
+        var record = Context.Transactions.Checkout(17)!;
         Assert.Equal(100m, record.TotalPrice);
         Assert.Equal(2, record.ProductLines.Count);
         Assert.Equal("parent", record.ProductLines[1].ParentLineId);
         Assert.Empty(record.DiscountLines);
-        Assert.Single(Context.Orders.FindById(42).ProductLines);
+        Assert.Single(Context.Transactions.Order(42)!.ProductLines);
     }
 }

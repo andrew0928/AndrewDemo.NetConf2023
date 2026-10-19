@@ -27,7 +27,7 @@ public sealed class AdminQueryTests : ShopDatabaseTestBase
     public void Orders_UseOwnPurposeAndSummarizeBeforePagination(string purpose, int count, int amount)
     {
         var collection = Context.Database.GetCollection("orders");
-        collection.Insert(OrderDoc(1)); collection.Insert(OrderDoc(2, 200)); collection.Insert(OrderDoc(3, 900, true));
+        collection.Insert(OrderDoc(1)); collection.Insert(OrderDoc(2, 200)); Context.Database.GetCollection("test_orders").Insert(OrderDoc(3, 900, true));
         Context.Members.Insert(new Member { Id = 10, Name = "changed", IsTest = true });
         var result = Service.GetOrders(new() { Purpose = purpose, PageSize = 1 });
         Assert.Equal(count, result.Page.TotalCount);

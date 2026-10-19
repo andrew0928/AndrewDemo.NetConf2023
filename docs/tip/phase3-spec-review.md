@@ -1,6 +1,6 @@
 # TiP Phase 3 規格與重構範圍 review
 
-日期：2026-10-19。**本次已同步需求規格與案例、追加 Phase 3；尚未開始程式重構或資料遷移。** 業務原則依使用者決定，以下具體配置與實作切分已由使用者回覆「OK」確認，並授權提交 docs／spec。
+日期：2026-10-19。本文保留規格凍結時的 review 快照；後續使用者已授權實作，目前結果見 [Phase 3.6 交付](phase3.6-delivery.md)。**下列狀態描述的是當時僅同步需求規格與案例、尚未開始程式重構的階段；現有部署 DB 仍未遷移。** 業務原則依使用者決定，以下具體配置與實作切分已由使用者回覆「OK」確認，並授權提交 docs／spec。
 
 主要入口：[重構計畫](../../spec/tip-phase3-plan.md)、[交易儲存規格](../../spec/tip-transaction-storage.md)、[26 個隔離案例](../../spec/testcases/tip-transaction-storage.md)、[Phase 3 決策](../decisions/2026-10-19-tip-phase3-spec-and-refactor-plan.md)。
 

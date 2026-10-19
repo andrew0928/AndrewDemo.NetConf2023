@@ -164,7 +164,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static IEnumerable<Order> GetOrdersForMember(int memberId)
         {
-            return Database.Orders.Find(o => o.Buyer.Id == memberId);
+            return Database.Transactions.Orders("all").Where(o => o.Buyer.Id == memberId);
         }
 
         private static string IssueToken(Member member)

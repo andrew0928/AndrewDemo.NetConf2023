@@ -40,7 +40,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.NotEqual(0, result.TransactionId);
             Assert.Equal(member.Id, result.ConsumerId);
 
-            var transaction = Context.CheckoutTransactions.FindById(result.TransactionId);
+            var transaction = Context.Transactions.Checkout(result.TransactionId)!;
             Assert.NotNull(transaction);
             Assert.Equal(cart.Id, transaction!.CartId);
             Assert.Equal(member.Id, transaction.MemberId);
@@ -66,7 +66,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -84,9 +84,9 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Equal(80m, result.OrderDetail.TotalPrice);
             Assert.Single(result.OrderDetail.ProductLines);
             Assert.Single(result.OrderDetail.DiscountLines);
-            Assert.Null(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+            Assert.Null(Context.Transactions.Checkout(transaction.TransactionId));
 
-            var storedOrder = Context.Orders.FindById(transaction.TransactionId);
+            var storedOrder = Context.Transactions.Order(transaction.TransactionId)!;
             Assert.NotNull(storedOrder);
             Assert.Equal(OrderFulfillmentStatus.Succeeded, storedOrder!.FulfillmentStatus);
         }
@@ -110,7 +110,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -126,7 +126,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.Null(result.OrderDetail.ShopNotes!.BuyerSatisfaction);
             Assert.Null(result.OrderDetail.ShopNotes.Comments);
 
-            var storedOrder = Context.Orders.FindById(transaction.TransactionId);
+            var storedOrder = Context.Transactions.Order(transaction.TransactionId)!;
             Assert.NotNull(storedOrder);
             Assert.NotNull(storedOrder!.ShopNotes);
             Assert.Null(storedOrder.ShopNotes!.BuyerSatisfaction);
@@ -145,7 +145,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             Context.Products.Delete("missing-product");
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
@@ -155,8 +155,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             Assert.Equal(CheckoutCompleteStatus.ProductNotFound, result.Status);
-            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
-            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+            Assert.NotNull(Context.Transactions.Checkout(transaction.TransactionId));
+            Assert.Null(Context.Transactions.Order(transaction.TransactionId));
         }
 
         [Fact]
@@ -179,7 +179,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = buyer });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -188,8 +188,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             Assert.Equal(CheckoutCompleteStatus.BuyerMismatch, result.Status);
-            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
-            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+            Assert.NotNull(Context.Transactions.Checkout(transaction.TransactionId));
+            Assert.Null(Context.Transactions.Order(transaction.TransactionId));
         }
 
         [Fact]
@@ -204,7 +204,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -216,7 +216,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             Assert.NotNull(result.OrderDetail);
             Assert.Equal(skuId, result.OrderDetail!.ProductLines[0].SkuId);
             Assert.Equal(3, Context.InventoryRecords.FindById(skuId)!.AvailableQuantity);
-            Assert.Null(Context.CheckoutTransactions.FindById(transaction.TransactionId));
+            Assert.Null(Context.Transactions.Checkout(transaction.TransactionId));
         }
 
         [Fact]
@@ -231,7 +231,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService();
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -240,8 +240,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             Assert.Equal(CheckoutCompleteStatus.InventoryInsufficient, result.Status);
-            Assert.NotNull(Context.CheckoutTransactions.FindById(transaction.TransactionId));
-            Assert.Null(Context.Orders.FindById(transaction.TransactionId));
+            Assert.NotNull(Context.Transactions.Checkout(transaction.TransactionId));
+            Assert.Null(Context.Transactions.Order(transaction.TransactionId));
             Assert.Equal(1, Context.InventoryRecords.FindById(skuId)!.AvailableQuantity);
         }
 
@@ -264,7 +264,7 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             var service = CreateCheckoutService(new HintOnlyDiscountRule());
             var created = service.Create(new CheckoutCreateCommand
             { CartId = cart.Id, PaymentId = 9527, RequestMember = member });
-            var transaction = Context.CheckoutTransactions.FindById(created.TransactionId);
+            var transaction = Context.Transactions.Checkout(created.TransactionId)!;
 
             var result = await service.CompleteAsync(new CheckoutCompleteCommand
             {
@@ -305,8 +305,8 @@ namespace AndrewDemo.NetConf2023.Core.Tests
             });
 
             Assert.Equal(CheckoutCompleteStatus.RecreateRequired, result.Status);
-            Assert.Null(Context.ArchivedCheckoutTransactions.FindById(42));
-            Assert.Empty(Context.Orders.FindAll());
+            Assert.Null(Context.Transactions.Checkout(42, true));
+            Assert.Empty(Context.Transactions.Orders("all"));
             Assert.Equal(10, Context.InventoryRecords.FindById(skuId).AvailableQuantity);
             Assert.Single(Context.Carts.FindById(cart.Id).LineItems);
             var stored = Context.Database.GetCollection("checkout_transactions").FindById(42);

@@ -41,7 +41,7 @@ public sealed class CheckoutContextLoader(IShopDatabaseContext database, IIdenti
         transaction.Clear();
         if (identity.Current.Kind != IdentityKind.Member || identity.Current.MemberId == null)
             throw new ExecutionContextInvalidException("載入 Checkout 時缺少會員身分。");
-        var stored = database.Database.GetCollection("checkout_transactions").FindById(id);
+        var stored = database.Transactions.FindActiveCheckout(id);
         if (stored == null) return CheckoutContextStatus.NotFound;
         if (!stored[nameof(CheckoutTransactionRecord.MemberId)].IsInt32)
             throw new ExecutionContextInvalidException("Checkout 買方資料無效。");

@@ -52,13 +52,14 @@
   - `影響 .Abstract / spec`
 - 若決策同時符合上述兩者，兩種標記都要出現
 - AppleBTS 過程中發現的這類通用修正，除了 decision 本文外，還必須同步登錄到：
-  - [AppleBTS 過程中的 Phase 1 / `.Core` 回頭修正追蹤](/Users/andrew/code-work/andrewshop.apidemo/docs/apple-bts-phase1-backtracking-tracker.md)
+  - [AppleBTS 過程中的 Phase 1 / `.Core` 回頭修正追蹤](../apple-bts-phase1-backtracking-tracker.md)
 - AppleBTS 擴充結案時，應以追蹤文件中的累計數量與清單，摘要回報「過程中回頭修正了哪些通用設計」
 
 ## 決策索引
 
 | 日期 | 決策 |
 |---|---|
+| [2026-10-19](2026-10-19-tip-storage-transaction-ownership.md) | **TiP storage transaction 擁有者**。使用者授權執行 Phase 3，並建議外層啟動、內層檢驗；採 Core 同步原子操作統一管理，避免 LiteDB Shared mode 重入 BeginTrans。 |
 | [2026-10-19](2026-10-19-tip-phase3-spec-and-refactor-plan.md) | **TiP Phase 3 規格修訂與重構計畫**。使用者要求同步需求並追加新階段；六個交易 collections、受控路由／唯一 ID、改價拒絕、查詢與離線遷移，已確認並授權提交文件；Abstract 與 code 未改。 |
 | [2026-10-19](2026-10-19-tip-identity-storage-and-access-boundaries.md) | **TiP 身分、儲存與存取邊界**。交易用途與 storage 路由固定，認證及非交易資料共用；test identity 改價明確拒絕，可執行交易但 test transaction 不得產生實際業務效果。不採 token 分區授權；後續已同步 spec／testcases 並追加 Phase 3，已確認，尚未實作。 |
 | [2026-10-19](2026-10-19-tip-collection-isolation-assessment-scope.md) | **TiP collection 隔離評估範圍**。PoC 以同庫拆 collection 表達隔離即可；僅評估變更範圍，不展開分庫，不修改 code／spec／Abstract，尚未定案實作方案。 |

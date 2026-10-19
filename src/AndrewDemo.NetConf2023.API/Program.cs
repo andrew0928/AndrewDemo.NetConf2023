@@ -148,6 +148,8 @@ namespace AndrewDemo.NetConf2023.API
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
+            // 在接收請求前檢查交易 storage，拒絕未遷移或不相容的資料庫。
+            _ = app.Services.GetRequiredService<IShopDatabaseContext>();
             var shopManifest = app.Services.GetRequiredService<ShopManifest>();
             Console.WriteLine($"[system] shop runtime initialized: {shopManifest.ShopId}");
 
