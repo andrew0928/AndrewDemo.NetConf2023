@@ -185,9 +185,9 @@ AC-TIP-013、AC-TIP-014 已接受：測試訂單的後續事件及重試維持�
 
 使用者在接受 [AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 時指出：要求改價為 80 元、讀回卻仍是 100 元，可能讓原本預期資料被修改的測試失敗。因此，修改價格的 API／CLI／interface／UI 等入口，需要提供明確且能由系統判讀的方式，讓測試端辨識這是 test behavior。
 
-2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。無交易時不給交易相關 header、物件中的 transaction 為 null；header 名稱、result code 與回傳格式見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)；這項需求不改變 AC-TIP-005 中「價格保持原值、略過更新留 log」的預期結果。
+2026-10-17 已確認：context 延續到系統內最後一個步驟，在離開系統前判定；跨出系統後以明確的 header／result code 等契約傳遞，HTTP API 由 middleware 統一處理出口表達。無交易時不給交易相關 header、物件中的 transaction 為 null；header 名稱、result code 與回傳格式見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)；此為當時結果識別的背景；2026-10-19 已修訂 AC-TIP-005 為「test identity 明確拒絕改價、記錄拒絕原因」，取代成功略過政策，見 [Phase 3 review](phase3-spec-review.md)。
 
-商業效果仍在各操作發生前受到控制；出口依 context 與已完成的判定結果產生一致表達。測試會員操作 Cart 可實際寫入，Cart 本身不標記用途；test 行為對 Product 的更新被略過、test Checkout 可因庫存不足失敗，因此對外結果需承接實際操作結果。具體資訊格式已納入 OperationResult 與 HTTP 合約。
+商業效果仍在各操作發生前受到控制；出口依 context 與已完成的判定結果產生一致表達。測試會員操作 Cart 可實際寫入，Cart 本身不標記用途；test identity 對 Product 改價被拒絕、test Checkout 可因庫存不足失敗，因此對外結果需承接實際操作結果。具體資訊格式已納入 OperationResult 與 HTTP 合約。
 
 本次正式 contract 已具體化：
 

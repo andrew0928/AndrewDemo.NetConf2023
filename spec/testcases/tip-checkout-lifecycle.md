@@ -1,6 +1,10 @@
 # Checkout 狀態與固定交易內容測試案例
 
+2026-10-19 修訂：與 [交易隔離案例](tip-transaction-storage.md) 共同驗收 Phase 3。下方 Phase 1／2 證據是當時版本；本次新增／變更要求尚未實作或驗證。
+
 依據：[正式規格](../tip-checkout-lifecycle.md)。區分 schema 證據與尚未實作的流程驗收。
+
+Phase 3 將下列 normal／test fixture 寫入各自 active／archive，Order 亦同用途分區；CHECKOUT-105～109 必須檢查所有相關 collections，而非只驗證 IsTest 欄位。ID 唯一性擴及四區，錯區與 rollback／事件驗收對照 STORE-004～014。固定報價案例中的商品改價由具權限的 normal identity 執行，不使用被禁止的 test identity 改價。
 
 ## 已有持久化測試
 

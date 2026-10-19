@@ -1,10 +1,12 @@
 # TiP Phase 1 定案基準
 
+2026-10-19 使用者授權更新本次需求規格並追加 [Phase 3](tip-phase3-plan.md)。[交易 collection 隔離](tip-transaction-storage.md) 與 test identity 改價拒絕取代對應舊規則；具體重構計畫已確認，Abstract 沿用不修改。以下原始交付紀錄保留日期，不代表 Phase 3 已實作。
+
 ## 狀態與範圍
 
 - 日期：2026-10-17。
 - Phase 1：完成，規格與 Abstract 合約定案。使用者後續明確追加的兩個核帳時間欄位與查詢排除原則，見下方補充；Abstract 未異動。
-- Phase 2：尚未交付；用途判定、效果控制與 host 整合仍待實作。
+- Phase 2：已於 2026-10-18 完成標準流程交付，見 [階段紀錄](tip-phase2-plan.md)。下方「本次交付／Phase 2 工作」為 2026-10-17 當時的切分。
 - 依使用者指示，本輪先修改 code，再同步 spec／testcases；既有 Core 基礎實作納入本次交付。
 - 適用標準 Core／API／CommonStorefront／CLI。AppleBTS、PetShop 領域政策排除；共用合約的呼叫參數同步不代表擴充模組已支援 TiP。
 
@@ -16,6 +18,7 @@
 
 | 規格 | 測試案例 | 定案內容 |
 |---|---|---|
+| [交易儲存／Phase 3](tip-transaction-storage.md) | [隔離案例](testcases/tip-transaction-storage.md) | 2026-10-19 修訂：交易兩用途六區、唯一 ID、用途路由、遷移；已確認，待實作。 |
 | [Core 物件](tip-core-object-definitions.md) | [物件案例](testcases/tip-core-object-definitions.md) | IsTest、PaymentId、nullable Order 關聯、獨立封存區與舊資料預設值。 |
 | [白名單](tip-test-allowlist.md) | [白名單案例](testcases/tip-test-allowlist.md) | Core 唯讀清單；預設 Member.Name test、PaymentId 990001；只在建立時分類。 |
 | [Context](tip-context-contracts.md) | [Context 案例](testcases/tip-context-contracts.md) | 獨立 Identity／Transaction、不可變快照、nullable transaction、scoped 邊界。 |
@@ -39,7 +42,7 @@
 
 ## AC 對照
 
-下表為規格覆蓋，不表示完整執行流程已通過測試。案例前綴為 TC-TIP-FLOW／TC-TIP-HTTP。
+下表為規格覆蓋，不表示完整執行流程已通過測試。案例前綴為 TC-TIP-FLOW／TC-TIP-HTTP／TC-TIP-STORE。
 
 | 接受條件 | 正式驗收案例 |
 |---|---|
@@ -47,7 +50,8 @@
 | AC-TIP-002 測試 PaymentId | FLOW-102、203。 |
 | AC-TIP-003 正常業務失敗 | FLOW-204；HTTP-005。 |
 | AC-TIP-004 用途不可變 | FLOW-003、107、401、402；物件與白名單案例。 |
-| AC-TIP-005／006 商品與 SKU 保護 | FLOW-303；HTTP-004。 |
+| AC-TIP-005 商品改價拒絕 | FLOW-303；HTTP-004；STORE-019／020。2026-10-19 修訂，待 Phase 3 實作。 |
+| AC-TIP-006 SKU 保護 | FLOW-309；HTTP-018；STORE-021。既有驗證後略過政策維持。 |
 | AC-TIP-009 正式／test 並行 | FLOW-301；HTTP-011。 |
 | AC-TIP-010 Cart 正常異動 | FLOW-302。 |
 | AC-TIP-011 買方驗證 | FLOW-205；HTTP-008。 |

@@ -1,5 +1,9 @@
 # TiP Context 合約測試案例
 
+2026-10-19 修訂：與 [交易隔離案例](tip-transaction-storage.md) 共同驗收 Phase 3。下方 Phase 1／2 證據是當時版本；本次新增／變更要求尚未實作或驗證。
+
+既有快照／Bind／Clear 合約維持；Phase 3 另以 STORE-002／008／013／014 驗證 locator 從保存用途重建 context、授權前不暴露用途、System 不解除 test 效果限制。單純快照單元測試不能證明 storage 路由正確。
+
 ## 狀態
 
 - 日期：2026-10-17。

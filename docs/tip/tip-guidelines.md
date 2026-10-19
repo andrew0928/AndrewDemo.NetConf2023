@@ -1,6 +1,8 @@
 # TiP 設計原則
 
-更新日期：2026-10-17。
+2026-10-19 最新邊界：嚴格隔離交易用途與 storage；認證及非交易資訊共用。test identity 商品改價明確拒絕，test transaction 無任何實際業務效果；SKU 維持既有略過政策。詳見 [交易規格](../../spec/tip-transaction-storage.md) 與 [Phase 3 review](phase3-spec-review.md)，尚未實作。
+
+更新日期：2026-10-19。
 
 本文件供 AndrewShop 的 TiP 研究與需求討論使用。目前已確認大前提、領域物件分類規則及 [AC-TIP-001](tip-acceptance-criteria.md#ac-tip-001)、[AC-TIP-003](tip-acceptance-criteria.md#ac-tip-003)、[AC-TIP-004](tip-acceptance-criteria.md#ac-tip-004)、[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005)、[AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006)、[AC-TIP-007](tip-acceptance-criteria.md#ac-tip-007)、[AC-TIP-008](tip-acceptance-criteria.md#ac-tip-008)、[AC-TIP-009](tip-acceptance-criteria.md#ac-tip-009)、[AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010)、[AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011)、[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012)、[AC-TIP-013](tip-acceptance-criteria.md#ac-tip-013)、[AC-TIP-014](tip-acceptance-criteria.md#ac-tip-014)、[AC-TIP-015](tip-acceptance-criteria.md#ac-tip-015)，本輪核心接受條件（AC）已全部確認。本文件不是已凍結的 `/spec`，也不代表系統已具備所述能力。
 
@@ -20,7 +22,7 @@
 - 沿用正常 log 機制，由 context 與判定結果決定對應紀錄內容。
 - 在 database schema 明確定義各類物件的正式／測試用途及適用規則，資料使用依此處理；既有受保護物件分類不變。
 
-Context 已區分為 current identity（目前執行身分及其用途）與 current transaction（目前處理交易及其用途）。架構保證資訊正確傳遞，應用端各環節依 context 執行政策，在商業效果發生前完成判定；改價等操作可依身分判定，交易用途則須在後續處理中保留。使用者已確認支撐 TiP 體系的設計涵蓋完成，本輪原則收斂；標準流程政策與具體 contract 已納入 [Phase 1 基準](../../spec/tip-phase1.md)，完整 runtime 接入留待 Phase 2，詳見[架構設計筆記](tip-architecture-notes.md)。已先將物件定義、白名單與 Context 合約落入 `/spec`，並建立 `.Abstract` 的獨立 Context 介面；Core 白名單查詢與 Context 基礎行為已在紅燈檢查確認後補上，完整應用流程尚未接入。
+Context 已區分為 current identity（目前執行身分及其用途）與 current transaction（目前處理交易及其用途）。架構保證資訊正確傳遞，應用端各環節依 context 執行政策，在商業效果發生前完成判定；改價等操作可依身分判定，交易用途則須在後續處理中保留。使用者已確認支撐 TiP 體系的設計涵蓋完成，本輪原則收斂；標準流程政策與具體 contract 已納入 [Phase 1 基準](../../spec/tip-phase1.md)，標準 runtime 已於 Phase 2 接入，collection 分流與改價拒絕列入 Phase 3，詳見[架構設計筆記](tip-architecture-notes.md)。已先將物件定義、白名單與 Context 合約落入 `/spec`，並建立 `.Abstract` 的獨立 Context 介面；Core 白名單查詢與 Context 基礎行為已在紅燈檢查確認後補上，Phase 2 已有標準流程交付證據，新版 Phase 3 要求仍待實作。
 
 此方向對齊 [project roadmap](../project-roadmap.md)：共用交易流程、DiscountRule、ProductService 與不同業務模組，都需要遵守一致的測試邊界。
 
@@ -73,7 +75,7 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 [AC-TIP-010](tip-acceptance-criteria.md#ac-tip-010) 已確認測試會員操作 Cart 可正常新增、刪除商品明細並保存結果，Cart 不保存 test 用途且不承接會員，Product、SKU 與庫存不受影響。已執行的 Cart 異動沿用正常操作紀錄規則，不記成 test 略過。
 
-`Member` 註冊時依預先指定的 Member.Name 白名單自動標示用途，命中為 true、未命中為 false；Token.IsTest 在簽發時由 Member.IsTest 繼承保存。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。以測試 Token 代表會員執行的業務行為與影響屬於測試；測試交易產生的 Order 必須標示為 test。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位、關聯與傳遞規則見 [Phase 1 基準](../../spec/tip-phase1.md)。
+`Member` 註冊時依預先指定的 Member.Name 白名單自動標示用途，命中為 true、未命中為 false；Token.IsTest 在簽發時由 Member.IsTest 繼承保存。Cart 不承接會員；建立 Checkout 時依會員用途與預先設定的 PaymentId 白名單判定，測試會員或測試卡號使 Checkout 為 test，否則為正式，Order 承接 Checkout 用途。用途一經建立不再由後續白名單變更重算。無交易操作依指定 identity 政策處理；既有交易依保存用途執行，不以當下 Token 分區或重新分類。測試交易產生的 Order 必須標示為 test，正式會員亦可使用測試 PaymentId。由讀取喚起、但依正式資料與時間規則執行的系統到期整理，另依下述責任邊界判定。實際欄位、關聯與傳遞規則見 [Phase 1 基準](../../spec/tip-phase1.md)。
 
 ### 第二類：受保護，測試行為不得異動
 
@@ -81,17 +83,17 @@ Context 已區分為 current identity（目前執行身分及其用途）與 cur
 
 **系統到期整理的責任邊界**：正式會員 A 的預約已逾期，測試會員 B 的查詢可以喚起系統正常清理；不因 B 為 test 而略過真正到期的狀態更新。此處區分 B 的查詢與系統的生命週期整理，不改變受保護物件分類，也不代表任何不帶會員資訊的事件都可異動正式資料。[AC-TIP-012](tip-acceptance-criteria.md#ac-tip-012) 已依此修正接受；詳見[系統到期整理決策](../decisions/2026-10-16-tip-system-expiration-boundary.md)，PetShop 執行邊界的差距列入[架構變更事項](tip-architecture-notes.md#petshop-expiration-change)，留待實作。
 
-必要的身分、權限與業務檢查仍照常執行；不會造成受保護資料異動的必要流程也照常執行。測試用途不代表無條件成功，僅略過被禁止的異動。例如庫存檢查照常，但不扣庫存，且記錄因 test 而未扣減。Log 必要欄位與結果代碼見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)，沿用 host logging。
+必要的身分、權限與業務檢查仍照常執行；不會造成受保護資料異動的必要流程也照常執行。測試用途不代表無條件成功；明確禁止的身分操作直接拒絕，允許模擬的交易效果才依政策略過。例如庫存檢查照常，但不扣庫存，且記錄因 test 而未扣減。Log 必要欄位與結果代碼見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)，沿用 host logging。
 
 [AC-TIP-011](tip-acceptance-criteria.md#ac-tip-011) 已確認測試會員不能完成其他會員的 Checkout，即使雙方都是 test 也須拒絕；原 Checkout 與 Cart 保持不變，不建立 Order 或產生商業效果，正常記錄買方不符而不留 test 略過紀錄。
 
-[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 已確認測試改價的案例：必要檢查通過後，略過 Product 更新並留 log；後續讀取與正式交易仍使用原售價。呼叫端如何以程式辨識測試行為及略過結果，已納入 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)，不改動此 AC。
+[AC-TIP-005](tip-acceptance-criteria.md#ac-tip-005) 已於 2026-10-19 改為 test identity 明確禁止商品改價：回拒絕、保留原價，記錄拒絕原因，不能回成功略過。具體結果見 [HTTP 與結果合約](../../spec/tip-http-and-operation-results.md)。
 
 [AC-TIP-006](tip-acceptance-criteria.md#ac-tip-006) 已確認測試修改 SKU 規格的案例：必要檢查通過後，略過 SKU 更新並留 log；重新讀取仍為原規格，Product 關聯與庫存資料均不受影響。
 
 ### `.Core` 持久化領域物件完整清單
 
-依目前 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類。新設計已確認 Checkout 的作用中與封存紀錄分區保存，封存延續同一交易的 ID、用途與付款來源，不新增用途分類；封存 collection 已定義，使用同資料庫的 archived_checkout_transactions，自動封存流程尚未實作，詳見 [Core 欄位決策](../decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。下表的 collection 為現行實作：
+依目前 [ShopDatabaseContext](../../src/AndrewDemo.NetConf2023.Core/ShopDatabaseContext.cs) 的 collection 註冊及實際持久化型別核對，共 8 種，已全部分類。新設計已確認 Checkout 的作用中與封存紀錄分區保存，封存延續同一交易的 ID、用途與付款來源，不新增用途分類；Phase 2 已實作同庫封存；Phase 3 將 Order／active Checkout／archive 各拆 normal／test，完整命名見 [交易儲存規格](../../spec/tip-transaction-storage.md)。下表為尚未重構的 Phase 2 實作配置，不是 Phase 3 目標：
 
 | 領域物件 | 實際型別 | Collection | 已確認分類 |
 |---|---|---|---|
@@ -182,4 +184,4 @@ Stripe 是使用者認可的主要設計參考。下列內容依官方公開文�
 
 本版已收斂大原則、領域物件分類及架構規範。2026-10-17 使用者最後確認：既有資料 IsTest 一律為 false；Order 新增 nullable CheckoutTransactionId；無交易不給交易 header，物件中的交易為 null。白名單可定義於 code 或 database，第一版採 code 內集中定義 Member.Name／PaymentId 清單。使用者指定先開始變更 code，再同步 `/spec` 與 `/spec/testcases`；本輪共享 contract 隨實作具體化。
 
-本版不決定 API、資料欄位名稱與結構、儲存隔離方式或付款實作，也不以現有 PoC 尚未連接實際金流，作為「測試已成功隔離真實扣款」的驗證證據。盤點完整代表需求分類涵蓋現有物件，不代表現行實作已符合 TiP 規則。
+API、欄位與儲存隔離的具體規則以正式 spec 為準；本研究不以 PoC 尚未連接實際金流，作為「測試已成功隔離真實扣款」的驗證證據。盤點完整代表需求分類涵蓋現有物件，不代表現行實作已符合 TiP 規則。

@@ -1,5 +1,7 @@
 # TiP Phase 2 執行與跨 Session 交接
 
+歷史基準：Phase 2.1～2.7 保留當時範圍與交付證據。2026-10-19 已追加 [Phase 3 交易隔離重構計畫](tip-phase3-plan.md)，取代其中商品改價「驗證後略過」及 mixed transaction collection 的現行目標；Phase 3 尚未實作。新工作請由 Phase 3 接手，不把 Phase 2 的綠燈視為新版驗收。
+
 ## 狀態與閱讀順序
 
 2026-10-18 使用者確認依序以同一台機器、不同 chat session 完成 Phase 2.1～2.7。本文件只整理實作切分與交接，不重新開啟 Phase 1 或修改既定對外合約。

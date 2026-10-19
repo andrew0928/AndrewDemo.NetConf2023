@@ -130,32 +130,30 @@ AC-TIP-012 已依使用者修正保留並接受：測試查詢可通知系統正
 
 ## AC-TIP-005
 
-**測試行為嘗試修改 Product 售價**
+**test identity 明確禁止修改 Product 售價**
 
-狀態：accepted。確認日期：2026-10-16。以商品維護操作描述需求，具體入口留待設計。
+狀態：accepted。2026-10-19 使用者確認修訂，取代 2026-10-16 的「驗證後略過更新」；具體 HTTP 映射與 Phase 3 計畫亦已隨本次 review 確認。依據：[交易邊界決策](../decisions/2026-10-19-tip-identity-storage-and-access-boundaries.md)。
 
 ### Given／前提
 
-- 商品目前售價為 100 元。
-- 操作者具備修改商品的權限。
-- 此次操作已被識別為 test。
-- 新售價 80 元符合正常業務規則。
+- 商品目前售價 100 元，要求的新售價 80 元符合正常業務規則。
+- 操作者認證有效且具一般改價權限，IdentityContext.IsTest=true。
 
 ### When／操作
 
-要求將商品售價從 100 元改為 80 元。
+要求將商品售價改為 80 元。
 
 ### Then／預期結果
 
 | 項目 | 驗收條件 |
 |---|---|
-| 必要檢查 | 身分、權限與價格規則照常檢查，均通過。 |
-| 商品資料 | 因 test 略過更新，Product 保持原樣；不能先寫入再還原。 |
-| 後續讀取 | 重新查詢商品，售價仍為 100 元。 |
-| 正式交易 | 正式交易讀取此商品時，仍使用原售價，不受這次測試影響。 |
-| Log | 留下「因 test 略過商品售價更新」，能識別目標商品及原本要求的變更。 |
+| 指定身分限制 | 明確拒絕 test identity，OperationOutcome=Rejected；不回成功略過。 |
+| 商品資料 | Product 完全不變，不能先寫入再還原。 |
+| 後續讀取與交易 | 重讀及後續依現價建立的正式交易仍使用 100 元。 |
+| Log／結果 | 記錄拒絕原因、目標及要求價格，不建立 product.update skipped effect。 |
+| 一般規則 | 無效認證／無權限仍按原規則拒絕；normal identity 通過必要檢查才可改價。 |
 
-使用者補充的 API／CLI／interface／UI 結果識別需求，另記於 [TiP 架構設計筆記](tip-architecture-notes.md)，不改動本 AC 的驗收條件。
+HTTP 拒絕為 403／test_identity_forbidden，見 [出口合約](../../spec/tip-http-and-operation-results.md)；目前沒有正式維護 API，以 Core 入口及測試探針驗證，不增加管理網站。SKU 的 AC-TIP-006 本次不改為禁止操作。
 
 ## AC-TIP-006
 

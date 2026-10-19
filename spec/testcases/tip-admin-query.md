@@ -1,5 +1,7 @@
 # TiP Phase 1.1 管理查核測試案例
 
+2026-10-19 修訂：與 [交易隔離案例](tip-transaction-storage.md) 共同驗收 Phase 3。下方 Phase 1／2 證據是當時版本；本次新增／變更要求尚未實作或驗證。
+
 日期：2026-10-18。依據：[管理查核規格](../tip-admin-query.md)。本輪只交付案例；未新增或執行這些自動化測試。認證設定方式已定案；CLI 案例供使用者後續追加工具時驗證，不是 API 完成條件。
 
 ## 認證與隔離
@@ -19,6 +21,8 @@
 ## 訂單與篩選
 
 隔離 fixture：正式 Order A=100、B=200（B 的 FulfillmentStatus=Failed）；測試 Order C=900，C 的 Buyer.IsTest=false；三筆均在同一日期區間且有已知 CreatedAt／TotalPrice。
+
+Phase 3 fixture 將 A／B 保存於 normal、C 保存於 test；Checkout 則準備兩用途各自的 active／archive。ORDER、CHECKOUT 與 READ 案例須在分區後重跑，並依 STORE-015／016 驗證四區合併及跨程序一致讀取，不能只重用 mixed collection fixture。LEGACY-001 的缺 IsTest 預設僅適用 normal 分區；test 缺欄位、用途與分區矛盾及重複 ID 另依 STORE-006／007 拒絕。
 
 | ID | Given／When | Then |
 |---|---|---|

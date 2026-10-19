@@ -1,5 +1,7 @@
 # TiP Core 物件定義
 
+2026-10-19 修訂：交易 collection 隔離與指定身分限制已同步至本規格並獲使用者確認，見 [Phase 3 review](../docs/tip/phase3-spec-review.md)。業務原則已確認；新 storage 與改價拒絕尚未實作。既有 Phase 1／2 的交付數字及紀錄僅代表當時版本。
+
 ## 狀態與範圍
 
 - 日期：2026-10-17
@@ -36,30 +38,25 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 
 ## 儲存區
 
-同一 shop database 中使用兩個獨立 collection，沿用同一個 CheckoutTransactionRecord 型別：
+同一 shop database 中將 Order、作用中 Checkout、封存 Checkout 各拆 normal／test，合計六個 collections；完整對照與路由以 [交易儲存規格](tip-transaction-storage.md) 為唯一基準。沿用原模型及 IsTest，不新增 test 模型；Member／Token 與其他非交易資料共用。
 
-| IShopDatabaseContext 屬性 | Collection | 用途 |
-|---|---|---|
-| CheckoutTransactions | checkout_transactions | 作用中的 Checkout。 |
-| ArchivedCheckoutTransactions | archived_checkout_transactions | Completed／Cancelled 終態的完整、凍結紀錄。 |
+封存完整保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest、PaymentId、TotalPrice、ProductLines、DiscountLines，以及終態 State／ClosedAt；不縮減欄位。Order.CheckoutTransactionId 對應同用途封存紀錄。
 
-封存完整保存原 TransactionId、CartId、MemberId、CreatedAt、IsTest、PaymentId、TotalPrice、ProductLines、DiscountLines，以及終態 State／ClosedAt；不縮減欄位。Order.CheckoutTransactionId 對應封存紀錄的 TransactionId。
-
-這次提供獨立存取入口；CheckoutService 尚未自動搬移紀錄。成功結帳的原子封存、交易 ID 跨區唯一與重複 complete 防護，須在後續流程變更一起完成；不能因為新增 collection 就視為這些保證已成立。原有泛型 ShopDatabase.Create<CheckoutTransactionRecord> 仍指向作用中區，封存須明確使用封存入口。
+Core 集中提供受控讀寫與單筆定位；IShopDatabaseContext 屬性屬 Core 內部設計，不作為讓業務端直接寫 raw collection 的契約。泛型 ShopDatabase.Create 不得成為交易繞道；既有用途防寫／凍結與原子封存必須擴及六區。Phase 3 待實作，不能以 collection 名稱已定義宣稱隔離成立。
 
 ## 既有資料
 
 - 改版前缺少 IsTest 的 Member、Token、Checkout、Order，讀取時一律為 false；Order.Buyer 快照亦同。
 - 缺少 CheckoutTransactionId 的舊 Order 讀取為 null，即使其 Id 與作用中 Checkout 相同，也不自動建立關聯。
 - 不補造已被刪除的歷史 Checkout。
-- 本次採讀取預設值相容，不批次改寫既有資料庫或 seed snapshot。
+- Phase 1 採讀取預設值相容；Phase 3 依交易儲存規格執行明確的離線 storage 遷移，保留 raw BSON，缺 IsTest 僅在 normal 分區視為 false，不補造歷史欄位。此次文件更新不操作既有 DB。
 - 舊 Checkout 缺少 PaymentId 時，模型預設值不代表已知付款來源。Complete 在反序列化前檢查儲存欄位；缺少或 null 明確回 409／checkout_recreate_required，要求重新建立，不補值、不改寫舊紀錄。新交易明確保存的 0 不視為缺少。詳見 [HTTP 合約](tip-http-and-operation-results.md)。
 
 ## 驗證邊界
 
 以原始 BSON 舊格式資料驗證讀取預設值，並驗證新增 init 欄位能經 LiteDB 寫入及還原、封存區與作用中區分離，以及 nullable 關聯與 Buyer 用途可獨立保存。
 
-本次測試不宣稱白名單、完整封存流程或 TiP 商業效果隔離已完成。
+本節的模型測試不代表完整流程通過；Phase 2 流程交付另有證據，Phase 3 分區要求須依新增案例重新驗收。
 
 ## 2026-10-17 核帳時間補充
 
@@ -67,9 +64,9 @@ Cart 不新增 IsTest 或會員綁定。Product、SKU、Inventory 不新增用�
 
 - ClosedAt 表示 complete／cancel 的結束時間；必要檢查失敗、409 要求重建等未結束交易維持 null。尚未提供 cancel 入口，不因新增欄位而新增取消流程。
 - Order.CreatedAt 在建立時確定，與履約完成時間分開；履約失敗或重試不改寫。
-- 新資料的時間由 TimeProvider 取得 UTC。完成 Checkout 並建立 Order 時，ClosedAt、Order.CreatedAt 與該次完成回應採同一個業務完成時間，與 Order／封存一併提交；rollback 不留下結束時間。填值流程留在 Phase 2。
+- 新資料的時間由 TimeProvider 取得 UTC。完成 Checkout 並建立 Order 時，ClosedAt、Order.CreatedAt 與該次完成回應採同一個業務完成時間，與 Order／封存一併提交；rollback 不留下結束時間。Phase 2 已接入，Phase 3 須在同用途分區維持此保證。
 - 舊 Checkout 缺少 ClosedAt、舊 Order 缺少 CreatedAt，均讀取 null。不以目前時間或 DateTime.MinValue 補值；沒有可查證來源時，不回填時間。
 - 業績／核帳查詢預設依各物件自己的 IsTest 排除 test，只有明確要求才列 test。不能依 Buyer.IsTest、Token 或當下白名單代替。歷史缺欄位仍依既有 false 政策處理，查詢須驗證原始 BSON 的缺值語意。
 - 本次沒有新增時間索引、查詢服務或結果 DTO；後續查詢須把時間未知的舊資料明確區隔，不能任意歸入日期。
 
-State、獨立金額與明細現已納入 schema，create 時固定、終態完整封存後凍結。完整規則見 [生命週期規格](tip-checkout-lifecycle.md) 與 [測試案例](testcases/tip-checkout-lifecycle.md)；本次沒有實作服務端計價／搬移／凍結保護，不能以欄位交付宣稱已可核帳。
+State、獨立金額與明細已納入 schema，create 時固定、終態完整封存後凍結。完整規則見 [生命週期規格](tip-checkout-lifecycle.md) 與 [測試案例](testcases/tip-checkout-lifecycle.md)；模型欄位與服務流程的驗證必須分開，Phase 3 另驗證 collection 分流與既有資料遷移。

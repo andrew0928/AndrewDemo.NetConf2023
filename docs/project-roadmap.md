@@ -16,6 +16,12 @@
 
 最後記錄：2026-10-17。
 
+2026-10-19 使用者確認本專案為 PoC，拆 collection 已足以代表本次研究所需的隔離性；本輪僅評估同一 shop-local LiteDB 內拆 collection 的變更範圍，不展開 database 分離，不修改 code、spec 或 Abstract。此為評估範圍確認，尚未定案拆分對象、命名或實作方案，也未重新開啟 Phase 1。見 [評估範圍決策](decisions/2026-10-19-tip-collection-isolation-assessment-scope.md)。
+
+同日最終決定：使用者接受以「交易」作為 live／test 的嚴格邊界；用途在交易建立時判定，此後執行、storage、封存、衍生訂單與事件均維持原用途。Member／Token 與非交易資料共用，不以 Token.IsTest 限定可存取的交易分區；既有身分驗證、物件歸屬與權限檢查仍適用，特別點名的操作嚴格禁止 test identity 執行。正式會員使用測試 PaymentId 的流程保留，未來保留實體分庫方向。先前 token 嚴格分區方案不採用；本次只更新設計決策，未修改 code、spec 或 Abstract。見 [身分、儲存與存取邊界](decisions/2026-10-19-tip-identity-storage-and-access-boundaries.md)。
+
+同日補充確認：test identity 變更商品價格必須明確拒絕；test identity 可執行交易，但 test transaction 不得產生任何實際業務效果，test 交易紀錄與 log 仍可保存。此新決策取代 AC-TIP-005 的「驗證後略過改價」政策。使用者後續要求確認需求規格並追加 Phase 3：spec／testcases 已同步，具體命名、拒絕回應及重構切分已由使用者確認並要求提交文件，code 與 Abstract 未改。SKU 維持既有政策，不擴張禁止清單。見 [Phase 3 review](tip/phase3-spec-review.md)、[執行計畫](../spec/tip-phase3-plan.md) 與 [追加決策](decisions/2026-10-19-tip-phase3-spec-and-refactor-plan.md)。
+
 以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，標準實作已完成 [Phase 1 定案基準](../spec/tip-phase1.md)，Phase 2 接入 Core 與 host。
 
 已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
@@ -28,7 +34,7 @@
 
 [AC-TIP-004](tip/tip-acceptance-criteria.md#ac-tip-004) 已確認：Order、Member、Checkout、Token 建立後，正式與 test 用途不得互換；Token.IsTest 由 Member.IsTest 繼承，Cart 排除標記；拒絕變更後原用途及關聯物件用途不變，正常記錄拒絕原因。
 
-[AC-TIP-005](tip/tip-acceptance-criteria.md#ac-tip-005) 已確認：測試改價仍執行必要檢查，但略過 Product 寫入並留 log；重新讀取及正式交易仍使用原售價。使用者另要求呼叫端能以程式辨識 test 行為及操作結果，此項列為架構議題，不修改 AC-TIP-005。
+[AC-TIP-005](tip/tip-acceptance-criteria.md#ac-tip-005) 已於 2026-10-19 修訂確認：test identity 商品改價明確拒絕，Product 維持原價，記錄拒絕原因，不回成功略過；Core／HTTP 結果須可由程式辨識。新版實作與驗證列入 Phase 3。
 
 [AC-TIP-006](tip/tip-acceptance-criteria.md#ac-tip-006) 已確認：測試修改 SKU 規格仍執行必要檢查，但略過更新並留 log；重新讀取為原規格，Product 關聯與庫存資料均不受影響。
 

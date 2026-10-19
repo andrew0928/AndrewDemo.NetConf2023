@@ -1,5 +1,9 @@
 # TiP Core 物件定義測試案例
 
+2026-10-19 修訂：與 [交易隔離案例](tip-transaction-storage.md) 共同驗收 Phase 3。下方 Phase 1／2 證據是當時版本；本次新增／變更要求尚未實作或驗證。
+
+Phase 3 的模型 round-trip fixture 須明確選擇相符用途的 collection；舊 BSON 缺 IsTest 僅在 normal 區視為 false，test 區缺值為異常。MODEL-001／002 的 true 交易保存於 test 區，Member／Token 仍共用；配合 STORE-001／007 驗證，不只更新測試中的 collection 字串。
+
 ## 狀態
 
 - 日期：2026-10-17
@@ -52,13 +56,12 @@
 - Then：ClosedAt=null，不自動使用現在時間。
 - 對應：`ActiveCheckout_HasNoClosingTimestamp`。
 
-## TC-TIP-MODEL-007 用途欄位可作為 DB 排除條件
+## TC-TIP-MODEL-007 正式 collection 排除 test Order
 
-- Given：同一正式 Buyer 的兩筆 Order，正式金額 100、test 金額 900。
-- When：直接以保存的 Order.IsTest=false 查詢。
-- Then：僅回傳正式 Order、金額 100；全部資料仍保存兩筆。
-- 對應：`StoredPurpose_CanExcludeTestOrdersForTheSameRegularBuyer`。
-- 邊界：驗證顯式保存用途的資料；後續查詢服務的預設過濾與舊 BSON 缺欄位語意仍待驗收。
+- Given：同一正式 Buyer 的兩筆 Order，正式金額 100 保存於 orders、test 金額 900 保存於 test_orders。
+- When：透過受控入口讀取 normal Order collection，再明確要求 all。
+- Then：normal 僅含正式 Order、金額 100；all 含兩筆，不依 Buyer.IsTest 分類。
+- 歷史證據：StoredPurpose_CanExcludeTestOrdersForTheSameRegularBuyer 只驗證舊 mixed collection 的 row filtering，不代表新 storage 要求通過；Phase 3 依 STORE-015 補實際分區驗證。
 
 ## Phase 2／後續查詢驗收要求
 

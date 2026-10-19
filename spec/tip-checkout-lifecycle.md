@@ -1,17 +1,18 @@
 # TiP Checkout 狀態與固定交易內容
 
+2026-10-19 修訂：交易 collection 隔離與指定身分限制已同步至本規格並獲使用者確認，見 [Phase 3 review](../docs/tip/phase3-spec-review.md)。業務原則已確認；新 storage 與改價拒絕尚未實作。既有 Phase 1／2 的交付數字及紀錄僅代表當時版本。
+
 ## 狀態與範圍
 
 2026-10-17 使用者明確追加並確認：Checkout 保存 State、獨立金額與明細，**create 時固定**，不保存商品資訊快照；終態完整搬移到封存區後凍結。依據：[決策](../docs/decisions/2026-10-17-checkout-state-and-transaction-details.md)。本文件納入 Phase 1 定案，取代原先 complete 時重讀 Cart／重新計價的流程規則。
 
-本次交付 Core schema 與持久化測試；服務流程仍由 Phase 2 實作。沒有新增 cancel API、查詢功能、金流或商品資訊快照；Abstract 簽章不變。
+Phase 2 已交付 Core 生命週期流程；Phase 3 在同用途分區維持相同規則。取消 API、真實金流與商品資訊快照不在本次範圍；查詢依既有 admin 規格調整存取，Abstract 簽章不變。
 
 ## 儲存與命名
 
-- 作用中：`checkout_transactions`／`IShopDatabaseContext.CheckoutTransactions`。
-- 封存：`archived_checkout_transactions`／`IShopDatabaseContext.ArchivedCheckoutTransactions`。
-- 兩區使用同一 `CheckoutTransactionRecord`；不使用 checkout_archived 別名、不建立第二份 schema。
-- 終態搬移保留所有欄位與原 TransactionId，不能縮減成摘要或產生另一個交易 ID。
+- normal／test 各有作用中與封存 collection，完整命名以 [交易儲存規格](tip-transaction-storage.md) 為準，避免第二份對照表漂移。
+- 四區使用同一 CheckoutTransactionRecord；生命週期與交易用途是獨立維度，active → archived 只可在原用途分區內移動。
+- 終態搬移保留所有欄位與原 TransactionId，不能縮減成摘要、產生新 ID 或改變用途。Order 亦寫入同用途分區。
 
 ## 狀態機
 
@@ -80,8 +81,8 @@
 - Completed／Cancelled 均保留 create 時相同金額與明細；取消時保留的是原交易條件，不代表已成交，不建立 Order。
 - 保存終態與 ClosedAt、寫入完整封存及移除作用中紀錄必須在同一個資料庫 transaction 提交。
 - 封存只允許首次新增與讀取；正常應用操作不得 update、upsert 覆寫、刪除或重新啟用。即使沿用可變模型，服務／儲存入口仍須拒絕修改。
-- 交易 ID 跨兩區唯一；重複 complete 維持作用中不存在的 400，不重新派送事件。
-- 本次尚未建立凍結執行邊界；目前公開 ILiteCollection 的直接寫入能力不是不可變保證。Phase 2 須將應用寫入集中至受控 Core 入口並驗證拒絕改寫。
+- 交易 ID 跨 normal／test、active／archived 四區唯一；重複 complete 維持作用中不存在的 400，不重新派送事件。
+- Phase 2 已建立用途／封存保護；Phase 3 必須擴及兩種用途及所有應用寫入，驗證不能以 raw collection 或另一分區繞過。
 
 ## 業績與核帳原則
 
@@ -89,7 +90,7 @@
 - Order 依自身 IsTest=false 與 CreatedAt 查詢；與關聯 Checkout 對照 ID、用途、總額及交易明細，不因 Buyer 為正式而納入 test Order。
 - 只有明確要求時列 test；交易與訂單兩個視角不得重複加總。取消可獨立查核原內容，但不是成交額。
 - 舊資料未知時間／金額／狀態不能補造或以 0 代替；歷史缺 IsTest 仍採已確認 false 政策。
-- 查詢 API／UI 後續再做。此 schema 支援本專案的交易／訂單核對，不新增外部金流、退款或沖銷帳務。
+- 管理查詢依 [admin 規格](tip-admin-query.md)；此 schema 支援本專案的交易／訂單核對，不新增外部金流、退款或沖銷帳務。
 
 ## 驗收
 

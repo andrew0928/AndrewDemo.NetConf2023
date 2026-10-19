@@ -1,5 +1,7 @@
 # TiP 標準流程驗收案例
 
+2026-10-19 修訂：與 [交易隔離案例](tip-transaction-storage.md) 共同驗收 Phase 3。下方 Phase 1／2 證據是當時版本；本次新增／變更要求尚未實作或驗證。
+
 依據：[標準流程](../tip-standard-flow.md)。除明列自動化證據外，下列為 Phase 2 必須實作及執行的案例，不代表已通過。每案使用隔離資料庫；實際商業效果需驗證持久化結果與 adapter 呼叫，不只看 log。
 
 ## 會員與白名單
@@ -21,7 +23,7 @@
 | TC-TIP-FLOW-103 | true | 否 | Checkout.IsTest=true。 |
 | TC-TIP-FLOW-104 | true | 是 | Checkout.IsTest=true。 |
 
-四案均驗證 Cart 不新增用途／會員綁定，create／complete 的 RequestMember 仍由呼叫端明確提供。
+Phase 3 四案另須依 STORE-001 驗證 Checkout／Order／封存實際 collection 位置，不能只斷言 IsTest。四案均驗證 Cart 不新增用途／會員綁定，create／complete 的 RequestMember 仍由呼叫端明確提供。
 
 | ID | Given／When | Then |
 |---|---|---|
@@ -52,12 +54,13 @@
 |---|---|---|
 | TC-TIP-FLOW-301 | 正式買 3 件與 test 買 2 件並行，庫存起始 10 | 庫存最後 7；兩筆 Order／封存用途各自正確，context 不互相污染。 |
 | TC-TIP-FLOW-302 | test 身分新增／刪除 Cart 明細 | Cart 真正保存結果，沒有 transaction，也不虛構 Cart 略過。 |
-| TC-TIP-FLOW-303 | test 要求有效商品改價或 SKU 規格變更 | 完成必要檢查後略過；重新讀取原值，記錄目標與原要求內容。未提供維護 API 時以 Core 操作入口驗證，不新增管理網站。 |
+| TC-TIP-FLOW-303 | 具一般權限的 test identity 要求有效商品改價 | 明確 Rejected；HTTP 探針為 403／test_identity_forbidden，商品維持原價，記錄拒絕，不產生 product.update 略過。以 Core 操作入口驗證，不新增正式維護 API。 |
 | TC-TIP-FLOW-304 | HTTP scope 結束後處理／重送 test Order 事件 | 新 scope 的系統 identity、test Order transaction；所有受保護效果仍受 test 限制。 |
 | TC-TIP-FLOW-305 | 同步 dispatch 返回外層，或巢狀／並行操作不同 scope | 內層初始化不改寫外層 context；不同 scope 不共用可變 context。 |
 | TC-TIP-FLOW-306 | 事件 Order 不存在或預期交易用途遺失 | 停止受保護效果並記錄 BUG，不當成無交易正常放行。 |
 | TC-TIP-FLOW-307 | 若有真實付款／出貨／事件統計 adapter，執行 test 交易 | adapter 真實效果不發生；只對實際到達並略過的效果留下紀錄。不存在的能力標示不適用。 |
 | TC-TIP-FLOW-308 | 若有正式查詢型報表，新增 test Order 前後比較 | 正式訂單數／銷量／營收不變；不要求為查詢排除留下略過 log。 |
+| TC-TIP-FLOW-309 | test identity 合法修改 SKU 規格 | 維持必要檢查後略過 sku.update；SKU 原值、Product 關聯及庫存不變。 |
 
 ## 現有自動化證據與限制
 
@@ -81,7 +84,7 @@
 
 ## Phase 2.4 自動化驗證證據（2026-10-18）
 
-既有 Given／When／Then 不變。FLOW-301～303 的 Core／HTTP 自動化已補齊，新增雙 test 買方的 FLOW-205 精確情境；FLOW-307 的真實付款／出貨／事件統計 adapter 不存在，標示不適用。solution 共 285 項通過（本次新增 Core 20、HTTP／scope 3）；具體測試方法與限制見 [2.4 交付](../../docs/tip/phase2.4-delivery.md) 及 [AC 對照](../../docs/tip/ac-test-coverage.md)。HTTP headers／完整 log 仍在 2.6，事件 scope 在 2.5，UI 在 2.7，不能將本紀錄視為全部 AC 通過。
+當時 Given／When／Then 不變；2026-10-19 已改寫 FLOW-303 為明確拒絕，下述舊證據不能證明新版通過。當時 FLOW-301～303 的 Core／HTTP 自動化已補齊，新增雙 test 買方的 FLOW-205 精確情境；FLOW-307 的真實付款／出貨／事件統計 adapter 不存在，標示不適用。solution 共 285 項通過（本次新增 Core 20、HTTP／scope 3）；具體測試方法與限制見 [2.4 交付](../../docs/tip/phase2.4-delivery.md) 及 [AC 對照](../../docs/tip/ac-test-coverage.md)。HTTP headers／完整 log 仍在 2.6，事件 scope 在 2.5，UI 在 2.7，不能將本紀錄視為全部 AC 通過。
 
 ## Phase 2.5 自動化驗證證據（2026-10-18）
 

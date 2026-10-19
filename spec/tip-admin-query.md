@@ -1,5 +1,7 @@
 # TiP 管理查核 API 規格
 
+2026-10-19 修訂：交易 collection 隔離與指定身分限制已同步至本規格並獲使用者確認，見 [Phase 3 review](../docs/tip/phase3-spec-review.md)。業務原則已確認；新 storage 與改價拒絕尚未實作。既有 Phase 1／2 的交付數字及紀錄僅代表當時版本。
+
 日期：2026-10-18。歸屬：[Phase 1.1](tip-phase1.1.md)。狀態：Phase 1.1 規格定案；API 已實作及驗證，Docker 映像已重建，使用者手動查詢通過，見 [交付紀錄](../docs/tip/phase1.1-delivery.md)。
 
 ## 目的與邊界
@@ -50,7 +52,7 @@
 
 - 時間使用 ISO 8601 且必須帶 Z 或 offset；換成 UTC 後採 `[from, to)`，可只給單側。訂單時間欄位固定為 CreatedAt。
 - 提供雙側時 from 必須小於 to。非法枚舉、時間、分頁、memberId、重複或不支援的參數回 400，避免拼錯條件卻查全部。
-- ID 由大至小排序；Checkout 兩分區合併後才排序／分頁。超過最後一頁回空 items，總筆數與統計保留。
+- ID 由大至小排序；Checkout 單用途合併 active／archived 兩區，all 合併四區；Order all 合併兩用途。依 [交易儲存規格](tip-transaction-storage.md) 選區、取得一致集合後才排序／分頁。超過最後一頁回空 items，總筆數與統計保留。
 - 不跨頁保留快照；有新資料時重查頁面可改變。需要保存某次結果時由 CLI 保存 JSON。
 
 ## 統計口徑與舊資料
@@ -92,7 +94,7 @@ members 列欄位：`id`、`name`、`isTest`。不回傳 token、ShopNotes 或�
 
 ## 讀取一致性與副作用
 
-每個回應的 items、totalCount、金額均從同一次一致讀取的集合計算，不各自執行可觀察到不同提交狀態的查詢。Checkout 完成期間查清單，只能看到移轉前的 active 或移轉後的 archived，不能漏掉、重複或看到未提交資料。
+Phase 3 的讀取須與 normal／test 的全部交易 writers 協調；不能將各 collection 的獨立 read version 視為跨 collection 共同快照。用途與 collection 不符或已讀資料 ID 重複須回 admin_data_invalid，不默默去重。每個回應的 items、totalCount、金額均從同一次一致讀取的集合計算，不各自執行可觀察到不同提交狀態的查詢。Checkout 完成期間查清單，只能看到移轉前的 active 或移轉後的 archived，不能漏掉、重複或看到未提交資料。
 
 由 Core 查詢服務負責此保證。實作時須驗證 LiteDB 跨集合讀取的隔離語意；可採適當讀取協調或穩定快照策略，不能以「有呼叫 BeginTrans」取代並行驗證。不得為查詢重新分類會員、補值、更新業務資料、派送事件或產生 test skipped-effect log。索引等初始化工作屬部署／啟動，不是每次查詢的業務副作用。
 

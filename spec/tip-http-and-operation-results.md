@@ -1,8 +1,10 @@
 # TiP HTTP 與操作結果合約
 
+2026-10-19 修訂：交易 collection 隔離與指定身分限制已同步至本規格並獲使用者確認，見 [Phase 3 review](../docs/tip/phase3-spec-review.md)。業務原則已確認；新 storage 與改價拒絕尚未實作。既有 Phase 1／2 的交付數字及紀錄僅代表當時版本。
+
 ## 狀態與邊界
 
-本文件定義 Phase 1 的對外契約與 Phase 2 驗收要求；HTTP middleware、結果收集與 log 串接尚未實作。Core 結果模型位於 `.Abstract/Operations`，不依賴 ASP.NET。
+本文件保留已交付的 Phase 2 對外契約，並追加 Phase 3 的商品改價拒絕與 storage 用途一致性要求。Core 結果模型位於 `.Abstract/Operations`，不依賴 ASP.NET。
 
 IdentityContext 與 TransactionContext 維持獨立。操作結果只描述本次執行，不把兩種 context 合併；HTTP adapter 在出口讀取當次已授權的 context 與結果。
 
@@ -28,7 +30,6 @@ IdentityContext 與 TransactionContext 維持獨立。操作結果只描述本�
 | EffectCode | TargetType | 使用條件 |
 |---|---|---|
 | inventory.deduct | inventory | 到達扣庫存步驟且因 test 略過。 |
-| product.update | product | 到達商品更新步驟且因 test 略過。 |
 | sku.update | sku | 到達 SKU 更新步驟且因 test 略過。 |
 | payment.charge | checkout | 實際存在付款 adapter，且該效果因 test 略過。 |
 | shipment.create | order | 實際存在出貨 adapter，且該效果因 test 略過。 |
@@ -60,7 +61,7 @@ ReasonCode 固定為 `test_behavior`。尚未提供的能力不得產生假的 s
 | X-Shop-Transaction-Id | 十進位 ID | 同上。 |
 | X-Shop-Transaction-Is-Test | true / false | 同上。 |
 
-沒有交易時，三個 transaction headers 全部省略；物件表示的 transaction 為 null。這與一般操作的用途／結果表達分開，例如 test 會員修改商品可沒有 transaction，但仍有 test 行為及略過結果。
+沒有交易時，三個 transaction headers 全部省略；物件表示的 transaction 為 null。這與一般操作的用途／結果表達分開，例如 test identity 修改商品價格沒有 transaction，但有 test 行為及 Rejected 結果，不產生 product.update skipped effect。
 
 出口不重新查白名單分類。Checkout 完成後即使作用中紀錄已移除，仍使用本次的 Checkout 快照；事件端則使用 Order 快照。
 
@@ -72,6 +73,7 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
 |---|---|---|
 | create JSON 沒有 paymentId | 400，Rejected | 不建立交易。 |
 | Token 無效／過期 | 401，Rejected | 不執行受驗證操作。 |
+| test identity 修改商品價格 | 403，Rejected，code=test_identity_forbidden | 不更新商品，不記為成功或 product.update 略過。 |
 | Checkout 買方不符 | 403，Rejected | 不修改交易，不輸出他人 transaction headers。 |
 | Checkout 不存在／重複完成 | 400，Rejected | 不從封存重做，不重送事件。 |
 | 舊 Checkout 未保存 PaymentId | 409，Rejected | 保留原紀錄，要求重新 create，不補值。 |
@@ -92,6 +94,14 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
 
 一般錯誤不在本輪全面改成新 envelope。用途 BUG 的 500 使用 `code` 與可供閱讀的 `message`；對無法信任的用途不得輸出 X-Shop-Behavior 或 transaction headers。建立結果前發生的基礎設施故障不偽造成功／正式分類。
 
+## 商品改價的指定身分限制
+
+先完成既有認證與一般操作權限檢查，再依可信 IdentityContext 拒絕 test identity；不能以交易用途或沒有 transaction 放行。拒絕後不進入寫入步驟，也不要求繼續所有價格業務驗證。normal identity 沿用價格與權限規則。這不是對全部共用資料的通用拒絕政策；SKU 維持 sku.update 的既有略過規則。
+
+Core 使用既有 OperationOutcome.Rejected／IsTestBehavior=true 表達。HTTP 拒絕 body 採 `{ "code": "test_identity_forbidden", "message": "測試身分不可變更商品價格。" }`，X-Shop-Behavior=test、X-Shop-Outcome=rejected；獨立維護沒有 transaction headers，也沒有 X-Shop-Skipped-Effects。403／code 已隨本次規格確認，待 Phase 3 實作。
+
+目前沒有正式商品維護 API；以既有 Core 入口及 HTTP 測試探針驗證映射，不為此新增公開 API／UI。交易用途與 collection 矛盾沿用 execution_context_invalid；查核 API 沿用 admin_data_invalid。
+
 ## 正常 log
 
 沿用 host 的 logging 機制，不另建專用 log 儲存。略過效果採結構化 Info log，至少包含：
@@ -99,13 +109,13 @@ Header 不帶 token、完整會員資料或 skipped effect 的逐筆目標明細
 - TraceId／CorrelationId（同次操作可追蹤），ShopId。
 - IdentityKind、適用時的 MemberId；TransactionKind、TransactionId、TransactionIsTest（無交易時為 null）。
 - EffectCode、TargetType、TargetId、ReasonCode、Outcome。
-- 商品／SKU 更新額外保留被略過的必要變更內容，避免只記錄「成功」。
+- SKU 更新保留被略過的必要變更內容；商品改價拒絕記錄目標、要求的新價格與拒絕原因，不偽造 skipped effect 或「成功」。
 
 不記錄 access token 或認證秘密；Log 中的用途與出口結果取自同一份快照及實際判定。正常業務拒絕沿用正常紀錄；context BUG 為 Error。真實效果已發生後的失敗要如實記錄，不以 test 略過掩蓋。
 
 ## 驗收
 
-見 [HTTP／結果案例](testcases/tip-http-and-operation-results.md)。目前只有結果模型與合約測試可驗證；middleware、HTTP headers、log 及 event scope 的整合驗證列入 Phase 2。
+見 [HTTP／結果案例](testcases/tip-http-and-operation-results.md)。Phase 2 出口已有驗證紀錄；新版商品改價拒絕與 storage 分區錯誤須在 Phase 3 補測，不能沿用舊成功略過的證據。
 
 ## 明文 token 清理範圍（Phase 2）
 

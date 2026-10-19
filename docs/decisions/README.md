@@ -59,6 +59,9 @@
 
 | 日期 | 決策 |
 |---|---|
+| [2026-10-19](2026-10-19-tip-phase3-spec-and-refactor-plan.md) | **TiP Phase 3 規格修訂與重構計畫**。使用者要求同步需求並追加新階段；六個交易 collections、受控路由／唯一 ID、改價拒絕、查詢與離線遷移，已確認並授權提交文件；Abstract 與 code 未改。 |
+| [2026-10-19](2026-10-19-tip-identity-storage-and-access-boundaries.md) | **TiP 身分、儲存與存取邊界**。交易用途與 storage 路由固定，認證及非交易資料共用；test identity 改價明確拒絕，可執行交易但 test transaction 不得產生實際業務效果。不採 token 分區授權；後續已同步 spec／testcases 並追加 Phase 3，已確認，尚未實作。 |
+| [2026-10-19](2026-10-19-tip-collection-isolation-assessment-scope.md) | **TiP collection 隔離評估範圍**。PoC 以同庫拆 collection 表達隔離即可；僅評估變更範圍，不展開分庫，不修改 code／spec／Abstract，尚未定案實作方案。 |
 | [2026-10-18](2026-10-18-storefront-payment-id-input.md) | **CommonStorefront PaymentID 輸入**。取消測試付款選項，輸入模擬卡號並由系統判定用途；與 AdminCLI 分開提交。 |
 | [2026-10-18](2026-10-18-tip-admin-cli.md) | **TiP Phase 1.2 .NET Admin CLI**。query-only 統計／明細、環境變數與 dotenv、help／skill topics、TXT／CSV／JSON；會員不接受日期。規格已確認並授權實作；保留 ConsoleUI、移除 DatabaseQuery 與 query-litedb.sh，以 AdminCLI＋Admin API 替代。 |
 | [2026-10-18](2026-10-18-tip-admin-query.md) | **TiP Phase 1.1 管理查核**。追加獨立 admin token、訂單總額與三種清單；未設定即停用、規格定案。需求僅有 API，沒有 Web UI，CLI 由使用者後續追加；實作留待後續。 |
