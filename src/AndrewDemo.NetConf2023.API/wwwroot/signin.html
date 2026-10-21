@@ -1,53 +1,151 @@
-﻿<!DOCTYPE html>
-<html>
+<!DOCTYPE html>
+<html lang="zh-Hant">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>登入 - Andrew Shop</title>
+    <style>
+        /* 沿用 storefront 的 UI 配色與表單風格；登入頁保持獨立 HTML，不依賴 storefront host。 */
+        :root {
+            --app-bg: #f7f7f7;
+            --app-panel: #ffffff;
+            --app-text: #0b0c0c;
+            --app-muted: #505a5f;
+            --app-border: #b1b4b6;
+            --app-primary-dark: #003078;
+            --app-success: #00703c;
+            --app-focus: #ffdd00;
+        }
 
-    <title></title>
-    <script language="javascript">
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: var(--app-text);
+            background: var(--app-bg);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.5;
+        }
+        a { color: var(--app-primary-dark); text-underline-offset: 0.2em; }
+        a:focus, button:focus, input:focus, main:focus {
+            outline: 3px solid var(--app-focus);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 5px var(--app-text);
+        }
+        .skip-link {
+            position: absolute;
+            top: -100px;
+            left: 0;
+            z-index: 1;
+            padding: 0.75rem 1rem;
+            background: var(--app-focus);
+            color: var(--app-text);
+        }
+        .skip-link:focus { top: 0; }
+        .site-header, .site-footer { background: var(--app-primary-dark); color: #fff; }
+        .site-header__container, .site-footer__container, .app-main {
+            width: 100%;
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+        .site-header__container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .site-header__brand { margin: 0; font-size: 1.25rem; font-weight: 700; }
+        .site-header a { display: inline-block; padding: 0.625rem 0; color: #fff; }
+        .app-main { flex: 1; padding-top: 2rem; padding-bottom: 3rem; }
+        .login-content { max-width: 36rem; }
+        h1 { margin: 0 0 1rem; font-size: 2rem; line-height: 1.25; }
+        .intro { margin: 0 0 1.5rem; }
+        .panel { padding: 1.5rem; background: var(--app-panel); border: 1px solid var(--app-border); }
+        .field { margin-bottom: 1.5rem; }
+        label { display: block; margin-bottom: 0.25rem; font-weight: 700; }
+        .hint-text { margin: 0 0 0.5rem; color: var(--app-muted); }
+        input {
+            width: 100%;
+            min-height: 44px;
+            padding: 0.625rem;
+            border: 2px solid var(--app-text);
+            border-radius: 0;
+            color: var(--app-text);
+            background: var(--app-panel);
+            font: inherit;
+        }
+        .button {
+            min-height: 44px;
+            padding: 0.75rem 1rem;
+            border: 0;
+            border-radius: 0;
+            background: var(--app-success);
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .button:hover { background: #005a30; }
+        .site-footer p { margin: 0; }
+        @media (max-width: 400px) {
+            .panel { padding: 1rem; }
+            .button { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
+    <header class="site-header">
+        <div class="site-header__container">
+            <p class="site-header__brand">Andrew Shop</p>
+            <nav aria-label="頁面導覽">
+                <a href="#login-form">前往登入表單</a>
+            </nav>
+        </div>
+    </header>
+    <main id="main-content" class="app-main" tabindex="-1">
+        <div class="login-content">
+            <h1>登入 Andrew Shop</h1>
+            <p class="intro">使用名稱登入示範商店。第一次使用的名稱會自動建立帳號。</p>
+            <form id="login-form" class="panel" method="post" onsubmit="fill()" aria-label="登入表單">
+                <div class="field">
+                    <label for="name">使用者名稱（必填）</label>
+                    <p id="name-hint" class="hint-text">再次登入時，請使用相同的名稱。</p>
+                    <input type="text" id="name" name="name" autocomplete="username"
+                           spellcheck="false" required aria-describedby="name-hint" />
+                </div>
+                <div class="field">
+                    <label for="password">密碼（選填）</label>
+                    <p id="password-hint" class="hint-text">此示範登入不驗證密碼，可以留空。</p>
+                    <input type="password" id="password" name="password" autocomplete="off"
+                           aria-describedby="password-hint" />
+                </div>
+
+                <input type="hidden" name="client_id" />
+                <input type="hidden" name="redirect_uri" />
+                <input type="hidden" name="state" />
+
+                <button type="submit" class="button">登入／建立帳號</button>
+            </form>
+        </div>
+    </main>
+    <footer class="site-footer">
+        <div class="site-footer__container">
+            <p>Andrew Shop Storefront Demo</p>
+        </div>
+    </footer>
+    <script>
         function fill() {
-            var url = window.location.href;
-            var params = url.split('?')[1].split('&');
-            for (var i = 0; i < params.length; i++) {
-                var key = params[i].split('=')[0];
-                var value = decodeURIComponent(params[i].split('=')[1]);
-
-                //alert(key + ' ' + value);
-
-                if (key == 'client_id') {
-                    document.getElementsByName('client_id')[0].value = decodeURI(value);
-                }
-                if (key == 'redirect_uri') {
-                    document.getElementsByName('redirect_uri')[0].value = decodeURI(value);
-                }
-                if (key == 'state') {
-                    document.getElementsByName('state')[0].value = decodeURI(value);
-                }
+            const params = new URLSearchParams(window.location.search);
+            const form = document.getElementById('login-form');
+            for (const name of ['client_id', 'redirect_uri', 'state']) {
+                form.elements.namedItem(name).value = params.get(name) ?? '';
             }
         }
     </script>
-</head>
-<body>
-    <h1>[Andrew Shop] Sign-In Here:</h1>
-    <div>// 說明: demo 用途的登入畫面。直接輸入你要的 username 就好了，會自動註冊帳號，密碼沒有作用。</div>
-    <form method="post" onsubmit="fill()">
-        <div class="mb-3 mt-3">
-            <label for="name" class="form-label">Name:</label>
-            <input type="text" class="form-control" id="name" placeholder="Enter name" name="name">
-        </div>
-        <div class="mb-3">
-            <label for="password" class="form-label">Password:</label>
-            <input type="password" class="form-control" id="password" placeholder="Enter password" name="password">
-        </div>
-
-        <input type="hidden" name="client_id">
-        <input type="hidden" name="redirect_uri">
-        <input type="hidden" name="state">
-
-        <button type="submit" class="btn btn-primary">Login / Register</button>
-    </form>
 </body>
-
 </html>
