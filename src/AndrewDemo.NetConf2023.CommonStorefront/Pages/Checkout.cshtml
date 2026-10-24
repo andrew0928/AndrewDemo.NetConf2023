@@ -5,12 +5,17 @@
 }
 <section>
     <h1 class="page-heading">結帳</h1>
-    <p class="hint-text">第一版以單頁確認為主，付款編號由 storefront demo 自動產生。</p>
+    <p class="hint-text">確認商品與 PaymentID 後送出訂單。此示範商店尚未串接真實金流。</p>
 </section>
 
 @if (Model.ErrorSummary.Errors.Count > 0)
 {
     <partial name="_ErrorSummary" model="Model.ErrorSummary" />
+}
+
+@if (Model.Operation != null)
+{
+    <partial name="_OperationSummary" model="Model.Operation" />
 }
 
 @if (!Model.Lines.Any())
@@ -39,8 +44,16 @@ else
 
     <section class="panel">
         <h2>確認送單</h2>
-        <p>送出後會建立訂單，第一版 storefront 不提供消費者填寫滿意度與備註。</p>
+        <p>必要檢查通過後才會建立訂單。測試交易同樣需要通過商品與庫存檢查。</p>
         <form method="post">
+            <div class="field">
+                <label asp-for="PaymentId">PaymentID（模擬卡號）</label>
+                <input asp-for="PaymentId" type="text" inputmode="numeric" autocomplete="off" required
+                       placeholder="例如 123456" aria-describedby="payment-help payment-test-help payment-error" />
+                <p id="payment-help" class="hint-text">僅供模擬，請勿輸入真實信用卡號。</p>
+                <p id="payment-test-help" class="hint-text">預設測試 PaymentID：990001。系統會依付款 ID 判定；測試會員或使用測試 ID 都會建立測試交易，不產生真實商業效果。實際用途以結帳結果為準。</p>
+                <span asp-validation-for="PaymentId" id="payment-error"></span>
+            </div>
             <div class="page-actions">
                 <button class="button button--primary" type="submit">送出訂單</button>
                 <a class="button button--secondary" href="/cart">返回購物車</a>

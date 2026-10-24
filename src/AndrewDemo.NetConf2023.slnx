@@ -27,4 +27,6 @@
   <Project Path="AndrewDemo.NetConf2023.CommonStorefront/AndrewDemo.NetConf2023.CommonStorefront.csproj" />
   <Project Path="AndrewDemo.NetConf2023.AppleBTS.Storefront/AndrewDemo.NetConf2023.AppleBTS.Storefront.csproj" />
   <Project Path="AndrewDemo.NetConf2023.PetShop.Storefront/AndrewDemo.NetConf2023.PetShop.Storefront.csproj" />
+  <Project Path="AndrewDemo.NetConf2023.AdminCLI/AndrewDemo.NetConf2023.AdminCLI.csproj" />
+  <Project Path="../tests/AndrewDemo.NetConf2023.AdminCLI.Tests/AndrewDemo.NetConf2023.AdminCLI.Tests.csproj" />
 </Solution>

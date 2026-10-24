@@ -1,4 +1,9 @@
-﻿using System;
+using AndrewDemo.NetConf2023.Abstract.Operations;
+using AndrewDemo.NetConf2023.Core.Operations;
+using AndrewDemo.NetConf2023.Core.Contexts;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,22 +45,83 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
         private static TimeProvider CurrentTimeProvider { get; } = TimeProviderFactory.Create(new TimeOptions());
 
         private static IProductService ProductService => new DefaultProductService(Database);
-        private static IOrderEventDispatcher OrderEventDispatcher { get; } = new DefaultOrderEventDispatcher();
 
-        private static CheckoutService BuildCheckoutService()
+        private static ServiceProvider OperationServices { get; set; } = null!;
+        private static readonly AsyncLocal<IServiceProvider?> ActiveOperation = new();
+
+        private static ServiceProvider BuildOperationServices()
         {
-            return new CheckoutService(Database, DiscountEngineService, OrderEventDispatcher, ProductService, ShopManifest, CurrentTimeProvider);
+            var services = new ServiceCollection();
+            services.AddSingleton(Database);
+            services.AddSingleton(ShopManifest);
+            services.AddSingleton(CurrentTimeProvider);
+            services.AddSingleton(DiscountEngineService);
+            services.AddSingleton<IProductService>(ProductService);
+            services.AddSingleton<IOrderEventDispatcher, DefaultOrderEventDispatcher>();
+            services.AddSingleton(_ => new AndrewDemo.NetConf2023.Core.Testing.TestAllowlist());
+            services.AddLogging(builder => builder.AddConsole());
+            services.AddSingleton<MemberService>();
+            services.AddShopExecutionContexts();
+            return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
+        }
+
+        private static CheckoutService BuildCheckoutService() => CurrentOperation.GetRequiredService<CheckoutService>();
+        private static IServiceProvider CurrentOperation => ActiveOperation.Value
+            ?? throw new ExecutionContextInvalidException("CLI 操作缺少 scope。");
+        private static MemberService Members => CurrentOperation.GetRequiredService<MemberService>();
+
+        private static OperationLease BeginOperation()
+        {
+            var scope = ShopOperationScope.Open(OperationServices.GetRequiredService<IServiceScopeFactory>(), _access_token);
+            var previous = ActiveOperation.Value;
+            ActiveOperation.Value = scope.Services;
+            return new OperationLease(scope, previous);
+        }
+
+        private sealed class OperationLease(ShopOperationScope scope, IServiceProvider? previous) : IDisposable
+        {
+            public OperationExecution Execution => scope.Execution;
+
+            public void Dispose()
+            {
+                ActiveOperation.Value = previous;
+                scope.Dispose();
+            }
+        }
+
+        private static T RunOperation<T>(Func<T> action, Func<T, bool>? accepted = null, bool display = true)
+        {
+            using var operation = BeginOperation();
+            try
+            {
+                var value = action();
+                var result = operation.Execution.Complete(accepted == null || accepted(value)
+                    ? OperationOutcome.Succeeded : OperationOutcome.Rejected);
+                if (display) ShowOperationResult(operation.Execution);
+                return value;
+            }
+            catch (Exception error)
+            {
+                operation.Execution.Fail(error);
+                if (display) ShowOperationResult(operation.Execution);
+                throw;
+            }
+        }
+
+        private static void ShowOperationResult(OperationExecution execution)
+        {
+            var result = execution.Result;
+            InfoOutput($"用途：{(result == null ? "未知" : result.IsTestBehavior ? "test" : "normal")}；結果：{execution.Outcome?.ToString().ToLowerInvariant()}；TraceId：{execution.TraceId}");
+            if (execution.Transaction is { } transaction)
+                InfoOutput($"交易：{transaction.Kind.ToString().ToLowerInvariant()}/{transaction.Id}；IsTest：{transaction.IsTest}");
+            if (result != null)
+                foreach (var effect in result.SkippedEffects)
+                    InfoOutput($"略過：{effect.EffectCode} {effect.TargetType}/{effect.TargetId} ({effect.ReasonCode})");
         }
 
         private static Member? GetMemberByToken(string token)
         {
-            if (string.IsNullOrWhiteSpace(token)) return null;
-
-            var tokenRecord = Database.MemberTokens.FindById(token);
-            if (tokenRecord == null) return null;
-            if (tokenRecord.Expire <= CurrentTimeProvider.GetLocalDateTime()) return null;
-
-            return Database.Members.FindById(tokenRecord.MemberId);
+            return Members.ValidateToken(token);
         }
 
         private static Member RequireCurrentMember()
@@ -98,54 +164,44 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
         private static IEnumerable<Order> GetOrdersForMember(int memberId)
         {
-            return Database.Orders.Find(o => o.Buyer.Id == memberId);
+            return Database.Transactions.Orders("all").Where(o => o.Buyer.Id == memberId);
         }
 
         private static string IssueToken(Member member)
         {
-            if (member == null)
-            {
-                throw new ArgumentNullException(nameof(member));
-            }
-
-            string token = Guid.NewGuid().ToString("N");
-            Database.MemberTokens.Upsert(new MemberAccessTokenRecord
-            {
-                Token = token,
-                MemberId = member.Id,
-                Expire = DateTime.MaxValue
-            });
-
-            return token;
+            return Members.IssueToken(member.Id, DateTime.MaxValue).Token;
         }
 
-        private static int CreateCheckoutTransaction(int cartId, string token)
+        private static int CreateCheckoutTransaction(int cartId, string token, int paymentId)
         {
             var cart = Database.Carts.FindById(cartId) ?? throw new ArgumentOutOfRangeException(nameof(cartId));
-            if (!cart.LineItems.Any()) throw new InvalidOperationException("cart is empty");
+            if (!cart.LineItems.Any()) throw new CheckoutRejectedException("cart is empty");
 
             var member = GetMemberByToken(token) ?? throw new ArgumentOutOfRangeException(nameof(token));
             var result = BuildCheckoutService().Create(new CheckoutCreateCommand
             {
                 CartId = cart.Id,
+                PaymentId = paymentId,
                 RequestMember = member
             });
 
             if (result.Status != CheckoutCreateStatus.Succeeded)
             {
-                throw new InvalidOperationException(result.ErrorMessage ?? "create checkout failed");
+                throw new CheckoutRejectedException(result.ErrorMessage ?? "create checkout failed");
             }
 
             return result.TransactionId;
         }
 
-        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int paymentId, int? satisfaction = null, string? comments = null)
+        private static async Task<Order> CompleteCheckoutTransactionAsync(int transactionId, int? satisfaction = null, string? comments = null)
         {
             var member = RequireCurrentMember();
+            var binding = CurrentOperation.GetRequiredService<CheckoutContextLoader>().Bind(transactionId);
+            if (binding != CheckoutContextStatus.Bound)
+                throw new CheckoutRejectedException($"Checkout 無法存取：{binding}");
             var result = await BuildCheckoutService().CompleteAsync(new CheckoutCompleteCommand
             {
                 TransactionId = transactionId,
-                PaymentId = paymentId,
                 Satisfaction = satisfaction,
                 ShopComments = comments,
                 RequestMember = member
@@ -153,7 +209,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
 
             if (result.Status != CheckoutCompleteStatus.Succeeded || result.OrderDetail == null)
             {
-                throw new InvalidOperationException(result.ErrorMessage ?? "complete checkout failed");
+                throw new CheckoutRejectedException(result.ErrorMessage ?? "complete checkout failed");
             }
 
             return result.OrderDetail;
@@ -302,22 +358,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             //var username = "andrew";
             //var password = "123456";
 
-            var member = Database.Members.FindOne(m => m.Name == (username ?? string.Empty));
-            if (member == null)
+            if (string.IsNullOrWhiteSpace(username))
             {
-                if (string.IsNullOrWhiteSpace(username))
-                {
-                    Console.WriteLine("Login / Register Failed");
-                    return false;
-                }
-
-                member = new Member
-                {
-                    Name = username
-                };
-
-                Database.Members.Insert(member);
+                Console.WriteLine("Login / Register Failed");
+                return false;
             }
+            var member = Members.GetOrCreate(username);
 
             // init login user context
             _access_token = IssueToken(member);

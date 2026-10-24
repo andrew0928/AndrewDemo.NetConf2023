@@ -4,7 +4,7 @@
 
 - phase: 1
 - status: draft-for-review
-- 日期：2026-04-01
+- 日期：2026-04-01；2026-10-17 同步 [TiP Phase 1](tip-phase1.md) 的用途與封存要求。
 
 ## 範圍
 
@@ -64,7 +64,8 @@ canonical 結論：
 - checkout 必須檢查該 `SkuId` 是否有足夠庫存
 - 若庫存不足，checkout 必須失敗
 - 不得建立 order
-- 不得刪除 checkout transaction
+- 不得刪除 checkout transaction 或產生成功封存
+- test 交易仍須檢查庫存，不因略過扣減就直接成功
 
 若 cart line 對應的 product 沒有 `SkuId`：
 
@@ -76,18 +77,21 @@ checkout 標準正確性要求：
 
 1. 載入 checkout transaction
 2. 驗證 buyer
-3. 載入 cart 與 products
+3. 讀取 create 時固定的交易明細並檢查 products，不從目前 cart 重算
 4. 驗證有 `SkuId` 的商品庫存足夠
-5. 寫入 inventory 扣減
-6. 建立 order
-7. 刪除 checkout transaction
-8. commit
+5. 正式交易寫入 inventory 扣減；test 交易略過扣減並記錄實際略過
+6. 建立 order，保存 IsTest 與 CheckoutTransactionId
+7. 保存完整 checkout transaction、Completed／ClosedAt 到封存區並凍結
+8. 移除作用中 checkout transaction
+9. commit
+
+庫存驗證及所有資料異動須在一致的資料庫 transaction 邊界內；同時再次確認 Checkout 尚未完成。完整 TiP 規則與實作驗收階段見 [標準流程](tip-standard-flow.md)。
 
 若任一步失敗：
 
 - rollback
 - transaction 保留
-- order 不成立
+- order 不成立，封存不留下部分紀錄
 - inventory 不得被部分扣減
 
 ### 6. LiteDB 實作前提

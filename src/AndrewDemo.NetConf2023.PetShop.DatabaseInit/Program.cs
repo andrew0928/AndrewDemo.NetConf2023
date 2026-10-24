@@ -40,7 +40,7 @@ namespace AndrewDemo.NetConf2023.PetShop.DatabaseInit
             Console.WriteLine("PetShop database initialized successfully.");
             Console.WriteLine($"Products: {database.Products.Count()}");
             Console.WriteLine($"Members: {database.Members.Count()}");
-            Console.WriteLine($"Orders: {database.Orders.Count()}");
+            Console.WriteLine($"Orders: {database.Transactions.Orders("all").Length}");
             Console.WriteLine($"Database file created at: {dbFilePath}");
         }
 

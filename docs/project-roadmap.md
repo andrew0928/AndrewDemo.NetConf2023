@@ -6,6 +6,80 @@
 
 後續若 conversation context 過長，應以本文件作為重新載入脈絡的第一來源；chat 中已收斂的結論不應只停留在對話。
 
+## TiP Phase 1.1：管理查核追加規格
+
+2026-10-18 使用者指定追加唯讀 admin API，用來驗證總訂單金額、訂單、結帳與會員清單；admin 使用獨立、預先設定的 `admin_` token，採 Bearer 與 SHOP_ADMIN_ACCESS_TOKEN，未設定即停用。沒有 Web UI，CLI 由使用者後續追加。本輪規格已定案，實作留待後續，正式入口為 [Phase 1.1](../spec/tip-phase1.1.md)，依據見 [決策](decisions/2026-10-18-tip-admin-query.md)。不取代既有 Phase 2.1～2.7，亦不將未交付階段視為完成。
+
+2026-10-18 使用者後續授權執行 Phase 1.1，管理查核 API 已完成實作、262 項 solution 回歸及真實 host 隔離驗證。CLI 由使用者後續追加，無 Web UI；Docker daemon 恢復後已成功重建 Common API 映像；使用者依 Compose 啟動與 curl 指令親自驗證正式訂單查詢通過，完整容器案例未重跑。見 [交付紀錄](tip/phase1.1-delivery.md)。
+
+## TiP：Phase 3 交易 collection 隔離已完成
+
+最後記錄：2026-10-19。Phase 3.1～3.6 已完成標準流程重構與隔離 DB 驗證，包含六區儲存、test identity 改價拒絕、事件效果限制、查詢與離線遷移。使用者另建議外層啟動 transaction、內層檢驗；已採 Core 同步原子操作邊界。見 [整體交付](tip/phase3.6-delivery.md) 與 [交易擁有者決策](decisions/2026-10-19-tip-storage-transaction-ownership.md)。現有部署 DB 未遷移；使用者已授權提交與推送。
+
+以下保留本次規格形成過程：
+
+2026-10-19 使用者確認本專案為 PoC，拆 collection 已足以代表本次研究所需的隔離性；本輪僅評估同一 shop-local LiteDB 內拆 collection 的變更範圍，不展開 database 分離，不修改 code、spec 或 Abstract。此為評估範圍確認，尚未定案拆分對象、命名或實作方案，也未重新開啟 Phase 1。見 [評估範圍決策](decisions/2026-10-19-tip-collection-isolation-assessment-scope.md)。
+
+同日最終決定：使用者接受以「交易」作為 live／test 的嚴格邊界；用途在交易建立時判定，此後執行、storage、封存、衍生訂單與事件均維持原用途。Member／Token 與非交易資料共用，不以 Token.IsTest 限定可存取的交易分區；既有身分驗證、物件歸屬與權限檢查仍適用，特別點名的操作嚴格禁止 test identity 執行。正式會員使用測試 PaymentId 的流程保留，未來保留實體分庫方向。先前 token 嚴格分區方案不採用；本次只更新設計決策，未修改 code、spec 或 Abstract。見 [身分、儲存與存取邊界](decisions/2026-10-19-tip-identity-storage-and-access-boundaries.md)。
+
+同日補充確認：test identity 變更商品價格必須明確拒絕；test identity 可執行交易，但 test transaction 不得產生任何實際業務效果，test 交易紀錄與 log 仍可保存。此新決策取代 AC-TIP-005 的「驗證後略過改價」政策。使用者後續要求確認需求規格並追加 Phase 3：spec／testcases 已同步，具體命名、拒絕回應及重構切分已由使用者確認並要求提交文件，code 與 Abstract 未改。SKU 維持既有政策，不擴張禁止清單。見 [Phase 3 review](tip/phase3-spec-review.md)、[執行計畫](../spec/tip-phase3-plan.md) 與 [追加決策](decisions/2026-10-19-tip-phase3-spec-and-refactor-plan.md)。
+
+以 AndrewShop PoC / prototype 研究 Testing in Production（TiP），驗證共用交易流程與各業務模組能否一致區分測試行為及其商業效果。此方向延續模組化、DiscountRule 與 ProductService 的主線，標準實作已完成 [Phase 1 定案基準](../spec/tip-phase1.md)，Phase 2 接入 Core 與 host。
+
+已確認的大前提：**服務部署在正式環境，測試行為不應產生真實商業效果。**
+
+已確認 `.Core` 管理的 8 種持久化領域物件範圍，2026-10-17 縮小直接標記對象為 `Order`、`Member`、`CheckoutTransactionRecord`，建立時確定正式／測試用途且不可變更；Token.IsTest 建立時繼承 Member.IsTest 並保存，Cart 不承接會員且不標記用途；`InventoryRecord`、`Product`、`SkuRecord` 受保護，測試行為不得異動，因測試而略過的操作必須留下 log。PetShop 的預約及行事曆／時段占用比照受保護規則。
+
+原則、分類與名詞解釋見 [TiP 設計原則](tip/tip-guidelines.md)，確認紀錄見 [TiP 大前提決策](decisions/2026-10-16-tip-no-real-business-effects.md)及[領域物件分類決策](decisions/2026-10-16-tip-domain-object-classification.md)。[AC-TIP-001](tip/tip-acceptance-criteria.md#ac-tip-001) 已確認：測試會員可完成一般商品結帳；略過扣庫存、扣款、出貨必須留 log。查詢型報表排除測試資料不須另留 TiP log，事件觸發的統計更新若因 test 略過則須留 log；若有商業統計功能或報表，AC 必須驗證其結果不受測試交易影響。
+
+[AC-TIP-003](tip/tip-acceptance-criteria.md#ac-tip-003) 已確認：庫存不足時正常終止結帳、保留 test Checkout，不建立訂單；按照正常流程記錄庫存不足及交易終止，未走到的操作不留 test 略過紀錄。
+
+[AC-TIP-004](tip/tip-acceptance-criteria.md#ac-tip-004) 已確認：Order、Member、Checkout、Token 建立後，正式與 test 用途不得互換；Token.IsTest 由 Member.IsTest 繼承，Cart 排除標記；拒絕變更後原用途及關聯物件用途不變，正常記錄拒絕原因。
+
+[AC-TIP-005](tip/tip-acceptance-criteria.md#ac-tip-005) 已於 2026-10-19 修訂確認：test identity 商品改價明確拒絕，Product 維持原價，記錄拒絕原因，不回成功略過；Core／HTTP 結果須可由程式辨識。新版實作與驗證列入 Phase 3。
+
+[AC-TIP-006](tip/tip-acceptance-criteria.md#ac-tip-006) 已確認：測試修改 SKU 規格仍執行必要檢查，但略過更新並留 log；重新讀取為原規格，Product 關聯與庫存資料均不受影響。
+
+[AC-TIP-007](tip/tip-acceptance-criteria.md#ac-tip-007) 已確認：測試預約通過必要檢查後，不新增 Reservation 或衍生 Product、不占用時段並留 log；正式查詢仍顯示可預約。此案例驗收至 `CreateHold`；使用者後續已決定不接續該預約的購物車與 Checkout，完整邊界見已接受的 AC-TIP-015。
+
+[AC-TIP-008](tip/tip-acceptance-criteria.md#ac-tip-008) 已確認：測試預約遇到已占用時段時，照常回報不可用並終止，不新增預約或商品、不影響既有正式預約及占用；正常記錄失敗，不留 test 略過紀錄。
+
+[AC-TIP-009](tip/tip-acceptance-criteria.md#ac-tip-009) 已確認：正式與測試交易同時結帳，各自建立正確用途的 Order；只有正式交易改變庫存與商業統計，正式流程正常執行，測試流程略過商業效果並留 log。
+
+[AC-TIP-010](tip/tip-acceptance-criteria.md#ac-tip-010) 已確認：測試會員操作 Cart 可正常新增、刪除商品明細並保存結果，Cart 不承接會員且不保存用途；Product、SKU 與庫存不受影響，已執行的 Cart 異動不記成 test 略過。
+
+[AC-TIP-011](tip/tip-acceptance-criteria.md#ac-tip-011) 已確認：測試會員不能完成其他測試會員的 Checkout，買方不符時正常拒絕；原 Checkout、Cart 不變，不建立 Order 或產生商業效果，正常記錄失敗，不留 test 略過紀錄。
+
+[AC-TIP-012](tip/tip-acceptance-criteria.md#ac-tip-012) 已依使用者修正保留並接受：測試會員查詢發現正式預約真正逾期，正常通知系統清理；處理完成後，預約須保存為 `Expired`，預約與 Product 紀錄保留。現行 PetShop 查詢同步寫入，尚缺對應非同步通知與系統處理邊界，已記入[架構變更事項](tip/tip-architecture-notes.md#petshop-expiration-change)，留待實作。決策與查核結果見[系統到期整理決策](decisions/2026-10-16-tip-system-expiration-boundary.md)。
+
+使用者已一次接受最後三條核心案例：[AC-TIP-013](tip/tip-acceptance-criteria.md#ac-tip-013) 的測試訂單後續事件與重試維持 test；[AC-TIP-014](tip/tip-acceptance-criteria.md#ac-tip-014) 要求用途明確，否則為 BUG；[AC-TIP-015](tip/tip-acceptance-criteria.md#ac-tip-015) 不允許測試預約接續 Cart／Checkout。本輪 14 條核心 AC 已全部確認。[AC-TIP-002](tip/tip-acceptance-criteria.md#ac-tip-002) 已依最新範圍改為 PaymentId 白名單的 PoC 驗收方向，建立 Checkout 時提供 PaymentId 並固定用途。
+
+研究目標進一步確認為：透過 prototype 演練歸納可重用的 TiP best practice，原則確定後，具體保證機制交由實作端決定。已確認最低層系統服務介面將用途不可變物件的 `id + type` 視為 immutable、以事件／任務交接隔離查詢與系統工作、context 延續至出口並由 HTTP middleware 統一轉成對外結果、沿用正常 log 機制，以及在 database schema 明確定義用途。
+
+Context 已進一步區分為 **current identity**（目前執行身分及其用途）與 **current transaction**（目前處理交易及其用途）。架構負責資訊正確傳遞，應用端依 context 執行業務政策：改價等操作可依身分判定，交易衍生操作另須保留交易用途；跨事件／async 邊界仍須遵守 AC-TIP-012／013 的責任區分。
+
+使用者已確認支撐 TiP 體系的架構原則涵蓋完成，本輪在 best practice 與規範層級收斂。完整用途組合政策留給應用規格，具體欄位、結果代碼及傳遞機制留給正式 contract／實作，PaymentId 白名單已納入標準 PoC，其他額外付款來源留待功能擴充；標準流程部分已於後續 Phase 1 定案；其他來源維持擴充範圍，不採用跨所有操作的通用 OR 規則。
+
+決策見 [TiP 研究範圍與架構規範邊界](decisions/2026-10-17-tip-contract-and-context-boundaries.md)；[TiP 架構設計筆記](tip/tip-architecture-notes.md) 區分已確認規範與後續事項。原研究階段未改程式；後續 TiP Phase 1 已同步 `/spec`、`.Abstract` 與 Core 基礎實作。
+
+2026-10-17 標準實作範圍補充：Cart 排除、Token 跟隨 Member；沿用 Checkout 同一路徑控制效果，事件處理器視為 event／async 邊界，暫不處理 AppleBTS／PetShop。使用者已選擇建立 Checkout 時提供 PaymentId 並固定用途。已接受 scoped injection：IdentityContext 與 TransactionContext 獨立建模並分開注入，CheckoutService 採 scoped；兩者可在單次 HTTP 操作中共用 request scope，其他執行範圍依事件／CLI 等處理邊界決定。HTTP Items 與 Core 對各種 context 使用相同資料；middleware 以 endpoint metadata 明確指定交易／訂單 ID 來源，解析規則已納入 [HTTP 合約](../spec/tip-http-and-operation-results.md)。決策見 [TiP 標準實作範圍與 Context 方向](decisions/2026-10-17-tip-standard-scope-and-context.md)。
+
+2026-10-17 Core 欄位已確認：新增 Member／Checkout／Order.IsTest、Checkout.PaymentId 及建立時從 Member 繼承的 Token.IsTest。Create／Complete command 保留明確 RequestMember，API／CLI 自行組合；PaymentId 移至 create，complete 使用保存值。Checkout 採作用中與封存分區保存，Order 關聯封存交易且不新增 Order.PaymentId；新增 nullable CheckoutTransactionId；Member.Name／PaymentId 白名單預設於 code 或 database，舊資料 IsTest = false；無交易時不給交易 header，物件中的交易為 null。詳見 [Core 欄位決策](decisions/2026-10-17-tip-core-fields-and-explicit-member.md)。
+
+TiP Phase 1 已於 2026-10-17 由使用者啟動並完成。使用者最後指定先開始變更 code，再同步正式 spec 與 testcases；本輪不以先凍結 spec 作為開工前置條件。最小共用 contract 已具體化並定案；規格、案例與交付證據見 [Phase 1 基準](../spec/tip-phase1.md)。Phase 2 的用途傳遞與效果控制尚未交付。
+
+2026-10-17 已開始 TiP Core 物件定義：新增四種物件的 IsTest、Checkout.PaymentId、Order.CheckoutTransactionId（nullable），以及 ArchivedCheckoutTransactions 封存入口；同步 [物件規格](../spec/tip-core-object-definitions.md) 與 [測試案例](../spec/testcases/tip-core-object-definitions.md)。初批僅交付欄位；後續已完成 command 付款前移、白名單查詢與 Context 基礎行為，封存編排留待 Phase 2。
+
+2026-10-17 TiP 進入 TDD 紅燈檢查點：新增 Core TestAllowlist 與 Abstract 的獨立 Context 介面，紅燈階段先保留 Core 骨架，確認 21 項新增案例預期失敗、75 項既有測試通過。使用者確認後已補上白名單查詢及 Context 初始化／綁定／清除，host 與 DI 整合留待後續。詳見 [決策](decisions/2026-10-17-tip-allowlist-and-tdd-checkpoint.md)。
+
+2026-10-17 Phase 1 收尾：使用者確認舊 Checkout 缺少 PaymentId 明確回 409 並要求重建，不做向前相容。已實作該分支並同步所有共用呼叫端；補齊標準流程、操作結果、HTTP／log、scope 與 AC 對應案例。全套 107 項測試通過。詳見 [定案決策](decisions/2026-10-17-tip-phase1-contract-baseline.md)。
+
+2026-10-17 核帳需求追加：新增 Checkout.ClosedAt 與 Order.CreatedAt，歷史未知時間為 null；業績／核帳查詢預設依交易／訂單的 IsTest 排除測試資料。時間填值與移除 access token 明文 log 留 Phase 2，查詢功能後續再做。Checkout 終態與獨立金額明細後續已確認並補上 schema，create 時固定；見 [決策](decisions/2026-10-17-tip-accounting-timestamps.md) 與 [檢驗](tip/accounting-schema-review.md)。
+
+2026-10-17 Checkout 追加定案：保存 State 與獨立交易金額／明細，create 時固定，complete 沿用且不重算 Cart／現價；Completed／Cancelled 完整搬移至 archived_checkout_transactions 後凍結。Checkout 不保存商品名稱、描述或規格快照。正式 [生命週期規格](../spec/tip-checkout-lifecycle.md) 與案例已同步，執行流程留 Phase 2。
+
+2026-10-18 使用者確認會員白名單改以 Name（預設 `test`）判定，名稱比對沿用作用中資料庫 collation；PaymentId 保留 `990001`，既有會員用途不重新分類。規格與實作同步修訂，Abstract 不變。見 [決策](decisions/2026-10-18-tip-member-name-allowlist.md)。
+
 ## Milestone 1 - 基礎建設
 
 目標：建立可支援模組化商店的共用基礎。
@@ -803,3 +877,31 @@ API spec draft：
 - `PetShopReservationPurchaseThresholdDiscountRule` 已實作。
 - `spec/testcases/petshop-reservation-purchase-threshold-discount.md` 已固定 testcase。
 - extension tests 已覆蓋無預約、單筆預約、多筆預約、門檻邊界、只有預約與過期預約。
+
+## TiP Phase 1.2 Admin CLI（2026-10-18）
+
+使用者追加 .NET query-only CLI 作為最後查核入口：統計／明細、環境變數與預設 working directory `.env`、人用 --help、agent --skill 情境指引、TXT／CSV／JSON，以及 member／checkout／order 與 all／normal／test 篩選。會員不接受日期經使用者確認；訂單／結帳沿用既有起訖時間語意。這是 TiP 驗證主線的工具補齊，不改動 .Core、Abstract 或既有 API 契約。
+
+[Phase 1.2](../spec/tip-phase1.2.md) 已定案並授權實作；取代先前 shell CLI 參考。最後確認以 CLI 資料證據加上既有 Core／HTTP／事件測試，不把三個唯讀查詢當成所有 AC 的證明。見 [決策](decisions/2026-10-18-tip-admin-cli.md)、[實作交付](tip/phase1.2-delivery.md) 與 [使用者驗收流程](tip/phase1.2-final-verification.md)。
+
+## TiP Phase 2 跨 Session 交接（2026-10-18）
+
+使用者確認以同一台機器、不同 chat session 依序執行 2.1～2.7；canonical 執行與進度入口為 [Phase 2 計畫](../spec/tip-phase2-plan.md)。每階段更新交付證據與剩餘工作；保持 Phase 1 與 Abstract 定案，不將資料模型或舊 Docker image 的可用性當作完整 TiP 驗收。
+
+2026-10-18 TiP Phase 2.1 完成：Core 會員／Token 共用服務接入標準 API 與 CLI，驗證最終 ID 分類、Token 繼承、舊資料不重分類、用途拒絕改寫與併發／失敗重試。solution 131 tests 通過；HTTP context 與完整出口仍待 2.2／2.6，Docker 未重建。詳見 [交付紀錄](tip/phase2.1-delivery.md)。
+
+2026-10-18 TiP Phase 2.2 完成：獨立 scoped contexts、HTTP 身分與 metadata 交易解析、CLI 每次操作 scope；solution 153 tests 通過。未來 `/api/orders/{id}/xxx` 後置處理須攜帶 Order transaction，現階段只留[確認註記](decisions/2026-10-18-tip-order-postprocessing-context.md)，不新增任務。詳見 [2.2 交付紀錄](tip/phase2.2-delivery.md)。
+
+2026-10-18 TiP Phase 2.3 完成：create 固定用途、付款與報價，complete 沿用保存內容並驗證商品／SKU／庫存；正式扣減、test 略過並留證據。Order、完整終態封存與作用中移除原子提交，補上用途／封存防寫、跨分區 ID、rollback 與併發驗證；solution 191 tests 通過，solution／CLI build 成功。Docker 未重建；後續接續 2.4 共用效果控制。詳見 [2.3 交付紀錄](tip/phase2.3-delivery.md)。
+
+2026-10-18 TiP Phase 2.4 完成：受保護寫入共用執行器、商品／SKU Core 維護、OperationEffects，以及 test Cart／並行交易／雙 test 買方拒絕的精確案例。solution 285 項通過；完整事件／出口／UI 留待 2.5～2.7，未重建 Docker。見 [交付紀錄](tip/phase2.4-delivery.md) 與 [AC 自動化覆蓋對照](tip/ac-test-coverage.md)。
+
+2026-10-18 TiP Phase 2.5 完成：標準 dispatcher 每次派送建立獨立 scope，以 System identity 載入保存 Order 用途，事件效果驗證原快照未遭替換。補齊重送、巢狀／並行、缺 Order／用途 BUG 及履約失敗封存不變；solution 310 項通過。真實商業 adapter 不適用；完整出口與 UI 留待 2.6／2.7。見 [交付紀錄](tip/phase2.5-delivery.md)。
+
+2026-10-18 TiP Phase 2.6 完成：統一 OperationResult、HTTP headers／錯誤映射、CLI／事件結果及完整略過 log，移除 OAuth 明文 token／授權碼診斷輸出。solution 327 項通過，CLI build 成功；2.5 已提交為 `64ced22`。CommonStorefront／Docker／UI 驗收留待 2.7，本輪未重建部署。見 [交付紀錄](tip/phase2.6-delivery.md)。
+
+2026-10-18 TiP Phase 2.7 完成標準流程交付：CommonStorefront 明確一般／測試付款、操作結果與用途呈現；solution 335 項通過，Docker 已重建。Edge 四種會員／付款組合、庫存拒絕流程與 400px 手機主要任務通過，admin／一致性 LiteDB 快照確認正式統計排除 test、只有一般交易扣庫存。2.6／2.7 依使用者授權一併提交；實際驗證與不適用範圍見 [2.7 交付紀錄](tip/phase2.7-delivery.md)。
+
+## CommonStorefront PaymentID 輸入調整（2026-10-18）
+
+依使用者要求，付款改為直接輸入 PaymentID（模擬卡號），用途由既有系統規則判定，次要文字提示預設測試 ID 990001 與測試會員規則。不改動 Core／Abstract／API，與已提交的 AdminCLI 分開 commit；見 [決策](decisions/2026-10-18-storefront-payment-id-input.md) 與 [交付](tip/payment-id-ui-delivery.md)。

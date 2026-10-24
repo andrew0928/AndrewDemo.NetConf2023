@@ -1,0 +1,32 @@
+[
+  {
+    "command": ".local/admin-cli/publish/shop-admin list --source order --type all --all-pages --format txt",
+    "output": "orders-all.txt",
+    "exitCode": 0
+  },
+  {
+    "command": ".local/admin-cli/publish/shop-admin list --source order --type all --all-pages --format json",
+    "output": "orders-all.json",
+    "exitCode": 0
+  },
+  {
+    "command": ".local/admin-cli/publish/shop-admin stats --source order --type normal --format txt",
+    "output": "stats-normal.txt",
+    "exitCode": 0
+  },
+  {
+    "command": ".local/admin-cli/publish/shop-admin stats --source order --type normal --format json",
+    "output": "stats-normal.json",
+    "exitCode": 0
+  },
+  {
+    "command": ".local/admin-cli/publish/shop-admin stats --source order --type test --format txt",
+    "output": "stats-test.txt",
+    "exitCode": 0
+  },
+  {
+    "command": ".local/admin-cli/publish/shop-admin stats --source order --type test --format json",
+    "output": "stats-test.json",
+    "exitCode": 0
+  }
+]

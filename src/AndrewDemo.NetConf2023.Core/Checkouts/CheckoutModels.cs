@@ -11,7 +11,8 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
     public sealed class CheckoutCreateCommand
     {
         public int CartId { get; set; }
-        public Member RequestMember { get; set; } = null!;
+        public required int PaymentId { get; set; }
+        public required Member RequestMember { get; set; }
     }
 
     public sealed class CheckoutCreateResult
@@ -53,16 +54,16 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
         CartNotFound = 3,
         ConsumerNotFound = 4,
         ProductNotFound = 5,
-        InventoryInsufficient = 6
+        InventoryInsufficient = 6,
+        RecreateRequired = 7
     }
 
     public sealed class CheckoutCompleteCommand
     {
         public int TransactionId { get; set; }
-        public int PaymentId { get; set; }
         public int? Satisfaction { get; set; }
         public string? ShopComments { get; set; }
-        public Member RequestMember { get; set; } = null!;
+        public required Member RequestMember { get; set; }
     }
 
     public sealed class CheckoutCompleteResult
@@ -118,6 +119,11 @@ namespace AndrewDemo.NetConf2023.Core.Checkouts
         public static CheckoutCompleteResult CreateInventoryInsufficient(string errorMessage)
         {
             return CreateFailure(CheckoutCompleteStatus.InventoryInsufficient, errorMessage);
+        }
+
+        public static CheckoutCompleteResult CreateRecreateRequired(string errorMessage)
+        {
+            return CreateFailure(CheckoutCompleteStatus.RecreateRequired, errorMessage);
         }
 
         private static CheckoutCompleteResult CreateFailure(CheckoutCompleteStatus status, string errorMessage)

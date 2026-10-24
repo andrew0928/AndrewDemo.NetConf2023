@@ -1,5 +1,7 @@
 # Shop Runtime Data Isolation Mode 規格
 
+2026-10-19 TiP 補充：每個 shop 一個專屬 DatabaseFilePath 的 tenant isolation 維持；同一 shop 內再依 [交易儲存規格](tip-transaction-storage.md) 將 Order、作用中及封存 Checkout 拆 normal／test 六區。認證與非交易資料共用，這是交易用途隔離，不改 ShopId／tenant 邊界；Phase 3 待實作。
+
 ## 狀態
 
 - phase: 1
@@ -67,6 +69,8 @@ canonical 結論：
 - `orders`
 - `member_tokens`
 - `checkout_transactions`
+- `archived_checkout_transactions`
+- Phase 3 的 `test_orders`、`test_checkout_transactions`、`test_archived_checkout_transactions`；完整用途對照見交易儲存規格。
 
 ### 3. `DatabaseFilePath` 是 runtime 邊界的一部分
 
@@ -101,13 +105,7 @@ canonical 結論：
 ## `.Core` 行為要求
 
 - `ShopDatabaseContext` 目前以單一 connection string 建立單一 `LiteDatabase`
-- `.Core` 內建 collection 名稱固定：
-  - `carts`
-  - `products`
-  - `members`
-  - `orders`
-  - `member_tokens`
-  - `checkout_transactions`
+- `.Core` 共用資料 collections 包含 carts、products、skus、inventory_records、members、member_tokens；交易 collections 的六區 canonical 名稱統一由 [交易儲存規格](tip-transaction-storage.md) 定義。
 - `.Core` 不負責依 `ShopId` 對上述 collection 做 row-level filter
 - 目前 collection 被視為該 shop database 的本地資料
 
@@ -121,7 +119,7 @@ flowchart LR
     DbPath["DatabaseFilePath"]
     Host["API Host Process"]
     Db["Shop-local Database File"]
-    Collections["carts / products / members / orders / member_tokens / checkout_transactions"]
+    Collections["共用資料 collections／normal 交易三區／test 交易三區"]
 
     ShopId --> Resolver
     Resolver --> Manifest

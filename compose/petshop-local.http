@@ -97,7 +97,8 @@ Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
-  "cartId": {{cartId}}
+  "cartId": {{cartId}},
+  "paymentId": {{paymentId}}
 }
 
 ### 完成 checkout，預期會確認 reservation 並輸出 PetShop PoC notification log
@@ -107,7 +108,6 @@ Content-Type: application/json
 
 {
   "transactionId": {{transactionId}},
-  "paymentId": {{paymentId}},
   "satisfaction": 5,
   "shopComments": "PetShop local smoke test"
 }

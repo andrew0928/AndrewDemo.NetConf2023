@@ -1,0 +1,140 @@
+{
+  "capturedAt": "2026-10-24T16:04:22+0800",
+  "stage": "01-after-test",
+  "raw": {
+    "Collections": {
+      "orders": [],
+      "test_orders": [
+        {
+          "Id": 1,
+          "IsTest": true,
+          "TotalPrice": 169.0,
+          "CheckoutTransactionId": 1,
+          "PaymentId": null
+        }
+      ],
+      "checkout_transactions": [],
+      "test_checkout_transactions": [],
+      "archived_checkout_transactions": [],
+      "test_archived_checkout_transactions": [
+        {
+          "Id": 1,
+          "IsTest": true,
+          "TotalPrice": 169.0,
+          "CheckoutTransactionId": null,
+          "PaymentId": 990001
+        }
+      ]
+    },
+    "Inventory": {
+      "SKU-BEER-18D": 100,
+      "SKU-COKE-350": 100,
+      "SKU-GREEN-TEA-550": 100
+    },
+    "Members": 1,
+    "Tokens": 1,
+    "Version": 1
+  },
+  "admin": {
+    "normal": {
+      "queriedAt": "2026-10-24T08:04:22.200394Z",
+      "filters": {
+        "purpose": "normal",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 0,
+      "excludedUnknownTimeCount": 0,
+      "items": [],
+      "totalAmount": 0,
+      "knownTotalAmount": 0,
+      "unknownAmountCount": 0
+    },
+    "test": {
+      "queriedAt": "2026-10-24T08:04:22.20119Z",
+      "filters": {
+        "purpose": "test",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 1,
+      "excludedUnknownTimeCount": 0,
+      "items": [
+        {
+          "id": 1,
+          "memberId": 1,
+          "memberName": "andrew",
+          "isTest": true,
+          "createdAt": "2026-10-24T08:01:31.038Z",
+          "totalPrice": 169.0,
+          "fulfillmentStatus": "succeeded",
+          "checkoutTransactionId": 1
+        }
+      ],
+      "totalAmount": 169.0,
+      "knownTotalAmount": 169.0,
+      "unknownAmountCount": 0
+    },
+    "all": {
+      "queriedAt": "2026-10-24T08:04:22.203206Z",
+      "filters": {
+        "purpose": "all",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 1,
+      "excludedUnknownTimeCount": 0,
+      "items": [
+        {
+          "id": 1,
+          "memberId": 1,
+          "memberName": "andrew",
+          "isTest": true,
+          "createdAt": "2026-10-24T08:01:31.038Z",
+          "totalPrice": 169.0,
+          "fulfillmentStatus": "succeeded",
+          "checkoutTransactionId": 1
+        }
+      ],
+      "totalAmount": 169.0,
+      "knownTotalAmount": 169.0,
+      "unknownAmountCount": 0
+    }
+  },
+  "members": {
+    "queriedAt": "2026-10-24T08:04:22.203872Z",
+    "filters": {
+      "purpose": "all",
+      "page": 1,
+      "pageSize": 50,
+      "memberId": null,
+      "name": null
+    },
+    "page": 1,
+    "pageSize": 50,
+    "totalCount": 1,
+    "excludedUnknownTimeCount": 0,
+    "items": [
+      {
+        "id": 1,
+        "name": "andrew",
+        "isTest": false
+      }
+    ]
+  }
+}

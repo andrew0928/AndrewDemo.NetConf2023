@@ -1,4 +1,4 @@
-﻿using AndrewDemo.NetConf2023.Abstract.Products;
+using AndrewDemo.NetConf2023.Abstract.Products;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +7,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     /// <summary>
     /// 負責提供商品查詢介面。
     /// </summary>
+    [Microsoft.AspNetCore.Authorization.AllowAnonymous]
     [Route("api/products")]
     [ApiController]
     public class ProductsController : ControllerBase

@@ -143,3 +143,9 @@
 - 第一版不包含 PetShop reservation flow
 - 第一版不重刻 login authority UI
 - 第一版不導入 client-side SPA state management
+
+## TiP Checkout 合約補充（2026-10-17）
+
+CoreApiClient.CreateCheckoutAsync 明確接收 paymentId，付款來源在 create 前決定；CompleteCheckoutRequestDto 不再提供 PaymentId。CommonStorefront 與共用 client 的呼叫端一併同步。舊 Checkout 完成時回 409／checkout_recreate_required，頁面須提示重新建立，不回填舊交易或採舊 complete 欄位。
+
+2026-10-18 使用者確認調整付款 UI：直接輸入 PaymentID（模擬卡號），不提供 normal／test 選項，不隨機產生或依選項替換付款 ID。欄位預設留空且必填，沿用 API int 語意（包含 0，不新增數值區間限制）；空白、非整數與 int 溢位在送出 Checkout API 前拒絕。create 傳入使用者提供的 PaymentId，交易用途由 Core 的會員用途／PaymentId 白名單判定。以次要色文字提示預設測試 ID 990001、測試會員或測試 ID 皆為測試交易，實際用途以 API 結果為準；卡號僅為模擬，不輸入真實信用卡號。失敗保留輸入與購物車，complete 不再傳付款 ID。UI 的用途／略過結果呈現與端到端驗證列入 TiP Phase 2，依 [HTTP 合約](tip-http-and-operation-results.md) 實作，不要求新增管理頁面。

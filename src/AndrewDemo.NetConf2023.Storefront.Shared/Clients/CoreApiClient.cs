@@ -119,16 +119,18 @@ public sealed class CoreApiClient
             ?? new CartEstimateResponseDto();
     }
 
-    public async Task<CheckoutCreateResponseDto> CreateCheckoutAsync(string accessToken, int cartId, CancellationToken cancellationToken)
+    public async Task<CheckoutCreateResponseDto> CreateCheckoutAsync(string accessToken, int cartId, int paymentId, CancellationToken cancellationToken)
     {
         using var request = CreateAuthorizedRequest(HttpMethod.Post, "/api/checkout/create", accessToken);
-        request.Content = JsonContent.Create(new CreateCheckoutRequestDto { CartId = cartId });
+        request.Content = JsonContent.Create(new CreateCheckoutRequestDto { CartId = cartId, PaymentId = paymentId });
 
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
-        return await response.Content.ReadFromJsonAsync<CheckoutCreateResponseDto>(JsonOptions, cancellationToken)
+        var result = await response.Content.ReadFromJsonAsync<CheckoutCreateResponseDto>(JsonOptions, cancellationToken)
             ?? throw new InvalidOperationException("Checkout create response is empty.");
+        result.Operation = ApiOperationSummary.FromHeaders(response.Headers);
+        return result;
     }
 
     public async Task<CheckoutCompleteResponseDto> CompleteCheckoutAsync(string accessToken, CompleteCheckoutRequestDto requestModel, CancellationToken cancellationToken)
@@ -139,8 +141,10 @@ public sealed class CoreApiClient
         using var response = await _httpClient.SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
-        return await response.Content.ReadFromJsonAsync<CheckoutCompleteResponseDto>(JsonOptions, cancellationToken)
+        var result = await response.Content.ReadFromJsonAsync<CheckoutCompleteResponseDto>(JsonOptions, cancellationToken)
             ?? throw new InvalidOperationException("Checkout complete response is empty.");
+        result.Operation = ApiOperationSummary.FromHeaders(response.Headers);
+        return result;
     }
 
     public async Task<TokenExchangeResponse> ExchangeTokenAsync(string code, CancellationToken cancellationToken)
@@ -176,6 +180,6 @@ public sealed class CoreApiClient
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken);
 
-        throw new CoreApiRequestException(response.StatusCode, body);
+        throw new CoreApiRequestException(response.StatusCode, body, ApiOperationSummary.FromHeaders(response.Headers));
     }
 }

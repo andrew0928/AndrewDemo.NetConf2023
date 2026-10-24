@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using AndrewDemo.NetConf2023.Core;
 using System.Data;
 using System.Runtime.CompilerServices;
@@ -37,15 +37,14 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
             // 初始化資料庫
             Database = new ShopDatabaseContext();
             
+            using var operations = BuildOperationServices();
+            OperationServices = operations;
             InitSK();
             InitShop();
 
-            if (!UserAuthorize())
-            {
-                return;
-            }
+            if (!RunOperation(UserAuthorize, accepted: value => value, display: false)) return;
 
-            var member = RequireCurrentMember();
+            var member = RunOperation(RequireCurrentMember, display: false);
             Console.WriteLine($"Hello {member.Name}({member.Id}), Welcome to Andrew's Shop!");
             Console.WriteLine();
 
@@ -81,7 +80,7 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     try
                     {
-                        commandProcessors[command](parameters);
+                        RunOperation(() => { commandProcessors[command](parameters); return true; }, display: false);
                         Console.WriteLine();
                     }
                     catch (Exception ex)
@@ -93,8 +92,12 @@ namespace AndrewDemo.NetConf2023.ConsoleUI
                 {
                     //AssistantOutput("Invalid command. try [0] to get help, or [5] to exit...");
                     AssistantOutput("請稍待，正在幫您詢問助理店長 (copilot) 中...");
-                    var result = CopilotAsk(commandline);
-                    Console.WriteLine($"copilot answer > {result}");
+                    try
+                    {
+                        var result = RunOperation(() => CopilotAsk(commandline), display: false);
+                        Console.WriteLine($"copilot answer > {result}");
+                    }
+                    catch (Exception error) { SystemOutput($"Error: {error.Message}"); }
                 }
 
                 Console.ForegroundColor = ConsoleColor.Yellow;

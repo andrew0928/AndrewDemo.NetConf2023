@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".env" CopyToOutputDirectory="PreserveNewest" />
+    <None Include=".env" CopyToOutputDirectory="PreserveNewest" Condition="Exists('.env')" />
     <None Include=".env.example" />
   </ItemGroup>
 

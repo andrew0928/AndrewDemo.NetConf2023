@@ -1,4 +1,4 @@
-﻿using AndrewDemo.NetConf2023.Abstract.Discounts;
+using AndrewDemo.NetConf2023.Abstract.Discounts;
 using AndrewDemo.NetConf2023.Abstract.Products;
 using AndrewDemo.NetConf2023.Abstract.Shops;
 using AndrewDemo.NetConf2023.Core;
@@ -17,6 +17,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
     public class CartsController : ControllerBase
     {
         private readonly IShopDatabaseContext _database;
+        private readonly MemberService _members;
         private readonly DiscountEngine _discountEngine;
         private readonly IProductService _productService;
         private readonly ShopManifest _shopManifest;
@@ -31,9 +32,11 @@ namespace AndrewDemo.NetConf2023.API.Controllers
         /// <param name="productService">商品服務。</param>
         /// <param name="shopManifest">目前啟動中的商店 manifest。</param>
         /// <param name="timeProvider">目前系統的時間提供者。</param>
-        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider)
+        /// <param name="members">會員與 Token 共用服務。</param>
+        public CartsController(IShopDatabaseContext database, DiscountEngine discountEngine, IProductService productService, ShopManifest shopManifest, TimeProvider timeProvider, MemberService members)
         {
             _database = database;
+            _members = members;
             _discountEngine = discountEngine;
             _productService = productService;
             _shopManifest = shopManifest;
@@ -258,13 +261,7 @@ namespace AndrewDemo.NetConf2023.API.Controllers
                 return null;
             }
 
-            var tokenRecord = _database.MemberTokens.FindById(accessToken);
-            if (tokenRecord == null || tokenRecord.Expire <= _timeProvider.GetLocalDateTime())
-            {
-                return null;
-            }
-
-            return _database.Members.FindById(tokenRecord.MemberId);
+            return _members.ValidateToken(accessToken);
         }
     }
 }

@@ -10,6 +10,12 @@ namespace AndrewDemo.NetConf2023.Core.Tests
     {
         private static int _productSeq = 1000;
 
+        // 只有 schema／legacy fixture 使用 raw 寫入；正常行為測試經 Core 服務。
+        internal static void InsertCheckoutFixture(IShopDatabaseContext context, CheckoutTransactionRecord record) =>
+            context.Database.GetCollection<CheckoutTransactionRecord>(Storage.TransactionCollections.Checkouts(record.IsTest)).Insert(record);
+        internal static void InsertArchivedCheckoutFixture(IShopDatabaseContext context, CheckoutTransactionRecord record) =>
+            context.Database.GetCollection<CheckoutTransactionRecord>(Storage.TransactionCollections.Checkouts(record.IsTest, true)).Insert(record);
+
         internal static string CreateProduct(IShopDatabaseContext context, decimal price, string? name = null, string? description = null)
         {
             int seq = Interlocked.Increment(ref _productSeq);

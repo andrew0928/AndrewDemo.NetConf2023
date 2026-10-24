@@ -90,24 +90,24 @@ Authorization: Bearer {{accessToken}}
 
 
 
-### STEP9, 建立結帳資料，準備結帳付款
+### STEP9, 建立結帳交易並指定 PaymentId
 POST {{baseURL}}/api/checkout/create
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
   "cartId": {{cartId}},
+  "paymentId": {{paymentId}},
   "accessToken": "{{accessToken}}"
 }
 
 
-### STEP10, 取得付款資料，完成結帳
+### STEP10, 完成結帳，使用建立時保存的付款來源
 POST {{baseURL}}/api/checkout/complete
 Authorization: Bearer {{accessToken}}
 Content-Type: application/json
 
 {
   "transactionId": {{transactionId}},
-  "accessToken": "{{accessToken}}",
-  "paymentId": {{paymentId}}
+  "accessToken": "{{accessToken}}"
 }

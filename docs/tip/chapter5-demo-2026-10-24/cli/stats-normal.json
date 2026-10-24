@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "command": "stats",
+  "source": "order",
+  "filters": {
+    "purpose": "normal",
+    "memberId": null,
+    "from": null,
+    "to": null
+  },
+  "pagination": {
+    "mode": "stats",
+    "page": null,
+    "pageSize": null
+  },
+  "observations": [
+    {
+      "page": 1,
+      "queriedAt": "2026-10-24T08:32:59.09087Z",
+      "totalCount": 1,
+      "excludedUnknownTimeCount": 0,
+      "totalAmount": 169.0,
+      "knownTotalAmount": 169.0,
+      "unknownAmountCount": 0
+    }
+  ],
+  "rows": []
+}

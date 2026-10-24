@@ -17,6 +17,7 @@ services:
   common-api:
     image: ${REGISTRY:-andrew0928.azurecr.io}/andrewdemo-shop-common-api:${IMAGE_TAG:-develop}
     environment:
+      - SHOP_ADMIN_ACCESS_TOKEN=${SHOP_ADMIN_ACCESS_TOKEN:-}
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_HTTP_PORTS=5108
       - SHOP_DATABASE_FILEPATH=/data/shop-database.db

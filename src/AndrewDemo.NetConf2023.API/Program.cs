@@ -1,4 +1,8 @@
-﻿using System;
+using AndrewDemo.NetConf2023.API.Admin;
+using AndrewDemo.NetConf2023.Core.AdminQueries;
+using AndrewDemo.NetConf2023.Core.Contexts;
+using AndrewDemo.NetConf2023.API.Execution;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using AndrewDemo.NetConf2023.Abstract.Discounts;
@@ -37,6 +41,9 @@ namespace AndrewDemo.NetConf2023.API
             Env.Load();
 
             var builder = WebApplication.CreateBuilder(args);
+            // 啟動即驗證設定；空設定停用，不提供預設管理秘密。
+            builder.Services.AddSingleton(new AdminAccessToken(Environment.GetEnvironmentVariable("SHOP_ADMIN_ACCESS_TOKEN")));
+            builder.Services.AddSingleton<AdminQueryService>();
             var requestedShopId = Environment.GetEnvironmentVariable("SHOP_ID")
                 ?? builder.Configuration["shop-id"];
 
@@ -66,6 +73,8 @@ namespace AndrewDemo.NetConf2023.API
                 };
             });
 
+            builder.Services.AddSingleton(_ => new AndrewDemo.NetConf2023.Core.Testing.TestAllowlist());
+            builder.Services.AddSingleton<MemberService>();
             builder.Services.AddSingleton<DefaultProductService>();
             builder.Services.AddSingleton<DefaultOrderEventDispatcher>();
             builder.Services.AddSingleton<IProductService>(sp =>
@@ -124,9 +133,9 @@ namespace AndrewDemo.NetConf2023.API
 
                 return new DiscountEngine(rules);
             });
-            builder.Services.AddSingleton<CheckoutService>();
+            builder.Services.AddShopExecutionContexts();
 
-            builder.Services.AddControllers();
+            builder.Services.AddControllers(options => options.Filters.Add<CheckoutTransactionFilter>());
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(c =>
@@ -139,48 +148,17 @@ namespace AndrewDemo.NetConf2023.API
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
+            // 在接收請求前檢查交易 storage，拒絕未遷移或不相容的資料庫。
+            _ = app.Services.GetRequiredService<IShopDatabaseContext>();
             var shopManifest = app.Services.GetRequiredService<ShopManifest>();
             Console.WriteLine($"[system] shop runtime initialized: {shopManifest.ShopId}");
 
 
 
-            //{ 
-            //    var token = Member.Register("andrew");
-            //    Member.SetShopNotes(
-            //        token,
-            //        @"安德魯是個很認真工作的工程師，平日工作或是需要專注時都喝茶飲料來提神，但是在休息或放鬆時則喜歡喝可樂。除非特定場合或是好友聚會，不然都不喝酒。");
-            //}
-
-            app.Use((context, next) =>
-            {
-                Console.WriteLine();
-                Console.WriteLine($"[system] request api:");
-                Console.WriteLine($"  {context.Request.Method} {context.Request.Path}{context.Request.QueryString.Value}");
-
-                //foreach (var header in context.Request.Headers)
-                //{
-                //    Console.WriteLine($"  {header.Key}: {header.Value}");
-                //}
-
-
-
-                if (context.Request.Path.StartsWithSegments("/api")
-                    && !IsAnonymousApiRequest(context))
-                {
-                    if (!context.Request.Headers.TryGetValue("Authorization", out var token))
-                    {
-                        Console.WriteLine($"[system] Authorization Header not found");
-                        context.Response.StatusCode = 401;
-                        return context.Response.WriteAsync("Unauthorized");
-                    }
-
-                    var accessToken = token.ToString().Substring("Bearer ".Length);
-                    Console.WriteLine($"[system] token: {accessToken}");
-                    context.Items["access-token"] = accessToken;
-                }
-
-                return next();
-            });
+            app.UseRouting();
+            app.UseMiddleware<AdminQueryMiddleware>();
+            app.UseWhen(http => !http.Request.Path.StartsWithSegments("/api/admin"),
+                shop => shop.UseMiddleware<ShopExecutionMiddleware>());
 
             // Configure the HTTP request pipeline.
             //if (app.Environment.IsDevelopment())
@@ -200,10 +178,5 @@ namespace AndrewDemo.NetConf2023.API
             app.Run();
         }
 
-        private static bool IsAnonymousApiRequest(HttpContext context)
-        {
-            return (HttpMethods.IsGet(context.Request.Method) || HttpMethods.IsHead(context.Request.Method))
-                && context.Request.Path.StartsWithSegments("/api/products");
-        }
     }
 }

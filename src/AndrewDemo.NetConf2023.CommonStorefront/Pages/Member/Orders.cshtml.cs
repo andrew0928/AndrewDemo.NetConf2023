@@ -1,3 +1,4 @@
+using System.Text.Json;
 using AndrewDemo.NetConf2023.Storefront.Shared.Authentication;
 using AndrewDemo.NetConf2023.Storefront.Shared.Clients;
 using AndrewDemo.NetConf2023.Storefront.Shared.ViewModels;
@@ -15,6 +16,8 @@ public sealed class OrdersModel : AuthenticatedPageModel
         _coreApiClient = coreApiClient;
     }
 
+    public ApiOperationSummary? CheckoutOperation { get; private set; }
+
     public int TotalOrders { get; private set; }
 
     public decimal TotalAmount { get; private set; }
@@ -30,6 +33,9 @@ public sealed class OrdersModel : AuthenticatedPageModel
         {
             return redirect;
         }
+
+        if (TempData["CheckoutOperation"] is string summary)
+            CheckoutOperation = JsonSerializer.Deserialize<ApiOperationSummary>(summary);
 
         try
         {

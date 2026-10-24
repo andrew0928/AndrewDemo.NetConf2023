@@ -1,0 +1,2 @@
+# 本機資料庫不可送入 image build context
+.local/

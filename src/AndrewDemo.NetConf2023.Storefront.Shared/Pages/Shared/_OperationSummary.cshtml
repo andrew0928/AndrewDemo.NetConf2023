@@ -1,0 +1,24 @@
+@model AndrewDemo.NetConf2023.Storefront.Shared.Clients.ApiOperationSummary
+<section class="panel" aria-live="polite" aria-label="結帳操作結果">
+    <h2>結帳操作結果</h2>
+    <p>用途：@Model.BehaviorText</p>
+    <p>結果：@Model.OutcomeText</p>
+    @if (Model.Transaction is { } transaction)
+    {
+        <p>@(transaction.Kind == "checkout" ? "結帳" : "訂單") #@transaction.Id — @(transaction.IsTest ? "測試交易" : "一般交易")</p>
+    }
+    @if (Model.SkippedEffectCodes.Length > 0)
+    {
+        <p>本次因測試用途略過：</p>
+        <ul>
+            @foreach (var code in Model.SkippedEffectCodes)
+            {
+                <li>@AndrewDemo.NetConf2023.Storefront.Shared.Clients.ApiOperationSummary.EffectText(code)（@code）</li>
+            }
+        </ul>
+    }
+    else if (Model.Outcome != null)
+    {
+        <p>本次沒有因測試而略過的步驟。</p>
+    }
+</section>
