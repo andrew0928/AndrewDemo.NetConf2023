@@ -1,0 +1,96 @@
+{
+  "capturedAt": "2026-10-24T15:58:46+0800",
+  "stage": "00-baseline",
+  "raw": {
+    "Collections": {
+      "orders": [],
+      "test_orders": [],
+      "checkout_transactions": [],
+      "test_checkout_transactions": [],
+      "archived_checkout_transactions": [],
+      "test_archived_checkout_transactions": []
+    },
+    "Inventory": {
+      "SKU-BEER-18D": 100,
+      "SKU-COKE-350": 100,
+      "SKU-GREEN-TEA-550": 100
+    },
+    "Members": 0,
+    "Tokens": 0,
+    "Version": 1
+  },
+  "admin": {
+    "normal": {
+      "queriedAt": "2026-10-24T07:58:46.768226Z",
+      "filters": {
+        "purpose": "normal",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 0,
+      "excludedUnknownTimeCount": 0,
+      "items": [],
+      "totalAmount": 0,
+      "knownTotalAmount": 0,
+      "unknownAmountCount": 0
+    },
+    "test": {
+      "queriedAt": "2026-10-24T07:58:46.778377Z",
+      "filters": {
+        "purpose": "test",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 0,
+      "excludedUnknownTimeCount": 0,
+      "items": [],
+      "totalAmount": 0,
+      "knownTotalAmount": 0,
+      "unknownAmountCount": 0
+    },
+    "all": {
+      "queriedAt": "2026-10-24T07:58:46.779119Z",
+      "filters": {
+        "purpose": "all",
+        "page": 1,
+        "pageSize": 50,
+        "memberId": null,
+        "from": null,
+        "to": null
+      },
+      "page": 1,
+      "pageSize": 50,
+      "totalCount": 0,
+      "excludedUnknownTimeCount": 0,
+      "items": [],
+      "totalAmount": 0,
+      "knownTotalAmount": 0,
+      "unknownAmountCount": 0
+    }
+  },
+  "members": {
+    "queriedAt": "2026-10-24T07:58:46.780328Z",
+    "filters": {
+      "purpose": "all",
+      "page": 1,
+      "pageSize": 50,
+      "memberId": null,
+      "name": null
+    },
+    "page": 1,
+    "pageSize": 50,
+    "totalCount": 0,
+    "excludedUnknownTimeCount": 0,
+    "items": []
+  }
+}

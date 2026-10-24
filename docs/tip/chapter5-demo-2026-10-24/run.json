@@ -1,0 +1,6 @@
+{
+  "api": "http://127.0.0.1:5197",
+  "ui": "http://127.0.0.1:5198",
+  "work": "/private/tmp/chapter5-demo-yfli1pp6",
+  "commit": "c67e2d37d426698571246dc97676cb68a2c3e83b"
+}

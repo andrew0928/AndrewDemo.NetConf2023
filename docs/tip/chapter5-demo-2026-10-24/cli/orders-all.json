@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "command": "list",
+  "source": "order",
+  "filters": {
+    "purpose": "all",
+    "memberId": null,
+    "from": null,
+    "to": null
+  },
+  "pagination": {
+    "mode": "all",
+    "page": null,
+    "pageSize": 50
+  },
+  "observations": [
+    {
+      "page": 1,
+      "queriedAt": "2026-10-24T08:32:58.957569Z",
+      "totalCount": 2,
+      "excludedUnknownTimeCount": 0,
+      "totalAmount": 338.0,
+      "knownTotalAmount": 338.0,
+      "unknownAmountCount": 0
+    }
+  ],
+  "rows": [
+    {
+      "id": 2,
+      "memberId": 1,
+      "memberName": "andrew",
+      "isTest": false,
+      "createdAt": "2026-10-24T08:05:22.61Z",
+      "totalPrice": 169.0,
+      "fulfillmentStatus": "succeeded",
+      "checkoutTransactionId": 2
+    },
+    {
+      "id": 1,
+      "memberId": 1,
+      "memberName": "andrew",
+      "isTest": true,
+      "createdAt": "2026-10-24T08:01:31.038Z",
+      "totalPrice": 169.0,
+      "fulfillmentStatus": "succeeded",
+      "checkoutTransactionId": 1
+    }
+  ]
+}

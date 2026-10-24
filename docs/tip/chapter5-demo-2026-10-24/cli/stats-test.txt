@@ -1,0 +1,9 @@
+命令：stats　來源：order
+有效條件：purpose=test，memberId=未知 (null)，from=未知 (null)，to=未知 (null)
+查詢時間：2026-10-24T08:32:59.158313Z　請求頁次：1
+  符合條件總筆數 (totalCount)：1
+  因未知時間排除筆數 (excludedUnknownTimeCount)：0
+  訂單總額 (totalAmount)：169.0
+  已知訂單金額 (knownTotalAmount)：169.0
+  未知金額筆數 (unknownAmountCount)：0
+金額涵蓋全部符合條件的訂單，為保存金額，非當頁合計或實收；all 含正式與測試。
